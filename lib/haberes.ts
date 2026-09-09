@@ -100,6 +100,10 @@ export interface ParsedHaberes {
  * "05/12/25 3085167 Pago haberes interbanking externa Empresa dos srl 30222222222 02 30851 67 $ 1.500.000,00 $ 1.500.446,34"
  *
  * En los tres casos: FECHA | COMPROBANTE | concepto con "haberes" | [nombre]+[CUIT]+ruido | $ MONTO | $ SALDO
+ *
+ * Si ninguna línea de movimiento matchea, se prueba como fallback el formato
+ * de comprobante individual de transferencia (ver parseComprobanteIndividual):
+ * un PDF de una sola operación (ej. "Office Banking"), sin tabla de movimientos.
  */
 export function parseHaberesText(fullText: string): ParsedHaberes {
   const rows: HaberRow[] = [];
@@ -152,6 +156,15 @@ export function parseHaberesText(fullText: string): ParsedHaberes {
     }
   }
 
+  // Comprobante individual de transferencia (ej. "Office Banking" de un banco):
+  // no tiene tabla de movimientos, son campos sueltos (Concepto, Fecha de envío,
+  // Monto, CUIT/CUIL, Razón Social). Se intenta solo si no hubo matches de
+  // extracto de cuenta, para no interferir con ese formato.
+  if (rows.length === 0) {
+    const comprobante = parseComprobanteIndividual(fullText);
+    if (comprobante) rows.push(comprobante);
+  }
+
   if (rows.length === 0) throw new Error('No se encontraron acreditaciones de haberes en el PDF');
 
   const mesesKeys = Array.from(new Set(rows.map((r) => {
@@ -160,4 +173,72 @@ export function parseHaberesText(fullText: string): ParsedHaberes {
   }))).sort();
 
   return { mesesKeys, rows };
+}
+
+const MESES = [
+  'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+  'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre',
+];
+
+/**
+ * Comprobante individual de transferencia (ej. "Office Banking" de un banco),
+ * a diferencia del extracto de cuenta: acá no hay tabla de movimientos, son
+ * campos etiqueta→valor sueltos ("Concepto" / "Acreditamiento De Haberes",
+ * "Fecha de envío" / "DD/MM/YYYY", "Monto" / "$ N", CUIT/razón social del
+ * pagador). Se usa el CUIT/razón social del PAGADOR (el empleador), no del
+ * destinatario (el titular de la cuenta). Devuelve null si no matchea el
+ * formato, para que el llamador pruebe otras alternativas o tire el error
+ * genérico.
+ *
+ * El sueldo es de mes vencido: la "Fecha de envío" es cuando se hizo la
+ * transferencia (ej. inicios de septiembre), pero el haber corresponde al mes
+ * anterior, que el banco informa aparte en "Descripción" (ej. "AGOSTO 2026").
+ * Se usa ese mes — con el día 1 — como fecha del haber, no la fecha de envío,
+ * para que el haber caiga en el mes que realmente se trabajó.
+ *
+ * Fixture sintético (mismo formato que un comprobante real, datos ficticios):
+ * "Identificador de la operación: X1 Datos del pago Tipo de transferencia
+ * Nro. de Transferencia Sueldos 1 Fecha de envío Monto 15/04/2026 $ 500.000,00
+ * Concepto Descripción Acreditamiento De Haberes MARZO 2026 Datos del pagador
+ * CUIT/CUIL Razón Social 30333333333 EMPRESA TRES SA Cuenta a debitar ..."
+ */
+function parseComprobanteIndividual(fullText: string): HaberRow | null {
+  if (!/acreditamiento\s+de\s+haberes/i.test(fullText)) return null;
+
+  // "Fecha de envío" y "Monto" son etiquetas de columna consecutivas, seguidas
+  // de sus valores en ese mismo orden ("15/04/2026 $ 500.000,00") — no dos
+  // pares etiqueta→valor intercalados.
+  const fechaMontoMatch = fullText.match(
+    /fecha\s+de\s+env[ií]o\s+monto\s*(\d{2}\/\d{2}\/\d{4})\s*\$?\s*([\d.,]+)/i
+  );
+  if (!fechaMontoMatch) return null;
+
+  const montoArs = parseArgNum(fechaMontoMatch[2]);
+  if (isNaN(montoArs) || montoArs <= 0) return null;
+
+  // Mes vencido informado en la descripción (ej. "AGOSTO 2026"). Si no aparece
+  // en ese formato, se cae a la fecha de envío tal cual, para no descartar
+  // comprobantes con una descripción distinta.
+  const mesVencidoMatch = fullText.match(
+    new RegExp(`\\b(${MESES.join('|')})\\s+(\\d{4})\\b`, 'i')
+  );
+  let fecha = fechaMontoMatch[1];
+  if (mesVencidoMatch) {
+    const mesIdx = MESES.indexOf(mesVencidoMatch[1].toLowerCase());
+    const mm = String(mesIdx + 1).padStart(2, '0');
+    fecha = `01/${mm}/${mesVencidoMatch[2]}`;
+  }
+
+  // Razón social/CUIT del PAGADOR (el empleador). El PDF trae primero las
+  // etiquetas de columna ("CUIT/CUIL", "Razón Social") y recién después los
+  // valores en ese mismo orden ("30333333333 EMPRESA TRES SA").
+  const pagadorMatch = fullText.match(
+    /datos del pagador\s*cuit\/cuil\s*raz[oó]n social\s*(\d{2}-?\d{8}-?\d)\s*([a-záéíóúñ0-9 .,-]*?)(?:\s+cuenta a debitar|\s+datos del destinatario|$)/i
+  );
+
+  let empleador = '';
+  if (pagadorMatch) empleador = limpiarEmpleador(pagadorMatch[2]) || (pagadorMatch[1] ? `CUIT ${pagadorMatch[1]}` : '');
+  if (!empleador) return null;
+
+  return { fecha, empleador, montoArs, montoUsd: 0 };
 }
