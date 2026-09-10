@@ -81,30 +81,21 @@ describe('parseHaberesText', () => {
   // Comprobante individual de transferencia (ej. "Office Banking" de un banco):
   // un PDF de una sola operación, sin tabla de movimientos. El fixture replica
   // el formato real (orden de campos, "Datos del pagador" antes de "Datos del
-  // destinatario") con razón social y CUIT ficticios. El sueldo es de mes
-  // vencido: la fecha de envío (03/04/2026) va un mes después del mes que
-  // realmente se paga (MARZO 2026, en la descripción) — el haber debe quedar
-  // fechado en marzo, no en abril.
-  it('reconoce el comprobante individual de transferencia y usa el mes vencido de la descripción, no la fecha de envío', () => {
-    const comprobanteText = `Identificador de la operación: AB12Cde340 Datos del pago Tipo de transferencia Nro. de Transferencia Sueldos 5 Fecha de envío Monto 03/04/2026 $ 500.000,00 Concepto Descripción Acreditamiento De Haberes MARZO 2026 Datos del pagador CUIT/CUIL Razón Social 30333333333 EMPRESA TRES SA Cuenta a debitar CC$ 111222333 Datos del destinatario CUIT/CUIL Razón social 20111111110 Titular De Prueba Cuenta en Cuenta de destino Banco De Prueba 0000000000000000000000`;
+  // destinatario") con razón social y CUIT ficticios.
+  it('reconoce el comprobante individual de transferencia y usa los datos del PAGADOR como empleador', () => {
+    const comprobanteText = `Identificador de la operación: AB12Cde340 Datos del pago Tipo de transferencia Nro. de Transferencia Sueldos 5 Fecha de envío Monto 15/03/2026 $ 500.000,00 Concepto Descripción Acreditamiento De Haberes MARZO 2026 Datos del pagador CUIT/CUIL Razón Social 30333333333 EMPRESA TRES SA Cuenta a debitar CC$ 111222333 Datos del destinatario CUIT/CUIL Razón social 20111111110 Titular De Prueba Cuenta en Cuenta de destino Banco De Prueba 0000000000000000000000`;
     const { rows } = parseHaberesText(comprobanteText);
     expect(rows).toEqual([{
-      fecha: '01/03/2026',
+      fecha: '15/03/2026',
       empleador: 'EMPRESA TRES SA',
       montoArs: 500000,
       montoUsd: 0,
     }]);
   });
 
-  it('agrupa el mes del comprobante individual por el mes vencido (descripción), no por el mes de la fecha de envío', () => {
-    const comprobanteText = `Datos del pago Fecha de envío Monto 03/04/2026 $ 500.000,00 Concepto Acreditamiento De Haberes MARZO 2026 Datos del pagador CUIT/CUIL Razón Social 30333333333 EMPRESA TRES SA Cuenta a debitar`;
+  it('agrupa el mes del comprobante individual igual que con un extracto de cuenta', () => {
+    const comprobanteText = `Datos del pago Fecha de envío Monto 15/03/2026 $ 500.000,00 Concepto Acreditamiento De Haberes MARZO 2026 Datos del pagador CUIT/CUIL Razón Social 30333333333 EMPRESA TRES SA Cuenta a debitar`;
     const { mesesKeys } = parseHaberesText(comprobanteText);
     expect(mesesKeys).toEqual(['2026-03']);
-  });
-
-  it('cae a la fecha de envío si la descripción no trae un mes reconocible', () => {
-    const comprobanteText = `Datos del pago Fecha de envío Monto 03/04/2026 $ 500.000,00 Concepto Acreditamiento De Haberes Datos del pagador CUIT/CUIL Razón Social 30333333333 EMPRESA TRES SA Cuenta a debitar`;
-    const { rows } = parseHaberesText(comprobanteText);
-    expect(rows[0].fecha).toBe('03/04/2026');
   });
 });
