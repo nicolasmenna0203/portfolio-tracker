@@ -112,3 +112,33 @@ export function fmtMonto(usd: number, moneda: Moneda, mepValor?: number | null):
 export function valorSegunMoneda(usd: number, ars: number, moneda: Moneda): number {
   return moneda === 'ARS' ? ars : usd;
 }
+
+// ── Entidades HTML ────────────────────────────────────────────────────────────
+// Los títulos de noticias llegan escapados: Yahoo (v1/finance/search) devuelve
+// `&quot;` en los titulares y los RSS de Ámbito pasan por un parser propio que
+// tampoco desescapa. Se decodifica a mano en vez de usar innerHTML sobre un
+// elemento temporal: eso ejecutaría el markup que venga en el feed.
+const ENTIDADES_HTML: Record<string, string> = {
+  amp: '&', lt: '<', gt: '>', quot: '"', apos: "'",
+  nbsp: '\u00a0', ndash: '–', mdash: '—', hellip: '…',
+  laquo: '«', raquo: '»', ldquo: '“', rdquo: '”', lsquo: '‘', rsquo: '’',
+};
+
+/**
+ * Decodifica entidades HTML nombradas y numéricas (decimales y hex) en una sola
+ * pasada. Una sola pasada es deliberado: evita desescapar de más un texto que
+ * venía doble-escapado a propósito. Las entidades desconocidas se dejan tal cual.
+ */
+export function decodeHtmlEntities(s: string): string {
+  return s.replace(/&(#\d+|#[xX][0-9a-fA-F]+|[a-zA-Z][a-zA-Z0-9]*);/g, (match, code: string) => {
+    if (code[0] === '#') {
+      const cp = code[1] === 'x' || code[1] === 'X'
+        ? parseInt(code.slice(2), 16)
+        : parseInt(code.slice(1), 10);
+      // Fuera del rango Unicode o surrogate suelto: se deja la entidad literal.
+      if (!Number.isFinite(cp) || cp <= 0 || cp > 0x10ffff) return match;
+      return String.fromCodePoint(cp);
+    }
+    return ENTIDADES_HTML[code.toLowerCase()] ?? match;
+  });
+}

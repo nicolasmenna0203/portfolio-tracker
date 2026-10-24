@@ -35,10 +35,7 @@ export default function PerformanceTab({ data }: Props) {
   const [subTab, setSubTab] = useState<SubTab>('fija');
 
   return (
-    <div style={{
-      display: 'flex', flexDirection: 'column', gap: 14, flex: 1, minHeight: 0,
-      overflowY: 'auto', WebkitOverflowScrolling: 'touch', paddingBottom: 24,
-    }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
 
       {/* ── Selector Renta Fija / Renta Variable ─────────────────────────── */}
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', flexShrink: 0 }}>

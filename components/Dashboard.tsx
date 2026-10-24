@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import type { DashboardData, TenenciaActual } from '@/types';
 import { fmtUSD, fmtARS, fmtPct, toMesKey, type Moneda } from '@/lib/parser';
 import { useFx } from '@/lib/useFx';
@@ -70,6 +70,50 @@ function FiltroPill({ label, onClear }: { label: string; onClear: () => void }) 
   );
 }
 
+// ── Scroller de pestaña ───────────────────────────────────────────────────────
+// Cada pestaña se monta y desmonta con el render condicional, así que su
+// scrollTop se perdía al volver. Se guarda por pestaña en memoria (sin
+// localStorage: es estado de sesión, no preferencia) y se restaura al montar.
+// El contenido de Noticias y Calendario llega async, así que al montar todavía
+// no mide: se reintenta por rAF hasta que `scrollHeight` da para el valor
+// guardado, con un techo de intentos para no quedar en loop si el contenido
+// terminó siendo más corto.
+function TabScroll({
+  tab, posiciones, style, children,
+}: {
+  tab: Tab;
+  posiciones: React.RefObject<Partial<Record<Tab, number>>>;
+  style?: React.CSSProperties;
+  children: React.ReactNode;
+}) {
+  const restaurar = useCallback((el: HTMLElement | null) => {
+    if (!el) return;
+    const destino = posiciones.current?.[tab] ?? 0;
+    if (destino === 0) return;
+
+    let intentos = 0;
+    const aplicar = () => {
+      el.scrollTop = destino;
+      // Si el contenido aún no llegó, `scrollTop` queda corto: reintentar.
+      if (el.scrollTop < destino && intentos++ < 30) requestAnimationFrame(aplicar);
+    };
+    aplicar();
+  }, [tab, posiciones]);
+
+  return (
+    <section
+      className="tab-scroll"
+      ref={restaurar}
+      onScroll={(e) => {
+        if (posiciones.current) posiciones.current[tab] = e.currentTarget.scrollTop;
+      }}
+      style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, ...style }}
+    >
+      {children}
+    </section>
+  );
+}
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 interface Props { data: DashboardData }
@@ -84,6 +128,47 @@ const [uploadOpen, setUploadOpen] = useState(false);
   const [hideValues, setHideValues] = useState(false);
   const [dimTenencias, setDimTenencias] = useState<DimTenencias>('TIPO');
   const [moneda, setMoneda]         = useState<Moneda>('USD');
+
+  // scrollTop por pestaña (en memoria) — ver TabScroll
+  const scrollPorTab = useRef<Partial<Record<Tab, number>>>({});
+
+  // Nav de pestañas: el contenido (961px) excede el ancho visible, así que la
+  // pestaña activa puede quedar fuera de vista. Se la centra cada vez que
+  // cambia, incluso cuando el cambio viene por código y no por click.
+  const navRef  = useRef<HTMLElement | null>(null);
+  const tabRefs = useRef<Partial<Record<Tab, HTMLButtonElement | null>>>({});
+  const [navSombra, setNavSombra] = useState({ izq: false, der: false });
+
+  const actualizarSombras = useCallback(() => {
+    const el = navRef.current;
+    if (!el) return;
+    setNavSombra({
+      izq: el.scrollLeft > 1,
+      der: el.scrollLeft + el.clientWidth < el.scrollWidth - 1,
+    });
+  }, []);
+
+  useEffect(() => {
+    // En dos pasos a propósito: la pestaña activa pasa a font-weight 700, así
+    // que su ancho —y el scrollWidth del nav— cambian recién después de que el
+    // navegador repinta. Centrar en el mismo tick usa la medida vieja y la
+    // última pestaña queda 2px cortada (visto en Gastos Fijos).
+    const raf = requestAnimationFrame(() => {
+      tabRefs.current[tab]?.scrollIntoView({ inline: 'center', block: 'nearest' });
+      actualizarSombras();
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [tab, actualizarSombras]);
+
+  // El overflow del nav depende del ancho disponible, que cambia al rotar o
+  // redimensionar — y también cuando aparecen los pills de filtros activos.
+  useEffect(() => {
+    const el = navRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(actualizarSombras);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [actualizarSombras]);
 
   useEffect(() => {
     try {
@@ -173,7 +258,10 @@ const [uploadOpen, setUploadOpen] = useState(false);
       display: 'flex',
       flexDirection: 'column',
       gap: 0,
-      height: '100vh',
+      // El alto real lo fija `body > main { flex:1 }` en globals.css: con
+      // `100vh` fijo, cualquier hermano previo (el banner de /demo) empujaba el
+      // fondo del scroller fuera de pantalla y el FAB tapaba el final.
+      minHeight: 0,
     }}>
 
       {/* ── Header ──────────────────────────────────────────────────────────── */}
@@ -313,10 +401,20 @@ const [uploadOpen, setUploadOpen] = useState(false);
         marginBottom: 14,
         flexWrap: 'wrap',
       }}>
-        <nav style={{ display: 'flex', gap: 4 }}>
+        {/* Wrapper: los degradés de borde se posicionan sobre el nav y solo
+            aparecen del lado donde queda contenido fuera de vista. Usan --bg,
+            así que acompañan al tema claro y oscuro sin color propio. */}
+        <div className="nav-tabs-wrap" style={{ position: 'relative', flex: 1, minWidth: 0 }}>
+          <nav
+            ref={navRef}
+            onScroll={actualizarSombras}
+            className="nav-tabs scroll-x"
+            style={{ display: 'flex', gap: 4 }}
+          >
           {TABS.map((t) => (
             <button
               key={t.id}
+              ref={(el) => { tabRefs.current[t.id] = el; }}
               onClick={() => setTab(t.id)}
               style={{
                 padding: '7px 18px',
@@ -336,7 +434,10 @@ const [uploadOpen, setUploadOpen] = useState(false);
               {t.label}
             </button>
           ))}
-        </nav>
+          </nav>
+          {navSombra.izq && <span className="nav-fade nav-fade-izq" aria-hidden="true" />}
+          {navSombra.der && <span className="nav-fade nav-fade-der" aria-hidden="true" />}
+        </div>
 
         {/* Filtros activos — visibles en todas las pestañas */}
         {hayFiltro && (
@@ -357,7 +458,7 @@ const [uploadOpen, setUploadOpen] = useState(false);
 
       {/* ── Tab: Resumen ────────────────────────────────────────────────────── */}
       {tab === 'resumen' && (
-        <section className="tab-scroll" style={{ display: 'flex', flexDirection: 'column', gap: 12, flex: 1, minHeight: 0 }}>
+        <TabScroll tab={tab} posiciones={scrollPorTab} style={{ gap: 12 }}>
           <div className="kpi-grid">
             <KPICard
               label="Total Cartera"
@@ -401,12 +502,12 @@ const [uploadOpen, setUploadOpen] = useState(false);
           <div className="resumen-chart-wrap" style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
             <EvolucionChart data={resumenSeries} tenenciasPorMes={tenenciasPorMes} hideValues={hideValues} moneda={moneda} />
           </div>
-        </section>
+        </TabScroll>
       )}
 
       {/* ── Tab: Tenencias ──────────────────────────────────────────────────── */}
       {tab === 'tenencias' && (
-        <section className="tab-scroll" style={{ display: 'flex', flexDirection: 'column', gap: 8, flex: 1, minHeight: 0 }}>
+        <TabScroll tab={tab} posiciones={scrollPorTab} style={{ gap: 8 }}>
 
           {/* Barra de controles: selector de mes centrado + dimensión + filtros activos */}
           <div className="tenencias-controles" style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', flexShrink: 0 }}>
@@ -426,7 +527,7 @@ const [uploadOpen, setUploadOpen] = useState(false);
             )}
 
             {/* MonthSlider centrado */}
-            <div className="tenencias-slider" style={{ flex: 1, minWidth: 200 }}>
+            <div className="tenencias-slider" style={{ flex: 1 }}>
               <MonthSlider
                 meses={mesesDisponibles}
                 selected={mesSel}
@@ -482,14 +583,14 @@ const [uploadOpen, setUploadOpen] = useState(false);
               moneda={moneda}
             />
           </div>
-        </section>
+        </TabScroll>
       )}
 
 
 
       {/* ── Tab: Informe ────────────────────────────────────────────────────── */}
       {tab === 'informe' && (
-        <section className="tab-scroll" style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+        <TabScroll tab={tab} posiciones={scrollPorTab}>
           <InformeTab
             resumenSeries={resumenSeries}
             tenenciasPorMes={tenenciasPorMes}
@@ -498,56 +599,56 @@ const [uploadOpen, setUploadOpen] = useState(false);
             hideValues={hideValues}
             moneda={moneda}
           />
-        </section>
+        </TabScroll>
       )}
 
       {/* ── Tab: Proyecciones ───────────────────────────────────────────────── */}
       {tab === 'proyecciones' && (
-        <section className="tab-scroll" style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+        <TabScroll tab={tab} posiciones={scrollPorTab}>
           <ProyeccionesTab data={data} hideValues={hideValues} />
-        </section>
+        </TabScroll>
       )}
 
       {/* ── Tab: Benchmarks ───────────────────────────────────────────────────── */}
       {tab === 'benchmarks' && (
-        <section className="tab-scroll" style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+        <TabScroll tab={tab} posiciones={scrollPorTab}>
           <BenchmarksTab data={data} />
-        </section>
+        </TabScroll>
       )}
 
       {/* ── Tab: Noticias ─────────────────────────────────────────────────────── */}
       {tab === 'noticias' && (
-        <section className="tab-scroll" style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+        <TabScroll tab={tab} posiciones={scrollPorTab}>
           <NoticiasTab data={data} />
-        </section>
+        </TabScroll>
       )}
 
       {/* ── Tab: Calendario (Eventos) ─────────────────────────────────────────── */}
       {tab === 'calendario' && (
-        <section className="tab-scroll" style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+        <TabScroll tab={tab} posiciones={scrollPorTab}>
           <CalendarioTab data={data} />
-        </section>
+        </TabScroll>
       )}
 
       {/* ── Tab: Performance (TIR, duration, paridad de bonos, ratios entre activos) ── */}
       {tab === 'performance' && (
-        <section className="tab-scroll" style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+        <TabScroll tab={tab} posiciones={scrollPorTab}>
           <PerformanceTab data={data} />
-        </section>
+        </TabScroll>
       )}
 
       {/* ── Tab: Ingresos (sueldos/haberes por empleador, ARS/USD) ────────────── */}
       {tab === 'ingresos' && (
-        <section className="tab-scroll" style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+        <TabScroll tab={tab} posiciones={scrollPorTab}>
           <IngresosSection hideValues={hideValues} moneda={moneda} />
-        </section>
+        </TabScroll>
       )}
 
       {/* ── Tab: Gastos Fijos (suscripciones/seguros recurrentes) ─────────────── */}
       {tab === 'gastos-fijos' && (
-        <section className="tab-scroll" style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+        <TabScroll tab={tab} posiciones={scrollPorTab}>
           <GastosFijosSection hideValues={hideValues} moneda={moneda} mepActual={mepActual} />
-        </section>
+        </TabScroll>
       )}
 
       {/* ── Bot flotante ────────────────────────────────────────────────────── */}

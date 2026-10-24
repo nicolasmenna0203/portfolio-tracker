@@ -66,6 +66,21 @@ html, body {
   overflow: hidden;
 }
 
+/* `main` lleva `height:100dvh` propio, pero si la página pone algo antes (el
+   banner de /demo, por ejemplo) ese alto fijo lo empuja fuera de pantalla: el
+   fondo del scroller —y con él el espacio reservado para el FAB— cae debajo
+   del viewport. Con el body como columna flex y `main` tomando el resto, el
+   scroller termina siempre donde termina la pantalla. */
+body {
+  display: flex;
+  flex-direction: column;
+  max-height: 100dvh;
+}
+body > main {
+  flex: 1;
+  min-height: 0;
+}
+
 body {
   background-color: var(--bg);
   color: var(--text);
@@ -145,6 +160,27 @@ input, select, textarea { font-size: 16px; }
   gap: 12px;
 }
 
+/* ── Tenencias: controles ───────────────────────────────────────
+   El thumb del MonthSlider en el extremo (left:100% con translateX(-50%)) y su
+   zona táctil de 44px sobresalen del track: sin contener, `.tab-scroll` crecía
+   a 620px de scrollWidth contra 598 de clientWidth (barra horizontal y perilla
+   cortada en el borde derecho). El padding lateral le deja lugar al radio del
+   thumb y `clip` corta lo que aún sobre sin crear un contexto de scroll
+   (`hidden` sí lo crearía). */
+.tenencias-controles {
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: clip;
+}
+.tenencias-slider {
+  min-width: 0;
+  padding-inline: 10px;
+}
+.dim-selector {
+  min-width: 0;
+  max-width: 100%;
+}
+
 /* ── Tenencias grid ─────────────────────────────────────────── */
 .tenencias-grid {
   display: grid;
@@ -171,6 +207,45 @@ input, select, textarea { font-size: 16px; }
 }
 .scroll-x::-webkit-scrollbar { display: none; }
 
+/* ── Nav de pestañas ────────────────────────────────────────────
+   La fila de pestañas (961px) no entra en el ancho visible (602px): scrollea
+   en horizontal también en desktop, y los degradés de borde avisan que hay más
+   de un lado. Sin ellos, con `scrollbar-width:none`, las últimas 4 pestañas
+   eran invisibles al entrar. */
+.nav-tabs {
+  flex: 1;
+  min-width: 0;
+  scroll-behavior: smooth;
+  /* 2px de holgura: con el nav scrolleado a tope el borde de la última
+     pestaña caía justo 1px fuera del área visible (el scrollWidth es
+     fraccionario) y se veía cortada. */
+  padding-inline: 2px;
+}
+/* Sin esto los botones se comprimen en vez de desbordar y no hay nada que
+   scrollear. */
+.nav-tabs button { flex-shrink: 0; }
+
+.nav-fade {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 28px;
+  pointer-events: none;
+  z-index: 2;
+}
+.nav-fade-izq {
+  left: 0;
+  background: linear-gradient(to right, var(--bg), transparent);
+}
+.nav-fade-der {
+  right: 0;
+  background: linear-gradient(to left, var(--bg), transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nav-tabs { scroll-behavior: auto; }
+}
+
 /* ── Área de contenido del tab: acá vive el scroll vertical ───
    Regla base (no solo mobile): `main` tiene height:100vh fijo y cada
    sección de tab usa flex:1 + minHeight:0, así que cualquier tab cuyo
@@ -181,9 +256,33 @@ input, select, textarea { font-size: 16px; }
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-y: contain;
-  /* espacio para que el botón de chat flotante (fixed, 52px + 24px de
-     margen) no tape la última fila de contenido al scrollear del todo */
-  padding-bottom: 84px;
+}
+
+/* El espacio para el bot flotante NO va como padding-bottom del scroller: los
+   tabs cuyo contenido es un hijo con `flex:1; min-height:0` consumen el padding
+   como espacio del flex y el último elemento vuelve a quedar debajo del FAB
+   (visto en Noticias). Un hijo ::after con alto fijo sí ocupa lugar en el flujo
+   del flex y se comporta igual en los 10 tabs. */
+.tab-scroll::after {
+  content: '';
+  display: block;
+  flex: none;
+  height: 84px;
+}
+
+/* Único scroller vertical por pestaña: `.tab-scroll`.
+   Anidar un segundo scroller rompe el gesto (el wheel/drag lo consume el hijo y
+   la pestaña no scrollea), deja una franja muerta abajo —el hijo mide 84px
+   menos— y corta el contenido con borde duro. Las clases de abajo son
+   contenedores de contenido, no scrollers; el scroll horizontal de tablas
+   anchas sigue permitido (`overflow-x`). */
+.informe-root,
+.proy-root,
+.cal-root,
+.noticias-grid .card-scroll {
+  overflow: visible;
+  flex: none;
+  min-height: 0;
 }
 
 /* ──────────────────────────────────────────
@@ -192,13 +291,13 @@ input, select, textarea { font-size: 16px; }
 ─────────────────────────────────────────── */
 @media (max-width: 768px) {
 
-  /* En mobile el alto fijo no sirve: el contenido de cada tab varía mucho.
-     `main` ocupa el viewport dinámico y el área de tab scrollea por dentro. */
+  /* El alto lo da `body > main { flex:1 }`: acá solo el padding con safe-area.
+     (Antes `height:100dvh` fijo; lo reemplaza el flex del body para que un
+     hermano previo no empuje el fondo del scroller fuera de pantalla.) */
   main {
     padding: calc(10px + env(safe-area-inset-top)) 12px 0 !important;
     padding-left:  calc(12px + env(safe-area-inset-left))  !important;
     padding-right: calc(12px + env(safe-area-inset-right)) !important;
-    height: 100dvh !important;
     gap: 0 !important;
   }
 
@@ -247,20 +346,11 @@ input, select, textarea { font-size: 16px; }
     gap: 0 !important;
     flex-shrink: 0;
   }
-  .mobile-tabs nav {
-    overflow-x: auto;
-    overflow-y: hidden;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-    scroll-snap-type: x proximity;
-    flex: 1;
-    min-width: 0;
-    padding-bottom: 1px;
-  }
-  .mobile-tabs nav::-webkit-scrollbar { display: none; }
+  /* El overflow horizontal y los degradés ya son regla base (.nav-tabs); acá
+     solo el snap y el flex del wrapper. */
+  .mobile-tabs .nav-tabs-wrap { flex: 1 1 100%; }
+  .mobile-tabs nav { padding-bottom: 1px; }
   .mobile-tabs nav button {
-    flex-shrink: 0;
-    scroll-snap-align: start;
     padding: 9px 14px !important;
     font-size: 13px !important;
   }
@@ -274,8 +364,8 @@ input, select, textarea { font-size: 16px; }
 
   /* ── Área de contenido del tab: overflow ya es regla base; acá solo
      el espacio extra para que el bot flotante no tape el final ── */
-  .tab-scroll {
-    padding-bottom: calc(84px + env(safe-area-inset-bottom));
+  .tab-scroll::after {
+    height: calc(84px + env(safe-area-inset-bottom));
   }
 
   /* ── KPI grid: 1 columna ancha + 2 abajo, legible de un vistazo ── */
@@ -328,11 +418,6 @@ input, select, textarea { font-size: 16px; }
     flex: none !important;
   }
   .noticias-grid > * { flex: none !important; }
-  .noticias-grid .card-scroll {
-    flex: none !important;
-    max-height: none !important;
-    overflow: visible !important;
-  }
 
   /* ── Pills / chips: área táctil mínima cómoda ── */
   .pill-touch {
@@ -364,14 +449,6 @@ input, select, textarea { font-size: 16px; }
   /* En la grilla mobile la celda no da el ancho para el monto + yield;
      el dato queda completo en la lista de eventos de abajo. */
   .cal-dia-montos { display: none !important; }
-
-  /* El scroll vertical lo maneja `.tab-scroll`; anidar otro rompe el gesto */
-  .cal-root,
-  .proy-root,
-  .informe-root {
-    overflow: visible !important;
-    flex: none !important;
-  }
 
   /* Proyecciones: el panel de parámetros pasa a ancho completo */
   .proy-controles {

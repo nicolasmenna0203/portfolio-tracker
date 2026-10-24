@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseArgNum, parseFechaDia, parseFechaMes, toMesKey, valorSegunMoneda } from './parser';
+import { parseArgNum, parseFechaDia, parseFechaMes, toMesKey, valorSegunMoneda, decodeHtmlEntities } from './parser';
 
 describe('parseArgNum', () => {
   it('pasa un number directamente', () => {
@@ -85,5 +85,37 @@ describe('valorSegunMoneda', () => {
   it('elige USD o ARS según el parámetro', () => {
     expect(valorSegunMoneda(100, 150000, 'USD')).toBe(100);
     expect(valorSegunMoneda(100, 150000, 'ARS')).toBe(150000);
+  });
+});
+
+describe('decodeHtmlEntities', () => {
+  it('decodifica el caso real de los titulares de Yahoo', () => {
+    expect(decodeHtmlEntities('&quot;Se necesita continuidad&quot;'))
+      .toBe('"Se necesita continuidad"');
+  });
+
+  it('decodifica las entidades nombradas básicas', () => {
+    expect(decodeHtmlEntities('a &amp; b &lt;c&gt; &apos;d&apos;')).toBe("a & b <c> 'd'");
+  });
+
+  it('decodifica numéricas decimales y hexadecimales', () => {
+    expect(decodeHtmlEntities('&#39;hola&#39; &#x2014; chau')).toBe("'hola' — chau");
+  });
+
+  it('deja intactas las entidades desconocidas', () => {
+    expect(decodeHtmlEntities('&noexiste; &amp;')).toBe('&noexiste; &');
+  });
+
+  it('no toca un texto sin entidades', () => {
+    expect(decodeHtmlEntities('YPF sube 3% en Nueva York')).toBe('YPF sube 3% en Nueva York');
+  });
+
+  it('decodifica en una sola pasada: no desescapa de más', () => {
+    // `&amp;quot;` es un `&quot;` escapado a propósito: debe quedar como texto.
+    expect(decodeHtmlEntities('&amp;quot;')).toBe('&quot;');
+  });
+
+  it('ignora code points fuera del rango Unicode', () => {
+    expect(decodeHtmlEntities('&#99999999;')).toBe('&#99999999;');
   });
 });

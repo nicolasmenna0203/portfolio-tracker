@@ -139,10 +139,7 @@ export default function GastosFijosSection({ hideValues, moneda = 'ARS', mepActu
   }
 
   return (
-    <div style={{
-      display: 'flex', flexDirection: 'column', gap: 14, flex: 1, minHeight: 0,
-      overflowY: 'auto', WebkitOverflowScrolling: 'touch', paddingBottom: 24,
-    }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       {error && (
         <div style={{
           background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.3)',

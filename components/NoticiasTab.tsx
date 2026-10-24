@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import type { DashboardData, NoticiaItem } from '@/types';
 import { useCalendario } from '@/lib/useCalendario';
 import { TIPOS_VALIDOS, TICKERS_INCLUIR, TICKERS_EXCLUIR } from '@/lib/tickersElegibles';
+import { decodeHtmlEntities } from '@/lib/parser';
 
 interface Props {
   data: DashboardData;
@@ -64,12 +65,12 @@ function ListaNoticias({ noticias, mostrarTicker }: { noticias: NoticiaItem[]; m
             borderBottom: i < noticias.length - 1 ? '1px solid var(--border-subtle)' : 'none',
           }}
         >
-          <span style={{ fontSize: 13, color: 'var(--text)', fontWeight: 500, lineHeight: 1.35 }}>{n.titulo}</span>
+          <span style={{ fontSize: 13, color: 'var(--text)', fontWeight: 500, lineHeight: 1.35 }}>{decodeHtmlEntities(n.titulo)}</span>
           <span style={{ fontSize: 10.5, color: 'var(--muted)', display: 'flex', gap: 8, alignItems: 'center' }}>
             {mostrarTicker && n.ticker && (
               <span style={{ fontWeight: 700, color: 'var(--primary)' }}>{n.ticker}</span>
             )}
-            {n.fuente} · {fmtFechaRelativa(n.fecha)}
+            {decodeHtmlEntities(n.fuente)} · {fmtFechaRelativa(n.fecha)}
           </span>
         </a>
       ))}

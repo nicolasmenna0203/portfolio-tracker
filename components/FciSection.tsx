@@ -99,7 +99,7 @@ export default function FciSection({ tenencias }: Props) {
 
       <div style={{
         background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 12,
-        overflow: 'auto', maxHeight: 420,
+        overflowX: 'auto',
       }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
           <thead style={{ position: 'sticky', top: 0, background: 'var(--card)', zIndex: 1 }}>

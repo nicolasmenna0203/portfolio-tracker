@@ -183,8 +183,12 @@ function DimChips({ rows, totalAnterior: _, moneda }: { rows: DimRow[]; totalAnt
               )}
             </div>
 
-            {/* etiqueta Δ debajo */}
-            <div style={{ position: 'relative', height: 16, marginTop: 3 }}>
+            {/* etiqueta Δ debajo. `overflowX:'clip'`: la etiqueta se centra en
+                `left:X%` con translateX(-50%), así que con la barra casi llena
+                sobresalía por derecha y hacía crecer el scrollWidth del tab
+                (barra horizontal en toda la pestaña). `clip` recorta sin crear
+                un contexto de scroll. */}
+            <div style={{ position: 'relative', height: 16, marginTop: 3, overflowX: 'clip' }}>
               <span style={{
                 position: 'absolute',
                 left: `${labelAt}%`, top: 0,

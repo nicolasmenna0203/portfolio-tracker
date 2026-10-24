@@ -20,6 +20,9 @@ interface Props {
 // desaparece del set visible).
 const EMPLEADOR_COLORS = ['#cfab6e', '#5fb896', '#8d7fc7', '#d9824e', '#6fa8d6', '#c15c4a'];
 
+// Cuántas acreditaciones se muestran antes de pedir "Ver todos".
+const PAGE_INGRESOS = 12;
+
 interface TooltipPayload {
   name: string;
   value: number;
@@ -53,6 +56,7 @@ export default function IngresosSection({ hideValues, moneda = 'ARS' }: Props) {
   const [resp, setResp] = useState<IngresosResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [verTodos, setVerTodos] = useState(false);
   const pathname = usePathname();
   const apiBase = pathname?.startsWith('/demo') ? '/api/demo' : '/api';
 
@@ -102,6 +106,15 @@ export default function IngresosSection({ hideValues, moneda = 'ARS' }: Props) {
   // — así la posición geométrica del tick siempre coincide con su barra.
   const xTickStep = chartData.length > 8 ? Math.ceil(chartData.length / 8) : 1;
 
+  // Las acreditaciones se muestran de a tandas en flujo normal: un contenedor
+  // con alto fijo + overflow robaba el gesto de scroll a la pestaña (dos
+  // scrollbars pegadas y la página no scrolleaba con el cursor encima).
+  const ingresosRecientes = useMemo(
+    () => [...(resp?.ingresos ?? [])].reverse(),
+    [resp],
+  );
+  const visibles = verTodos ? ingresosRecientes : ingresosRecientes.slice(0, PAGE_INGRESOS);
+
   const kpis = useMemo(() => {
     if (!resp || resp.ingresos.length === 0) return null;
     const totalArs = resp.ingresos.reduce((s, r) => s + r.montoArs, 0);
@@ -142,10 +155,7 @@ export default function IngresosSection({ hideValues, moneda = 'ARS' }: Props) {
   }
 
   return (
-    <div style={{
-      display: 'flex', flexDirection: 'column', gap: 14, flex: 1, minHeight: 0,
-      overflowY: 'auto', WebkitOverflowScrolling: 'touch', paddingBottom: 24,
-    }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       <div className="kpi-grid">
         <KPICard
           label={`Total acumulado (${moneda})`}
@@ -214,8 +224,8 @@ export default function IngresosSection({ hideValues, moneda = 'ARS' }: Props) {
         <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--muted)', margin: '0 0 12px' }}>
           Detalle de acreditaciones
         </p>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 2, maxHeight: 320, overflowY: 'auto' }}>
-          {[...resp.ingresos].reverse().map((r, i) => (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          {visibles.map((r, i) => (
             <div
               key={i}
               style={{
@@ -236,6 +246,22 @@ export default function IngresosSection({ hideValues, moneda = 'ARS' }: Props) {
             </div>
           ))}
         </div>
+
+        {ingresosRecientes.length > PAGE_INGRESOS && (
+          <button
+            onClick={() => setVerTodos((v) => !v)}
+            style={{
+              marginTop: 10, width: '100%', padding: '9px 12px',
+              background: 'transparent', border: '1px solid var(--border)',
+              borderRadius: 8, cursor: 'pointer',
+              fontSize: 12, fontWeight: 600, color: 'var(--primary)',
+            }}
+          >
+            {verTodos
+              ? 'Ver menos'
+              : `Ver todos (${ingresosRecientes.length})`}
+          </button>
+        )}
       </div>
     </div>
   );
