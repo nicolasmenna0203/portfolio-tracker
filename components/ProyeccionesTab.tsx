@@ -564,9 +564,13 @@ export default function ProyeccionesTab({ data, hideValues }: Props) {
     : null;
 
   const finalProyectado = proyeccion[proyeccion.length - 1]?.proyectado ?? totalActual;
-  const gananciaProyectada = finalProyectado - totalActual;
   const aportesTotales = aporte * horizonte;
-  const rentabilidadPura = gananciaProyectada - aportesTotales;
+  // El capital proyectado se descompone en tres partes disjuntas:
+  //   capital = cartera hoy + aportes acumulados + interés generado
+  // La "ganancia" es solo la tercera: lo que aportás es plata tuya que cambiás
+  // de lugar, no una ganancia. Antes acá se mostraba (final - totalActual), que
+  // incluía los aportes y por eso duplicaba la cifra.
+  const interesGenerado = finalProyectado - totalActual - aportesTotales;
 
   // ── Ticks del eje X (mostrar cada N puntos para no saturar)
   const totalPuntos = chartData.length;
@@ -640,11 +644,13 @@ export default function ProyeccionesTab({ data, hideValues }: Props) {
             <p style={{ margin: '0 0 4px', fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--muted)' }}>
               Ganancia total
             </p>
-            <p style={{ margin: 0, fontSize: 22, fontWeight: 700, color: 'var(--up)', letterSpacing: '-0.03em' }}>
-              {hideValues ? '***' : `+${fmtUSD(gananciaProyectada)}`}
+            <p style={{ margin: 0, fontSize: 22, fontWeight: 700, color: interesGenerado >= 0 ? 'var(--up)' : 'var(--down)', letterSpacing: '-0.03em' }}>
+              {hideValues ? '***' : `${interesGenerado >= 0 ? '+' : '−'}${fmtUSD(Math.abs(interesGenerado))}`}
             </p>
             <p style={{ margin: '4px 0 0', fontSize: 11, color: 'var(--muted)' }}>
-              aportes: {hideValues ? '***' : fmtUSD(aportesTotales)} · interés: {hideValues ? '***' : fmtUSD(Math.max(0, rentabilidadPura))}
+              {hideValues
+                ? '***'
+                : `cartera hoy ${fmtUSD(totalActual)} + aportes ${fmtUSD(aportesTotales)} + interés ${fmtUSD(interesGenerado)}`}
             </p>
           </div>
 

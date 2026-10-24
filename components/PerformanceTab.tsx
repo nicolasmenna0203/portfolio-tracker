@@ -26,7 +26,7 @@ const SUB_TABS: { id: SubTab; label: string }[] = [
 export default function PerformanceTab({ data }: Props) {
   const { tenenciasPorMes } = data;
 
-  const { tenencias, tickersUsa } = useMemo(() => {
+  const { tenencias, tickersUsa, tickersFciVariable } = useMemo(() => {
     const meses = Object.keys(tenenciasPorMes).sort();
     const ultimoMes = meses[meses.length - 1];
     return tickersDeCartera(tenenciasPorMes[ultimoMes] ?? []);
@@ -62,7 +62,7 @@ export default function PerformanceTab({ data }: Props) {
       </div>
 
       {subTab === 'fija' && <RentaFijaSection tenencias={tenencias} />}
-      {subTab === 'variable' && <RentaVariableSection tickersUsa={tickersUsa} tenencias={tenencias} />}
+      {subTab === 'variable' && <RentaVariableSection tickersUsa={tickersUsa} tenencias={tenencias} tickersFci={tickersFciVariable} />}
       {subTab === 'carry' && <CarryTradeSection tenencias={tenencias} />}
       {subTab === 'fci' && <FciSection tenencias={tenencias} />}
       {subTab === 'ratios' && <RatiosTab data={data} />}

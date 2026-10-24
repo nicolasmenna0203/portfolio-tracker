@@ -1,5 +1,6 @@
 import type { EventoCalendario } from '@/types';
 import { getCrumb, UA } from './yahooCrumb';
+import { aliasYahoo } from './tickersElegibles';
 
 // Por qué quoteSummary necesita cookie+crumb:
 // docs/decisiones/0008-yahoo-cookie-crumb-y-yield-desde-chart.md
@@ -18,7 +19,8 @@ async function fetchEarningsTicker(
   ticker: string,
   cred: { crumb: string; cookie: string },
 ): Promise<EventoCalendario[]> {
-  const url = `https://query1.finance.yahoo.com/v10/finance/quoteSummary/${encodeURIComponent(ticker)}?modules=calendarEvents&crumb=${encodeURIComponent(cred.crumb)}`;
+  // aliasYahoo: el ticker de cartera puede no ser el símbolo del proveedor (BRKB → BRK-B).
+  const url = `https://query1.finance.yahoo.com/v10/finance/quoteSummary/${encodeURIComponent(aliasYahoo(ticker))}?modules=calendarEvents&crumb=${encodeURIComponent(cred.crumb)}`;
   const res = await fetch(url, {
     headers: { 'User-Agent': UA, Cookie: cred.cookie },
     signal: AbortSignal.timeout(8000),

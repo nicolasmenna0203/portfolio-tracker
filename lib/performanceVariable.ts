@@ -1,6 +1,10 @@
+// Por qué un fondo CAFCI puede aparecer en esta lista, y qué significa `esFci`:
+// docs/decisiones/0020-fuente-de-precio-por-naturaleza-del-instrumento.md
+
 import type { HistoricoResponse, PerformanceVariableResponse, PrecioHistoricoPunto, RangoHistorico, StockPerformance } from '@/types';
 import { datosAcciones } from './precios';
 import { fetchFundamentals } from './yahooFundamentals';
+import { fetchFciMetricsRentaVariable } from './fciCocos';
 import { aliasYahoo } from './tickersElegibles';
 
 const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0 Safari/537.36';
@@ -10,17 +14,56 @@ const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0 Safari/537.36
  * (P/E, market cap, rango 52 semanas, variación 1D vía quoteSummary) para el
  * universo de acciones/CEDEARs/ETF de la cartera actual. Tickers sin dato en
  * ninguna de las dos fuentes se omiten del resultado en vez de romperlo.
+ *
+ * `tickersFci` son posiciones de renta variable que en realidad son fondos
+ * CAFCI (no cotizan en Yahoo): se resuelven contra la planilla y entran a la
+ * misma lista con `esFci`, para que el total del tab cierre con el Resumen.
+ * Sin esto quedaban fuera de las dos pestañas y su valor no sumaba en ninguna.
  */
 export async function fetchPerformanceVariable(
   tickersUsa: string[],
   tenencias: Record<string, number> = {},
+  tickersFci: string[] = [],
 ): Promise<PerformanceVariableResponse> {
-  const [datos, fundamentals] = await Promise.all([
+  const [datos, fundamentals, fciMetrics] = await Promise.all([
     datosAcciones(tickersUsa),
     fetchFundamentals(tickersUsa),
+    // La planilla es una sola descarga cacheada; si falla, las acciones
+    // normales no se pierden por eso.
+    tickersFci.length > 0
+      ? fetchFciMetricsRentaVariable().catch(() => new Map())
+      : Promise.resolve(new Map()),
   ]);
 
   const acciones: StockPerformance[] = [];
+
+  for (const ticker of tickersFci) {
+    const m = fciMetrics.get(ticker.toUpperCase());
+    if (!m || !(m.vcp > 0)) continue;
+    acciones.push({
+      ticker,
+      nombre: m.nombreFondo,
+      px: m.vcp,
+      variacion1d: m.variacionDiaria,
+      // El mapeo rendimiento → columna de variación es deliberado: el fondo no
+      // tiene serie de precios propia, y así la fila comparte las columnas de
+      // la tabla con el resto en vez de necesitar otra vista.
+      variacion1m: m.rendimientoMes,
+      variacionYtd: m.rendimientoAnio,
+      variacion1a: m.rendimiento12Meses,
+      peRatio: null,
+      marketCap: null,
+      fiftyTwoWeekLow: null,
+      fiftyTwoWeekHigh: null,
+      dividendYield: null,
+      esFci: true,
+      fciMoneda: m.moneda,
+      fciFecha: m.fecha,
+      fciRezagado: m.rezagado,
+      ...(tenencias[ticker] ? { tenenciaUsd: tenencias[ticker] } : {}),
+    });
+  }
+
   for (const ticker of tickersUsa) {
     const d = datos[ticker];
     const f = fundamentals[ticker];

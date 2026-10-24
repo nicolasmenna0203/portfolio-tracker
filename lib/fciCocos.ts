@@ -1,6 +1,10 @@
 import { inflateRawSync } from 'zlib';
 
 // Decisión y alternativas descartadas: docs/decisiones/0005-parsear-cafci-con-zlib-nativo.md
+// Por qué los rendimientos son `number | null` y no `number`:
+// docs/decisiones/0019-sin-dato-no-es-cero-en-rendimientos-de-fci.md
+// Por qué hay dos mapeos de fondos (FCI y renta variable):
+// docs/decisiones/0020-fuente-de-precio-por-naturaleza-del-instrumento.md
 //
 // ── FCI del broker, vía la Planilla Diaria pública de CAFCI ────────────────
 //
@@ -11,6 +15,14 @@ import { inflateRawSync } from 'zlib';
 // "Cocos Asset Management S.A.". No hay API JSON pública: la de Cocos exige
 // login de broker y la de CAFCI (api.cafci.org.ar) devuelve 401 sin
 // documentación de auth — esta planilla es la única fuente sin credenciales.
+//
+// Ojo con el rezago: la planilla no publica todos los fondos al mismo día.
+// Algunos (típicamente los de valuación no diaria) aparecen con la fecha del
+// día hábil anterior y con **todas** las columnas de comparación vacías —
+// VCP anterior, variación diaria, mes, año y 12 meses. Por eso los
+// rendimientos son `number | null` y no `number`: leer esas celdas como 0
+// convertía "CAFCI no lo informó" en "el fondo no rindió nada", que para un
+// fondo en dólares es un dato falso y verosímil a la vez.
 //
 // El .xlsx es un ZIP (DEFLATE) con XML adentro; se parsea a mano con el
 // zlib nativo de Node en vez de agregar una librería de xlsx: el paquete
@@ -29,18 +41,38 @@ const MAPEO_FCI_COCOS: Record<string, string> = {
   COCOSPPA:   'Cocos Pesos Plus - Clase A',
 };
 
+// Fondos de la misma planilla que el Sheet clasifica como renta variable
+// (TIPO=ETF), no como FCI. Van en un mapa aparte a propósito: la pestaña de FCI
+// lista `MAPEO_FCI_COCOS` y tiene que seguir contando solo los fondos que el
+// usuario considera FCI, mientras la de Renta Variable resuelve estos por acá.
+// La clasificación del Sheet no se toca; lo único que cambia es de qué fuente
+// sale el precio, que se elige por naturaleza del instrumento.
+const MAPEO_FCI_RENTA_VARIABLE: Record<string, string> = {
+  COCOACCA:   'Cocos Acciones - Clase A',
+};
+
 export interface FciMetric {
   ticker: string;           // ticker cartera (ej. "COCORMA")
   nombreFondo: string;       // nombre completo en CAFCI (ej. "Cocos Rendimiento - Clase A")
   moneda: string;             // ARS o USD
   horizonte: string;          // "Cor" (corto), "Med" (medio), "Lar" (largo) plazo
   vcp: number;                  // valor de la cuotaparte, moneda del fondo
-  variacionDiaria: number;       // %, tanto por uno
-  rendimientoMes: number;         // % desde el último cierre de mes, tanto por uno
-  rendimientoAnio: number;         // % desde el cierre del año anterior, tanto por uno
-  rendimiento12Meses: number;       // % interanual, tanto por uno
+  // Los rendimientos son `null` cuando la planilla no los publica para esa fila
+  // (celda vacía). No son 0: un fondo rezagado trae el VCP pero sin ninguna
+  // columna de comparación, y mostrar 0,0% ahí afirma "no rindió nada" sobre un
+  // dato que CAFCI no informó. La UI y el MCP los muestran como "s/d".
+  variacionDiaria: number | null;    // %, tanto por uno
+  rendimientoMes: number | null;      // % desde el último cierre de mes, tanto por uno
+  rendimientoAnio: number | null;      // % desde el cierre del año anterior, tanto por uno
+  rendimiento12Meses: number | null;    // % interanual, tanto por uno
   patrimonio: number;                // patrimonio del fondo (clase), en moneda del fondo
   fecha: string;                      // "YYYY-MM-DD"
+  /**
+   * true si la fila viene con fecha anterior a la más reciente de la planilla:
+   * CAFCI publica algunos fondos con un día de rezago y sin columnas de
+   * comparación. Permite explicar en la UI por qué no hay rendimientos.
+   */
+  rezagado: boolean;
 }
 
 const CAFCI_PLANILLA_URL = 'https://api.pub.cafci.org.ar/pb_get';
@@ -135,6 +167,32 @@ function parseNum(v: string | undefined): number {
   return Number.isFinite(n) ? n : 0;
 }
 
+/**
+ * Igual que `parseNum` pero distingue "celda vacía" de "cero": las columnas de
+ * variación y rendimiento vienen en blanco en los fondos que la planilla
+ * publica con rezago, y ahí 0 sería un dato inventado.
+ */
+function parseNumOpt(v: string | undefined): number | null {
+  if (v == null || v.trim() === '') return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+
+/** Divide por 100 preservando el `null` (porcentaje → tanto por uno). */
+function pctOpt(v: number | null): number | null {
+  return v == null ? null : v / 100;
+}
+
+/**
+ * Fecha de la planilla ("DD/MM/AA") a clave ordenable ("AAAA-MM-DD"), para
+ * comparar el rezago entre filas sin depender del orden del archivo.
+ */
+function fechaOrdenable(f: string): string {
+  const m = /^(\d{2})\/(\d{2})\/(\d{2})$/.exec(f.trim());
+  if (!m) return '';
+  return `20${m[3]}-${m[2]}-${m[1]}`;
+}
+
 async function fetchPlanillaRows(): Promise<string[][]> {
   const res = await fetch(`${CAFCI_PLANILLA_URL}?d=${Date.now()}`, {
     headers: {
@@ -159,16 +217,26 @@ async function fetchPlanillaRows(): Promise<string[][]> {
  * los fondos de Cocos Capital presentes en MAPEO_FCI_COCOS. Ignora el resto
  * del universo de ~4200 fondos que trae la planilla (de todas las gestoras).
  */
-export async function fetchFciMetrics(): Promise<Map<string, FciMetric>> {
+async function fetchTodasLasMetricas(): Promise<Map<string, FciMetric>> {
   if (cache && Date.now() - cache.ts < CACHE_MS) return cache.metrics;
 
   const rows = await fetchPlanillaRows();
 
   // Nombre de fondo+clase (columna A) → ticker cartera, para no recorrer las
-  // ~4200 filas por cada uno de los 4 tickers buscados.
+  // ~4200 filas por cada uno de los tickers buscados. Se resuelven los dos
+  // mapas en la misma pasada: es el mismo archivo de ~1MB para ambos.
   const nombreATicker = new Map<string, string>();
-  for (const [ticker, nombre] of Object.entries(MAPEO_FCI_COCOS)) {
+  for (const [ticker, nombre] of Object.entries({ ...MAPEO_FCI_COCOS, ...MAPEO_FCI_RENTA_VARIABLE })) {
     nombreATicker.set(nombre, ticker);
+  }
+
+  // Fecha más reciente de toda la planilla: es la del día de publicación, y
+  // sirve de referencia para marcar como rezagadas las filas que quedaron un
+  // día atrás (ver `rezagado` en FciMetric).
+  let fechaMax = '';
+  for (const row of rows) {
+    const f = fechaOrdenable(row[4] ?? '');
+    if (f > fechaMax) fechaMax = f;
   }
 
   const metrics = new Map<string, FciMetric>();
@@ -181,21 +249,49 @@ export async function fetchFciMetrics(): Promise<Map<string, FciMetric>> {
     // Columnas de la planilla (0-based): A nombre, B moneda, D horizonte,
     // E fecha, F VCP actual, H var% diaria, J rend% mes, K rend% año,
     // L rend% 12 meses, O patrimonio actual.
+    const fecha = row[4] ?? '';
     metrics.set(ticker, {
       ticker,
       nombreFondo,
       moneda: row[1] ?? '',
       horizonte: row[3] ?? '',
       vcp: parseNum(row[5]),
-      variacionDiaria: parseNum(row[7]) / 100,
-      rendimientoMes: parseNum(row[9]) / 100,
-      rendimientoAnio: parseNum(row[10]) / 100,
-      rendimiento12Meses: parseNum(row[11]) / 100,
+      variacionDiaria: pctOpt(parseNumOpt(row[7])),
+      rendimientoMes: pctOpt(parseNumOpt(row[9])),
+      rendimientoAnio: pctOpt(parseNumOpt(row[10])),
+      rendimiento12Meses: pctOpt(parseNumOpt(row[11])),
       patrimonio: parseNum(row[14]),
-      fecha: row[4] ?? '',
+      fecha,
+      rezagado: fechaMax !== '' && fechaOrdenable(fecha) < fechaMax,
     });
   }
 
   cache = { metrics, ts: Date.now() };
   return metrics;
+}
+
+function subconjunto(todas: Map<string, FciMetric>, mapeo: Record<string, string>): Map<string, FciMetric> {
+  const out = new Map<string, FciMetric>();
+  for (const ticker of Object.keys(mapeo)) {
+    const m = todas.get(ticker);
+    if (m) out.set(ticker, m);
+  }
+  return out;
+}
+
+/**
+ * Métricas de los fondos que el usuario clasifica como FCI. Es lo que alimenta
+ * la pestaña de FCI y la tool `renta_fija_fci` del MCP.
+ */
+export async function fetchFciMetrics(): Promise<Map<string, FciMetric>> {
+  return subconjunto(await fetchTodasLasMetricas(), MAPEO_FCI_COCOS);
+}
+
+/**
+ * Métricas de los fondos CAFCI que la cartera clasifica como renta variable
+ * (ver MAPEO_FCI_RENTA_VARIABLE). Separado de `fetchFciMetrics` para que la
+ * pestaña de FCI siga contando solo los fondos de tipo FCI.
+ */
+export async function fetchFciMetricsRentaVariable(): Promise<Map<string, FciMetric>> {
+  return subconjunto(await fetchTodasLasMetricas(), MAPEO_FCI_RENTA_VARIABLE);
 }

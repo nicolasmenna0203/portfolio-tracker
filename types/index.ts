@@ -219,12 +219,19 @@ export interface FciPerformance {
   moneda: string;
   horizonte: string;
   vcp: number;
-  variacionDiaria: number;
-  rendimientoMes: number;
-  rendimientoAnio: number;
-  rendimiento12Meses: number;
+  /**
+   * `null` cuando la planilla de CAFCI no publica la columna para esa fila
+   * (fondos con un día de rezago vienen sin ninguna comparación). Se muestra
+   * "s/d", nunca 0,0%.
+   */
+  variacionDiaria: number | null;
+  rendimientoMes: number | null;
+  rendimientoAnio: number | null;
+  rendimiento12Meses: number | null;
   patrimonio: number;
   fecha: string;
+  /** La fila viene con fecha anterior a la última publicada en la planilla. */
+  rezagado: boolean;
   /** Presente solo si el ticker está en la cartera actual. */
   tenenciaUsd?: number;
 }
@@ -323,6 +330,21 @@ export interface StockPerformance {
   dividendYield: number | null;
   /** Presente solo si el ticker está en la cartera actual. */
   tenenciaUsd?: number;
+  /**
+   * Presente solo en las posiciones de renta variable que son fondos CAFCI
+   * (ej. un fondo de acciones del broker). Ahí `px` es el VCP del fondo en
+   * `fciMoneda`, no un precio de mercado en USD, y las variaciones son los
+   * rendimientos que publica la planilla: diaria, mes (en variacion1m), año
+   * (en variacionYtd) y 12 meses (en variacion1a). No tienen P/E, market cap,
+   * rango de 52 semanas ni yield.
+   */
+  esFci?: boolean;
+  /** Moneda del VCP cuando `esFci` (ARS o USD); el resto de las filas va en USD. */
+  fciMoneda?: string;
+  /** Fecha del dato de la planilla cuando `esFci` ("DD/MM/AA"). */
+  fciFecha?: string;
+  /** La planilla publica este fondo con rezago y sin columnas de variación. */
+  fciRezagado?: boolean;
 }
 
 export interface PerformanceVariableResponse {

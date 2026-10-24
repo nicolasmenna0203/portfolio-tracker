@@ -10,8 +10,11 @@ export async function POST(req: NextRequest) {
     const payload = await req.json().catch(() => ({}));
     const tickersUsa: string[] = Array.isArray(payload.tickersUsa) ? payload.tickersUsa.filter(Boolean) : [];
     const tenencias: Record<string, number> = payload.tenencias && typeof payload.tenencias === 'object' ? payload.tenencias : {};
+    // Posiciones de renta variable que son fondos CAFCI: se resuelven contra la
+    // planilla, no contra Yahoo (ver lib/performanceVariable.ts).
+    const tickersFci: string[] = Array.isArray(payload.tickersFci) ? payload.tickersFci.filter(Boolean) : [];
 
-    const body: PerformanceVariableResponse = await fetchPerformanceVariable(tickersUsa, tenencias);
+    const body: PerformanceVariableResponse = await fetchPerformanceVariable(tickersUsa, tenencias, tickersFci);
 
     return NextResponse.json(body);
   } catch (err) {

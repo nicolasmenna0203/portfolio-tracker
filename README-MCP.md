@@ -28,8 +28,8 @@ Los meses se piden en formato `YYYY-MM` (ej. `2026-07`). Si se omite, se usa el 
 |---|---|---|
 | `calendario_cobros` | Dividendos, cupones y amortizaciones próximas con monto neto estimado, más el yield de cada posición | Yahoo, Nasdaq, bonistas.com |
 | `renta_fija_bonos` | TIR, TNA, duration, paridad y vencimiento de los bonos en cartera, con ponderados por grupo de tasa | bonistas.com |
-| `renta_fija_fci` | VCP y rendimientos (día/mes/año/12m) de los FCI del broker | Planilla CAFCI |
-| `renta_variable_acciones` | Precio, variaciones, P/E, market cap, 52 semanas y dividend yield | Yahoo Finance |
+| `renta_fija_fci` | VCP y rendimientos (día/mes/año/12m) de los FCI del broker. Un rendimiento en `null` es "no informado", no 0% | Planilla CAFCI |
+| `renta_variable_acciones` | Precio, variaciones, P/E, market cap, 52 semanas y dividend yield. Las filas con `es_fci` traen VCP en `moneda_vcp` y rendimientos de CAFCI en vez de precio de mercado | Yahoo Finance + Planilla CAFCI |
 | `comparar_benchmarks` | Cartera vs. S&P 500, inflación, MEP, Bitcoin y oro (índice base 100) | Varias |
 | `ratio_activos` | Fuerza relativa entre dos activos: ratio A/B, percentil, z-score, correlación y beta. Sin argumentos lista los pares guardados | Yahoo Finance |
 

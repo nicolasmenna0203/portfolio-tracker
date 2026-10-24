@@ -639,39 +639,48 @@ async function rentaFijaFci() {
   const enCartera = res.fondos.filter((f) => f.tenenciaUsd != null);
   const lista = enCartera.length > 0 ? enCartera : res.fondos;
 
+  // null = CAFCI no publicó la columna para esa fila (fondo con un día de
+  // rezago). No se convierte a 0: el modelo tiene que poder decir "sin dato".
+  const pct = (v: number | null) => (v == null ? null : round(v * 100));
+
   return {
     fuente: 'Planilla pública diaria de CAFCI (fondos del broker).',
     solo_en_cartera: enCartera.length > 0,
+    nota_rendimientos:
+      'Un rendimiento en null significa que la planilla no lo informa para ese fondo (viene con un día de rezago y sin columnas de comparación), no que haya rendido 0%. Decí "sin dato" y, si importa, que el dato es al día que indica fecha_dato.',
     fondos: lista.map((f) => ({
       ticker: f.ticker,
       nombre: f.nombreFondo,
       moneda: f.moneda,
       horizonte: f.horizonte,
       vcp: f.vcp,
-      variacion_diaria_pct: round(f.variacionDiaria * 100),
-      rendimiento_mes_pct: round(f.rendimientoMes * 100),
-      rendimiento_anio_pct: round(f.rendimientoAnio * 100),
-      rendimiento_12m_pct: round(f.rendimiento12Meses * 100),
+      variacion_diaria_pct: pct(f.variacionDiaria),
+      rendimiento_mes_pct: pct(f.rendimientoMes),
+      rendimiento_anio_pct: pct(f.rendimientoAnio),
+      rendimiento_12m_pct: pct(f.rendimiento12Meses),
       patrimonio: f.patrimonio,
       fecha_dato: f.fecha,
+      dato_rezagado: f.rezagado,
       tenencia_usd: f.tenenciaUsd == null ? null : round(f.tenenciaUsd),
     })),
   };
 }
 
 async function rentaVariableAcciones() {
-  const { tickersUsa, tenencias } = await insumosDeCartera();
-  if (tickersUsa.length === 0) {
+  const { tickersUsa, tenencias, tickersFciVariable } = await insumosDeCartera();
+  if (tickersUsa.length === 0 && tickersFciVariable.length === 0) {
     return { error: 'No hay acciones ni ETFs elegibles en la cartera.' };
   }
 
-  const clave = `perf-variable:${tickersUsa.join(',')}`;
-  const res = await cacheado(clave, () => fetchPerformanceVariable(tickersUsa, tenencias));
+  const clave = `perf-variable:${tickersUsa.join(',')}|${tickersFciVariable.join(',')}`;
+  const res = await cacheado(clave, () => fetchPerformanceVariable(tickersUsa, tenencias, tickersFciVariable));
 
   const pct = (v: number | null) => (v == null ? null : round(v * 100));
 
   return {
     nota: 'Variaciones de precio de mercado del activo subyacente, no del valor de tu tenencia (que además depende de cuándo compraste y de cuántas unidades tenés).',
+    nota_fondos:
+      'Las posiciones con es_fci=true son fondos comunes de inversión que la cartera clasifica como renta variable: no cotizan en el proveedor de precios, así que "precio" es el VCP en moneda_vcp (puede ser ARS, no USD) y las variaciones de 1 mes / YTD / 1 año son los rendimientos de mes, año y 12 meses que publica CAFCI. No tienen P/E, market cap ni rango de 52 semanas. No compares su VCP contra el precio en USD de una acción.',
     acciones: res.acciones.map((a) => ({
       ticker: a.ticker,
       nombre: a.nombre ?? null,
@@ -686,6 +695,9 @@ async function rentaVariableAcciones() {
       maximo_52s: a.fiftyTwoWeekHigh,
       dividend_yield_pct: pct(a.dividendYield),
       tenencia_usd: a.tenenciaUsd == null ? null : round(a.tenenciaUsd),
+      ...(a.esFci
+        ? { es_fci: true, moneda_vcp: a.fciMoneda ?? null, fecha_dato: a.fciFecha ?? null, dato_rezagado: a.fciRezagado ?? false }
+        : {}),
     })),
   };
 }
@@ -1036,6 +1048,8 @@ Las herramientas de mercado (\`calendario_cobros\`, \`renta_fija_bonos\`, \`rent
 - **Montos de dividendos**: van netos de retenciones (30% de origen + 0,6% de impuesto al cheque). No descuentan la comisión del depositario, así que el neto real puede ser 1-2% menor. Los bonos ARG no tienen retención.
 - **Yield vs. cobro**: el yield publicado es bruto (para comparar con screeners); el cobro anual estimado va neto. Son inconsistentes a propósito — no los mezcles en la misma frase sin aclarar.
 - **TIR de bonos**: solo comparables dentro del mismo grupo de tasa. Una TIR de un bono CER contra una de un hard-dollar no dice nada.
+- **Rendimientos de FCI en null**: la planilla de CAFCI publica algunos fondos con un día de rezago y sin columnas de comparación. Un rendimiento en null es "no informado", no 0%: decí que no hay dato a esa fecha en vez de reportar que el fondo no rindió nada.
+- **Fondos dentro de renta variable**: en \`renta_variable_acciones\`, las posiciones con \`es_fci=true\` son FCI que la cartera clasifica como renta variable. Su "precio" es el VCP en \`moneda_vcp\` (puede ser ARS) y sus variaciones son rendimientos de CAFCI, no variaciones de precio de mercado: no las pongas en el mismo ranking que las acciones sin aclararlo, y no las conviertas a USD por tu cuenta.
 - **Benchmarks**: están en índice base 100, no son precios. Y la serie de la cartera sube también por aportes nuevos, no solo por rendimiento: para rendimiento puro usá \`resumen_cartera\` o \`evolucion_mensual\`.
 
 Cuando una de estas sutilezas afecte la respuesta, decila. Cuando no, no la menciones.

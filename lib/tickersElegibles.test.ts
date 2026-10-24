@@ -43,6 +43,27 @@ describe('tickersDeCartera', () => {
     expect(tickersUsa).toEqual([]);
   });
 
+  // No alcanza con excluirlo de Yahoo: es una posición de renta variable real,
+  // y si no sale por ninguna lista su valor desaparece del total del tab.
+  it('devuelve el fondo clasificado como renta variable en tickersFciVariable', () => {
+    const { tickersUsa, tickersFciVariable } = tickersDeCartera([
+      item({ ticker: 'COCOACCA', TIPO: 'ETF', tenencia_usd: 457 }),
+    ]);
+    expect(tickersUsa).toEqual([]);              // no va a Yahoo
+    expect(tickersFciVariable).toEqual(['COCOACCA']); // sí va a CAFCI
+  });
+
+  it('no mete en tickersFciVariable a un fondo que el Sheet clasifica como FCI', () => {
+    const { tickersFciVariable } = tickersDeCartera([item({ ticker: 'COCOACCA', TIPO: 'FCI' })]);
+    expect(tickersFciVariable).toEqual([]);
+  });
+
+  it('no marca como fondo a una acción común', () => {
+    const { tickersUsa, tickersFciVariable } = tickersDeCartera([item({ ticker: 'BRKB', TIPO: 'ACCION' })]);
+    expect(tickersUsa).toEqual(['BRKB']);
+    expect(tickersFciVariable).toEqual([]);
+  });
+
   it('detecta bonos ARG mapeados para tickersArg', () => {
     const { tickersArg } = tickersDeCartera([item({ ticker: 'GD30', TIPO: 'BONO', SECTOR_GEO: 'ARG' })]);
     expect(tickersArg).toEqual(['GD30']);

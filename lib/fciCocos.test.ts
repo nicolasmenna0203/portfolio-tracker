@@ -93,11 +93,45 @@ const SHEET_XML =
   celda('L2789', '32.188', false) +
   celda('O2789', '266846461064.28', false) +
   '</row>' +
+  // Fondo rezagado: la planilla real lo publica con la fecha del día hábil
+  // anterior y TODAS las columnas de comparación vacías (sin VCP previo, sin
+  // variación diaria, sin mes/año/12m). Trae solo VCP y patrimonio.
+  '<row r="1834">' +
+  celda('A1834', 'Cocos Dólares Plus - Clase A', true) +
+  celda('B1834', 'USD', true) +
+  celda('D1834', 'Lar', true) +
+  celda('E1834', '29/07/26', true) +
+  celda('F1834', '1061.516', false) +
+  celda('O1834', '269865984.44', false) +
+  '</row>' +
+  // Fondo de acciones del broker: el Sheet lo clasifica como renta variable,
+  // así que sale por fetchFciMetricsRentaVariable, no por fetchFciMetrics.
+  '<row r="99">' +
+  celda('A99', 'Cocos Acciones - Clase A', true) +
+  celda('B99', 'ARS', true) +
+  celda('D99', 'Lar', true) +
+  celda('E99', '30/07/26', true) +
+  celda('F99', '1432.901', false) +
+  celda('H99', '3.780', false) +
+  celda('J99', '4.254', false) +
+  celda('K99', '0.547', false) +
+  celda('L99', '46.560', false) +
+  celda('O99', '4556874110.51', false) +
+  '</row>' +
   '<row r="9000">' +
   celda('A9000', 'Otro Fondo No-Cocos - Clase A', true) +
   celda('F9000', '1000', false) +
   '</row>' +
   '</sheetData></worksheet>';
+
+function stubPlanilla(): void {
+  const xlsxBuf = buildXlsxFixture(SHEET_XML);
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+    ok: true,
+    status: 200,
+    arrayBuffer: async () => xlsxBuf.buffer.slice(xlsxBuf.byteOffset, xlsxBuf.byteOffset + xlsxBuf.byteLength),
+  }));
+}
 
 describe('fetchFciMetrics', () => {
   afterEach(() => {
@@ -116,7 +150,7 @@ describe('fetchFciMetrics', () => {
     const { fetchFciMetrics } = await import('./fciCocos');
     const metrics = await fetchFciMetrics();
 
-    expect(metrics.size).toBe(1); // solo COCORMA está en el fixture; los otros 3 tickers mapeados no aparecen
+    expect(metrics.size).toBe(2); // COCORMA y COCOUSDPA; COCOACCA no es de tipo FCI y los otros 2 no están en el fixture
     const rma = metrics.get('COCORMA');
     expect(rma).toBeDefined();
     expect(rma?.nombreFondo).toBe('Cocos Rendimiento - Clase A');
@@ -132,5 +166,72 @@ describe('fetchFciMetrics', () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 503 }));
     const { fetchFciMetrics } = await import('./fciCocos');
     await expect(fetchFciMetrics()).rejects.toThrow('503');
+  });
+
+  // Regresión: con celdas vacías leídas como 0, un fondo en dólares mostraba
+  // 0,0% en diaria/mes/año/12m — un dato falso y verosímil a la vez.
+  it('deja los rendimientos en null (no en 0) cuando la planilla no los publica', async () => {
+    stubPlanilla();
+    const { fetchFciMetrics } = await import('./fciCocos');
+    const plus = (await fetchFciMetrics()).get('COCOUSDPA');
+
+    expect(plus).toBeDefined();
+    expect(plus?.vcp).toBeCloseTo(1061.516); // el VCP sí viene
+    expect(plus?.variacionDiaria).toBeNull();
+    expect(plus?.rendimientoMes).toBeNull();
+    expect(plus?.rendimientoAnio).toBeNull();
+    expect(plus?.rendimiento12Meses).toBeNull();
+  });
+
+  it('marca como rezagado solo al fondo con fecha anterior a la última de la planilla', async () => {
+    stubPlanilla();
+    const { fetchFciMetrics } = await import('./fciCocos');
+    const metrics = await fetchFciMetrics();
+
+    expect(metrics.get('COCOUSDPA')?.rezagado).toBe(true);  // 29/07, la planilla va al 30/07
+    expect(metrics.get('COCOUSDPA')?.fecha).toBe('29/07/26');
+    expect(metrics.get('COCORMA')?.rezagado).toBe(false);
+  });
+
+  it('distingue un 0 informado de una celda vacía', async () => {
+    const xml = SHEET_XML.replace(
+      celda('H2789', '0.052', false),
+      celda('H2789', '0.000', false),
+    );
+    const buf = buildXlsxFixture(xml);
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      arrayBuffer: async () => buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength),
+    }));
+
+    const { fetchFciMetrics } = await import('./fciCocos');
+    // Un 0 que la planilla sí informa se conserva como 0, no se vuelve null:
+    // "no se movió" es un dato, "no lo publicaron" es otro.
+    expect((await fetchFciMetrics()).get('COCORMA')?.variacionDiaria).toBe(0);
+  });
+});
+
+describe('fetchFciMetricsRentaVariable', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.resetModules();
+  });
+
+  it('devuelve el fondo de acciones y lo deja fuera del conjunto de FCI', async () => {
+    stubPlanilla();
+    const { fetchFciMetrics, fetchFciMetricsRentaVariable } = await import('./fciCocos');
+
+    const variable = await fetchFciMetricsRentaVariable();
+    const acca = variable.get('COCOACCA');
+    expect(acca?.nombreFondo).toBe('Cocos Acciones - Clase A');
+    expect(acca?.moneda).toBe('ARS');
+    expect(acca?.vcp).toBeCloseTo(1432.901);
+    expect(acca?.variacionDiaria).toBeCloseTo(0.0378);
+    expect(acca?.rendimientoMes).toBeCloseTo(0.04254);
+    expect(acca?.rendimiento12Meses).toBeCloseTo(0.4656);
+
+    // La pestaña de FCI tiene que seguir contando solo los fondos de tipo FCI.
+    expect((await fetchFciMetrics()).has('COCOACCA')).toBe(false);
   });
 });

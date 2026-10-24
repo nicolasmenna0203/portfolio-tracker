@@ -1,4 +1,5 @@
 import { MAPEO_BONOS_ARG } from './bonosArg';
+import { aliasYahoo } from './tickersElegibles';
 
 // Precios de mercado para estimar cuántas unidades/nominales tenés a partir del
 // valor de tu posición (el Sheet guarda valor en USD, no cantidad).
@@ -52,7 +53,10 @@ async function fetchDatosAccion(ticker: string): Promise<DatosAccion | null> {
   const hit = cachePrecioAccion.get(ticker);
   if (hit && Date.now() - hit.ts < CACHE_MS) return hit.datos;
   try {
-    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?range=1y&interval=1d&events=div`;
+    // aliasYahoo: el ticker del Sheet no siempre es el símbolo del proveedor
+    // (las acciones con clase usan guión: BRKB → BRK-B). Sin esto el chart
+    // devuelve 404 y la posición se cae del tab de renta variable.
+    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(aliasYahoo(ticker))}?range=1y&interval=1d&events=div`;
     const res = await fetch(url, { headers: { 'User-Agent': UA }, signal: AbortSignal.timeout(8000) });
     if (!res.ok) return null;
     const json = await res.json();

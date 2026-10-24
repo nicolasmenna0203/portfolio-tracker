@@ -12,8 +12,15 @@ interface Props {
 
 const COLOR_FCI = PALETA_TIPO.FCI;
 
-function fmtPct1(v: number): string {
+/** "s/d" cuando CAFCI no publicó la columna: 0,0% afirmaría que el fondo no rindió nada. */
+function fmtPct1(v: number | null): string {
+  if (v == null) return 's/d';
   return `${(v * 100).toFixed(1)}%`;
+}
+
+function colorPct(v: number | null): string {
+  if (v == null) return 'var(--muted)';
+  return v >= 0 ? '#1baf7a' : '#ef553b';
 }
 
 function fmtVcp(v: number, moneda: string): string {
@@ -42,8 +49,18 @@ export default function FciSection({ tenencias }: Props) {
   const fondosOrdenados = useMemo(() => {
     const copia = [...fondos];
     copia.sort((a, b) => {
-      const cmp = sortKey === 'ticker' ? a.ticker.localeCompare(b.ticker) : a[sortKey] - b[sortKey];
-      return sortDesc ? -cmp : cmp;
+      if (sortKey === 'ticker') {
+        const cmp = a.ticker.localeCompare(b.ticker);
+        return sortDesc ? -cmp : cmp;
+      }
+      // Los fondos sin dato (null) van siempre al final, en cualquier sentido
+      // de orden: son ausencia de dato, no el valor más bajo.
+      const av = a[sortKey];
+      const bv = b[sortKey];
+      if (av == null && bv == null) return a.ticker.localeCompare(b.ticker);
+      if (av == null) return 1;
+      if (bv == null) return -1;
+      return sortDesc ? bv - av : av - bv;
     });
     return copia;
   }, [fondos, sortKey, sortDesc]);
@@ -126,13 +143,23 @@ export default function FciSection({ tenencias }: Props) {
                 <td style={{ padding: '7px 10px', color: 'var(--text)' }}>
                   <span style={{ fontWeight: 700 }}>{f.ticker}{f.tenenciaUsd ? ' ★' : ''}</span>
                   <span style={{ marginLeft: 6, fontSize: 10, color: 'var(--muted)' }}>{f.moneda}</span>
+                  {f.rezagado && (
+                    <span
+                      title={`CAFCI publica este fondo al ${f.fecha}, un día hábil detrás del resto de la planilla, y sin las columnas de variación. Por eso los rendimientos van "s/d".`}
+                      style={{
+                        marginLeft: 6, fontSize: 9, fontWeight: 700, cursor: 'help',
+                        padding: '1px 5px', borderRadius: 4, whiteSpace: 'nowrap',
+                        color: '#d98a0b', background: '#d98a0b22',
+                      }}
+                    >al {f.fecha}</span>
+                  )}
                   <div style={{ fontSize: 10, color: 'var(--muted)' }}>{f.nombreFondo}</div>
                 </td>
                 <td style={{ padding: '7px 10px', textAlign: 'right', color: 'var(--text-sec)' }}>{fmtVcp(f.vcp, f.moneda)}</td>
-                <td style={{ padding: '7px 10px', textAlign: 'right', color: f.variacionDiaria >= 0 ? '#1baf7a' : '#ef553b' }}>{fmtPct1(f.variacionDiaria)}</td>
-                <td style={{ padding: '7px 10px', textAlign: 'right', color: 'var(--text-sec)' }}>{fmtPct1(f.rendimientoMes)}</td>
-                <td style={{ padding: '7px 10px', textAlign: 'right', color: 'var(--text-sec)' }}>{fmtPct1(f.rendimientoAnio)}</td>
-                <td style={{ padding: '7px 10px', textAlign: 'right', fontWeight: 700, color: 'var(--text)' }}>{fmtPct1(f.rendimiento12Meses)}</td>
+                <td style={{ padding: '7px 10px', textAlign: 'right', color: colorPct(f.variacionDiaria) }}>{fmtPct1(f.variacionDiaria)}</td>
+                <td style={{ padding: '7px 10px', textAlign: 'right', color: f.rendimientoMes == null ? 'var(--muted)' : 'var(--text-sec)' }}>{fmtPct1(f.rendimientoMes)}</td>
+                <td style={{ padding: '7px 10px', textAlign: 'right', color: f.rendimientoAnio == null ? 'var(--muted)' : 'var(--text-sec)' }}>{fmtPct1(f.rendimientoAnio)}</td>
+                <td style={{ padding: '7px 10px', textAlign: 'right', fontWeight: 700, color: f.rendimiento12Meses == null ? 'var(--muted)' : 'var(--text)' }}>{fmtPct1(f.rendimiento12Meses)}</td>
               </tr>
             ))}
           </tbody>
@@ -141,6 +168,7 @@ export default function FciSection({ tenencias }: Props) {
 
       <p style={{ margin: 0, fontSize: 10, color: 'var(--muted)' }}>
         Fuente: Planilla Diaria pública de CAFCI (Cámara Argentina de Fondos Comunes de Inversión), fondos gestionados por Cocos Asset Management S.A.
+        {fondos.some((f) => f.rezagado) && ' Los fondos marcados con fecha vienen un día hábil detrás en la planilla y sin columnas de variación: sus rendimientos figuran como "s/d" hasta que CAFCI los publique.'}
       </p>
     </div>
   );

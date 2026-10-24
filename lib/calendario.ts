@@ -12,6 +12,7 @@ import { fetchDividendosFuturos } from './dividendosFuturos';
 import { fetchEarningsUsa } from './yahooEarnings';
 import { datosAcciones, preciosBonos, preciosBonosArs, mepSpot } from './precios';
 import { netoDividendo } from './retenciones';
+import { aliasYahoo } from './tickersElegibles';
 
 /** Dividendos ya pagados (histórico real de Yahoo Finance chart). */
 async function fetchDividendos(
@@ -21,7 +22,10 @@ async function fetchDividendos(
   tenenciaUsd?: number,
   precio?: number,
 ): Promise<EventoCalendario[]> {
-  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?range=5y&interval=3mo&events=div`;
+  // El símbolo que pide el proveedor puede diferir del ticker de cartera
+  // (BRKB → BRK-B); los eventos se piden por símbolo, pero el evento se
+  // reporta con el ticker de cartera, que es el que el usuario reconoce.
+  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(aliasYahoo(ticker))}?range=5y&interval=3mo&events=div`;
   const res = await fetch(url, {
     headers: { 'User-Agent': 'Mozilla/5.0' },
     signal: AbortSignal.timeout(8000), // Yahoo a veces cuelga; no arrastrar toda la request

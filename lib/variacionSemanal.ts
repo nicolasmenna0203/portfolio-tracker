@@ -13,7 +13,7 @@
 import type { TenenciaActual } from '@/types';
 import { MAPEO_BONOS_ARG } from './bonosArg';
 import { fetchFciMetrics, type FciMetric } from './fciCocos';
-import { TIPOS_VALIDOS, TICKERS_EXCLUIR, TICKERS_INCLUIR } from './tickersElegibles';
+import { TIPOS_VALIDOS, TICKERS_EXCLUIR, TICKERS_INCLUIR, aliasYahoo } from './tickersElegibles';
 
 const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0 Safari/537.36';
 const DIAS = 7;
@@ -120,7 +120,8 @@ async function serieMep(): Promise<PuntoMep[]> {
 interface PuntoCierre { fecha: string; close: number }
 
 async function serieYahoo(ticker: string): Promise<PuntoCierre[]> {
-  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?range=1mo&interval=1d`;
+  // aliasYahoo: el ticker de cartera puede no ser el símbolo del proveedor (BRKB → BRK-B).
+  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(aliasYahoo(ticker))}?range=1mo&interval=1d`;
   const res = await fetch(url, { headers: { 'User-Agent': UA }, signal: AbortSignal.timeout(10_000) });
   if (!res.ok) throw new Error(`Yahoo ${ticker}: HTTP ${res.status}`);
   const json = await res.json();
@@ -272,7 +273,11 @@ export async function calcularVariacionSemanal(
           precioArsPrevio: null,
           variacionUsd: null,
           variacionArs: null,
-          nota: `sin serie 7d (día ${(m.variacionDiaria * 100).toFixed(2)}%)`,
+          // La variación diaria puede venir vacía en la planilla (fondo con
+          // rezago): ahí se omite en vez de informar 0,00%, que sería falso.
+          nota: m.variacionDiaria == null
+            ? `sin serie 7d (CAFCI al ${m.fecha}, sin variación publicada)`
+            : `sin serie 7d (día ${(m.variacionDiaria * 100).toFixed(2)}%)`,
         };
       }
 

@@ -9,12 +9,15 @@ import type { RangoHistorico, StockPerformance } from '@/types';
 import { usePerformanceVariable } from '@/lib/usePerformanceVariable';
 import { useHistoricoTicker } from '@/lib/useHistoricoTicker';
 import { fmtUSD, fmtPct } from '@/lib/parser';
+import { PALETA_TIPO } from '@/lib/constants';
 import KPICard from './KPICard';
 import SectoresMercado from './SectoresMercado';
 
 interface Props {
   tickersUsa: string[];
   tenencias: Record<string, number>;
+  /** Posiciones de renta variable que son fondos CAFCI: su precio es el VCP de la planilla. */
+  tickersFci?: string[];
 }
 
 const RANGOS: { id: RangoHistorico; label: string }[] = [
@@ -27,6 +30,13 @@ const RANGOS: { id: RangoHistorico; label: string }[] = [
 
 function fmtPx(v: number): string {
   return `$${v.toFixed(2)}`;
+}
+
+/** Los fondos cotizan por VCP, que puede estar en pesos: la moneda tiene que ir explícita. */
+function fmtPrecio(a: StockPerformance): string {
+  if (!a.esFci) return fmtPx(a.px);
+  const prefijo = a.fciMoneda === 'USD' ? 'US$' : '$';
+  return `${prefijo}${a.px.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 function fmtPct1(v: number): string {
@@ -66,8 +76,8 @@ function ChartTooltip({ active, payload }: { active?: boolean; payload?: ChartTo
   );
 }
 
-export default function RentaVariableSection({ tickersUsa, tenencias }: Props) {
-  const { data: perf, loading, error } = usePerformanceVariable(tickersUsa, tenencias);
+export default function RentaVariableSection({ tickersUsa, tenencias, tickersFci = [] }: Props) {
+  const { data: perf, loading, error } = usePerformanceVariable(tickersUsa, tenencias, tickersFci);
 
   const [sortKey, setSortKey] = useState<SortKey>('variacion1d');
   const [sortDesc, setSortDesc] = useState(true);
@@ -81,9 +91,13 @@ export default function RentaVariableSection({ tickersUsa, tenencias }: Props) {
   // cartera) para no dejar el gráfico en blanco al entrar al tab.
   useEffect(() => {
     if (preseleccionado.current || acciones.length === 0) return;
+    // Los fondos no tienen serie de precios en el proveedor, así que no pueden
+    // quedar preseleccionados: el gráfico se quedaría vacío al entrar al tab.
+    const graficables = acciones.filter((a) => !a.esFci);
+    if (graficables.length === 0) return;
     preseleccionado.current = true;
-    const conTenencia = acciones.filter((a) => a.tenenciaUsd != null);
-    const base = conTenencia.length > 0 ? conTenencia : acciones;
+    const conTenencia = graficables.filter((a) => a.tenenciaUsd != null);
+    const base = conTenencia.length > 0 ? conTenencia : graficables;
     const top = [...base].sort((a, b) => (b.tenenciaUsd ?? 0) - (a.tenenciaUsd ?? 0))[0];
     setTickerSel(top.ticker);
   }, [acciones]);
@@ -94,6 +108,8 @@ export default function RentaVariableSection({ tickersUsa, tenencias }: Props) {
     () => acciones.reduce((s, a) => s + (a.tenenciaUsd ?? 0), 0),
     [acciones],
   );
+
+  const hayFci = acciones.some((a) => a.esFci);
 
   const accionesOrdenadas = useMemo(() => {
     const copia = [...acciones];
@@ -167,6 +183,7 @@ export default function RentaVariableSection({ tickersUsa, tenencias }: Props) {
         <KPICard
           label="Valor en cartera"
           value={fmtUSD(valorTotalCartera)}
+          sub={`${acciones.filter((a) => a.tenenciaUsd).length} de ${acciones.length} posiciones${hayFci ? ' · incluye fondos (VCP de CAFCI)' : ''}`}
           accentColor="var(--primary)"
         />
       </div>
@@ -272,17 +289,27 @@ export default function RentaVariableSection({ tickersUsa, tenencias }: Props) {
               return (
                 <tr
                   key={a.ticker}
-                  onClick={() => setTickerSel(a.ticker)}
+                  onClick={() => { if (!a.esFci) setTickerSel(a.ticker); }}
                   style={{
                     borderBottom: '1px solid var(--border-subtle)',
                     background: activo ? 'var(--primary-dim)' : a.tenenciaUsd ? 'color-mix(in srgb, var(--primary) 6%, transparent)' : 'transparent',
-                    cursor: 'pointer',
+                    cursor: a.esFci ? 'default' : 'pointer',
                   }}
                 >
                   <td style={{ padding: '7px 10px', fontWeight: 700, color: 'var(--text)' }}>
                     {a.ticker}{a.tenenciaUsd ? ' ★' : ''}
+                    {a.esFci && (
+                      <span
+                        title={`Fondo común de inversión (${a.nombre ?? 'CAFCI'}). No cotiza en el proveedor de precios: el valor es el VCP de la planilla de CAFCI${a.fciFecha ? ` al ${a.fciFecha}` : ''}, en ${a.fciMoneda ?? 'su moneda'}, y las variaciones son los rendimientos publicados (mes, año y 12 meses).`}
+                        style={{
+                          marginLeft: 6, fontSize: 9, fontWeight: 700, cursor: 'help',
+                          padding: '1px 5px', borderRadius: 4, verticalAlign: 'middle',
+                          color: PALETA_TIPO.FCI, background: `${PALETA_TIPO.FCI}22`,
+                        }}
+                      >FCI</span>
+                    )}
                   </td>
-                  <td style={{ padding: '7px 10px', textAlign: 'right', fontWeight: 700, color: 'var(--text)' }}>{fmtPx(a.px)}</td>
+                  <td style={{ padding: '7px 10px', textAlign: 'right', fontWeight: 700, color: 'var(--text)' }}>{fmtPrecio(a)}</td>
                   <td style={{ padding: '7px 10px', textAlign: 'right', color: colorVar(a.variacion1d) }}>{a.variacion1d != null ? fmtPct1(a.variacion1d) : '—'}</td>
                   <td style={{ padding: '7px 10px', textAlign: 'right', color: colorVar(a.variacion1m) }}>{a.variacion1m != null ? fmtPct1(a.variacion1m) : '—'}</td>
                   <td style={{ padding: '7px 10px', textAlign: 'right', color: colorVar(a.variacionYtd) }}>{a.variacionYtd != null ? fmtPct1(a.variacionYtd) : '—'}</td>
@@ -299,6 +326,14 @@ export default function RentaVariableSection({ tickersUsa, tenencias }: Props) {
           </tbody>
         </table>
       </div>
+
+      {hayFci && (
+        <p style={{ margin: 0, fontSize: 10, color: 'var(--muted)' }}>
+          Las filas marcadas <strong>FCI</strong> son fondos comunes de inversión: no cotizan en el proveedor de precios, así que el
+          valor es el VCP de la Planilla Diaria de CAFCI (en la moneda del fondo) y las columnas de variación son los rendimientos
+          publicados de mes, año y 12 meses. No tienen P/E, market cap, rango de 52 semanas ni gráfico de precio.
+        </p>
+      )}
 
       {/* ── Sectores del mercado ──────────────────────────────────────────── */}
       <SectoresMercado />
