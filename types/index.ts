@@ -67,6 +67,7 @@ export interface DashboardData {
   mesesDisponibles: string[];              // ["Mar-2024", ...] ordered
   totalPorMes: Record<string, number>;     // "YYYY-MM" → total_cartera (USD)
   totalPorMesArs: Record<string, number>;  // "YYYY-MM" → total_cartera_ars
+  movimientos: MovimientoRow[];            // aportes/retiros, orden cronológico
 }
 
 // ── Benchmarks ────────────────────────────────────────────────────────────────

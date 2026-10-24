@@ -133,6 +133,23 @@ function round(n: number): number {
   return Math.round(n * 100) / 100;
 }
 
+/**
+ * Convierte un filtro "YYYY-MM" al timestamp del borde del mes: el inicio del
+ * día 1 con `fin: false`, el final del último día con `fin: true` (ambos
+ * inclusive). Devuelve null si el filtro viene vacío o mal formado, que las
+ * tools interpretan como "sin límite de ese lado".
+ *
+ * Compartido por las tools que aceptan rango: si cada una define el suyo,
+ * basta con que alguien corrija una para que dos respuestas sobre el mismo
+ * período dejen de coincidir.
+ */
+function limiteMes(mesKey: string | undefined, fin: boolean): number | null {
+  if (!mesKey) return null;
+  const [y, m] = mesKey.split('-').map(Number);
+  if (!y || !m) return null;
+  return fin ? Date.UTC(y, m, 0, 23, 59, 59) : Date.UTC(y, m - 1, 1);
+}
+
 // ── Implementaciones ──────────────────────────────────────────────────────────
 
 async function resumenCartera() {
@@ -376,15 +393,8 @@ async function evolucionMensual({ desde, hasta }: { desde?: string; hasta?: stri
 
   // resumenSeries usa "Mar-2024"; los filtros usan "YYYY-MM" (fechaTs es la
   // única referencia común entre ambos formatos).
-  const limite = (mesKey: string | undefined, fin: boolean): number | null => {
-    if (!mesKey) return null;
-    const [y, m] = mesKey.split('-').map(Number);
-    if (!y || !m) return null;
-    return fin ? Date.UTC(y, m, 0, 23, 59, 59) : Date.UTC(y, m - 1, 1);
-  };
-
-  const desdeTs = limite(desde, false);
-  const hastaTs = limite(hasta, true);
+  const desdeTs = limiteMes(desde, false);
+  const hastaTs = limiteMes(hasta, true);
 
   const serie = data.resumenSeries
     .filter((r) => (desdeTs == null || r.fechaTs >= desdeTs)
@@ -413,6 +423,38 @@ async function evolucionMensual({ desde, hasta }: { desde?: string; hasta?: stri
     mejor_mes: ordenadaPorRendimiento[0],
     peor_mes: ordenadaPorRendimiento[ordenadaPorRendimiento.length - 1],
     variacion_periodo_usd: round(ultimo.total_cartera_usd - primero.total_cartera_usd),
+  };
+}
+
+async function listarMovimientos({ desde, hasta }: { desde?: string; hasta?: string }) {
+  const data = await getData();
+
+  const desdeTs = limiteMes(desde, false);
+  const hastaTs = limiteMes(hasta, true);
+
+  const movimientos = data.movimientos.filter(
+    (mv) => (desdeTs == null || mv.fecha >= desdeTs)
+         && (hastaTs == null || mv.fecha <= hastaTs),
+  );
+
+  const totalPorTipo = { ingreso: 0, salida: 0 };
+  for (const mv of movimientos) totalPorTipo[mv.tipo] += mv.monto_neto;
+
+  return {
+    cantidad: movimientos.length,
+    total_neto_usd: round(movimientos.reduce((s, mv) => s + mv.monto_neto, 0)),
+    total_ingresos_usd: round(totalPorTipo.ingreso),
+    total_salidas_usd: round(Math.abs(totalPorTipo.salida)),
+    movimientos: movimientos.map((mv) => ({
+      fecha: new Date(mv.fecha).toISOString().slice(0, 10),
+      tipo: mv.tipo,
+      monto_usd: round(mv.monto_usd),
+      monto_ars: round(mv.monto_ars),
+      monto_neto_usd: round(mv.monto_neto),
+      monto_neto_ars: round(mv.monto_neto_ars),
+    })),
+    nota:
+      'monto_ars y monto_neto_ars están convertidos al MEP del día exacto de cada movimiento, no a un MEP único. monto_neto es positivo para ingresos y negativo para salidas.',
   };
 }
 
@@ -777,6 +819,21 @@ export const AGENT_TOOLS: AgentTool[] = [
     },
     run: (input) =>
       evolucionMensual({ desde: optStr(input, 'desde'), hasta: optStr(input, 'hasta') }),
+  },
+  {
+    name: 'listar_movimientos',
+    description:
+      'Lista los movimientos de dinero (aportes y retiros) cargados en el Sheet, con fecha, tipo, y monto en USD y ARS al MEP del día exacto. Incluye el total neto, de ingresos y de salidas del período. Usar para preguntas sobre cuánto se aportó o retiró, cuándo, o para auditar los movimientos que explican la evolución de la cartera. Acepta un rango opcional.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        desde: { type: 'string', description: 'Mes inicial "YYYY-MM" (inclusive). Opcional.' },
+        hasta: { type: 'string', description: 'Mes final "YYYY-MM" (inclusive). Opcional.' },
+      },
+      additionalProperties: false,
+    },
+    run: (input) =>
+      listarMovimientos({ desde: optStr(input, 'desde'), hasta: optStr(input, 'hasta') }),
   },
   {
     name: 'historico_ticker',

@@ -42,6 +42,7 @@ function dataConTenencia(ticker: string, tenenciaUsd: number, extra: Partial<Das
     mesesDisponibles: ['Jul-2026'],
     totalPorMes: { '2026-07': tenenciaUsd },
     totalPorMesArs: { '2026-07': 0 },
+    movimientos: [],
   };
 }
 

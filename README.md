@@ -58,7 +58,7 @@ lib/                 lógica de negocio y acceso a datos (+ tests .test.ts)
   sheets.ts          fetchDashboardData(): las 4 hojas → modelo del dashboard
   precios.ts         precios spot y MEP
   bondMetrics.ts     TIR/duration/paridad de bonos
-  agentTools.ts      las 15 tools del MCP + SYSTEM_PROMPT
+  agentTools.ts      las 16 tools del MCP + SYSTEM_PROMPT
   use*.ts            hooks de datos del cliente
 mcp/server.ts        servidor MCP por stdio (delega en lib/agentTools.ts)
 middleware.ts        auth por cookie de sesión firmada (Edge runtime)
@@ -121,7 +121,7 @@ La alerta semanal se dispara desde GitHub Actions (`.github/workflows/alerta-sem
 | Hoja | Columnas | Descripción |
 |---|---|---|
 | `Activos` | TICKER, BROKER, TIPO, RIESGO, SECTOR GEO, RENTA, MONEDA | Catálogo de instrumentos |
-| `Movimientos` | Fecha, Monto (USD), Ingreso/Salida | Flujos de caja — `ingreso` suma al acumulado, `salida` resta |
+| `Movimientos` | Fecha, Monto (USD), Monto (ARS), Ingreso/Salida | Flujos de caja — `ingreso` suma al acumulado, `salida` resta. `Monto (ARS)` es el monto al MEP del día exacto del movimiento: sin esa columna los importes en pesos quedan en cero |
 | `Tenencias` | Ticker, Tenencia (ARS), Tenencia (USD), Fecha | Snapshots mensuales de posiciones |
 | `Ingresos` | Fecha, Empleador, Monto (ARS), Monto (USD) | Haberes acreditados |
 | `Objetivos` | Un bloque de 2 columnas por dimensión | Composición objetivo. La crea y reescribe el dashboard: no editar a mano |

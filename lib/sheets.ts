@@ -243,5 +243,6 @@ export async function fetchDashboardData(): Promise<DashboardData> {
     mesesDisponibles,
     totalPorMes,
     totalPorMesArs,
+    movimientos,
   };
 }

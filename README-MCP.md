@@ -18,6 +18,7 @@ con tu suscripción; este proceso solo lee el Google Sheet y devuelve JSON.
 | `evolucion_mensual` | Serie mensual + mejor y peor mes (acepta rango) |
 | `historico_ticker` | Evolución de una posición puntual mes a mes |
 | `metricas_concentracion` | Top 1/3/5, índice HHI y posiciones ordenadas por peso |
+| `listar_movimientos` | Aportes y retiros cargados, con fecha, monto USD/ARS y totales del período |
 
 Los meses se piden en formato `YYYY-MM` (ej. `2026-07`). Si se omite, se usa el último disponible.
 

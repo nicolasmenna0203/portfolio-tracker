@@ -14,6 +14,7 @@ import type {
   ResumenRow,
   TenenciaActual,
   KPIData,
+  MovimientoRow,
 } from '@/types';
 
 const MESES_HISTORIA = 13;
@@ -83,6 +84,7 @@ export function buildDemoDashboardData(): DashboardData {
   const cashflows: Cashflow[] = [];
   const aportesPorMes: Record<string, number> = {};
   const aportesArsPorMes: Record<string, number> = {};
+  const movimientos: MovimientoRow[] = [];
 
   mesesOrdenados.forEach((mk, i) => {
     const ts = mesesTs[i];
@@ -104,7 +106,16 @@ export function buildDemoDashboardData(): DashboardData {
 
     aportesPorMes[mk] = aporteUsd;
     aportesArsPorMes[mk] = Math.round(aporteUsd * mep);
-    cashflows.push({ date: ts + 15 * 24 * 3600 * 1000, amount: -aporteUsd });
+    const fechaMovimiento = ts + 15 * 24 * 3600 * 1000;
+    cashflows.push({ date: fechaMovimiento, amount: -aporteUsd });
+    movimientos.push({
+      fecha: fechaMovimiento,
+      monto_usd: aporteUsd,
+      monto_ars: aportesArsPorMes[mk],
+      tipo: 'ingreso',
+      monto_neto: aporteUsd,
+      monto_neto_ars: aportesArsPorMes[mk],
+    });
   });
 
   // ── Resumen series ────────────────────────────────────────────────────────
@@ -159,5 +170,6 @@ export function buildDemoDashboardData(): DashboardData {
     mesesDisponibles,
     totalPorMes,
     totalPorMesArs,
+    movimientos,
   };
 }

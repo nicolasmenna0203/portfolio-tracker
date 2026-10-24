@@ -2,7 +2,7 @@
 
 Dashboard de seguimiento de una cartera (CEDEARs, ETFs, bonos argentinos, FCI) en
 Next.js 15 (App Router) + React 19 + TypeScript. Google Sheets es la fuente de
-verdad. Deploy en Vercel. Un servidor MCP (`mcp/server.ts`) expone 15 tools de
+verdad. Deploy en Vercel. Un servidor MCP (`mcp/server.ts`) expone 16 tools de
 `lib/agentTools.ts` para consultar la cartera desde Claude. La alerta semanal de
 cobros la dispara GitHub Actions.
 
