@@ -1,10 +1,13 @@
 import { inflateRawSync } from 'zlib';
+import { rendimiento12MesesVia } from './fciHistorico';
 
 // Decisión y alternativas descartadas: docs/decisiones/0005-parsear-cafci-con-zlib-nativo.md
 // Por qué los rendimientos son `number | null` y no `number`:
 // docs/decisiones/0019-sin-dato-no-es-cero-en-rendimientos-de-fci.md
 // Por qué hay dos mapeos de fondos (FCI y renta variable):
 // docs/decisiones/0020-fuente-de-precio-por-naturaleza-del-instrumento.md
+// Por qué el 12 meses de un fondo rezagado se completa con una fuente aparte,
+// y por qué mes/año no: docs/decisiones/0021-fuente-secundaria-para-12-meses-de-fci-rezagado.md
 //
 // ── FCI del broker, vía la Planilla Diaria pública de CAFCI ────────────────
 //
@@ -51,6 +54,16 @@ const MAPEO_FCI_RENTA_VARIABLE: Record<string, string> = {
   COCOACCA:   'Cocos Acciones - Clase A',
 };
 
+// Categoría del espejo de argentinadatos (ver lib/fciHistorico.ts) para cada
+// fondo que pueda necesitar completar el 12 meses. Es un dato de esa API, no
+// de CAFCI: el mismo fondo puede estar clasificado distinto en cada fuente
+// (ej. horizonte "largo" en CAFCI puede caer en "rentaFija" ahí). Solo se
+// mapean los fondos que hoy llegan a tener la columna vacía; agregar uno
+// nuevo a esta lista no cambia nada si CAFCI ya lo publica completo.
+const CATEGORIA_HISTORICO: Partial<Record<string, string>> = {
+  COCOUSDPA: 'rentaFija',
+};
+
 export interface FciMetric {
   ticker: string;           // ticker cartera (ej. "COCORMA")
   nombreFondo: string;       // nombre completo en CAFCI (ej. "Cocos Rendimiento - Clase A")
@@ -66,13 +79,20 @@ export interface FciMetric {
   rendimientoAnio: number | null;      // % desde el cierre del año anterior, tanto por uno
   rendimiento12Meses: number | null;    // % interanual, tanto por uno
   patrimonio: number;                // patrimonio del fondo (clase), en moneda del fondo
-  fecha: string;                      // "YYYY-MM-DD"
+  fecha: string;                      // "DD/MM/AA", como lo publica la planilla
   /**
    * true si la fila viene con fecha anterior a la más reciente de la planilla:
    * CAFCI publica algunos fondos con un día de rezago y sin columnas de
    * comparación. Permite explicar en la UI por qué no hay rendimientos.
    */
   rezagado: boolean;
+  /**
+   * true si `rendimiento12Meses` no vino de la columna de CAFCI (estaba vacía
+   * por rezago) sino que se completó con el VCP de hace 12 meses del espejo de
+   * argentinadatos. Ver docs/decisiones/0021-fuente-secundaria-para-12-meses-de-fci-rezagado.md.
+   * false en todos los demás campos y en todos los fondos no rezagados.
+   */
+  rendimiento12MesesEstimado: boolean;
 }
 
 const CAFCI_PLANILLA_URL = 'https://api.pub.cafci.org.ar/pb_get';
@@ -263,11 +283,47 @@ async function fetchTodasLasMetricas(): Promise<Map<string, FciMetric>> {
       patrimonio: parseNum(row[14]),
       fecha,
       rezagado: fechaMax !== '' && fechaOrdenable(fecha) < fechaMax,
+      rendimiento12MesesEstimado: false,
     });
   }
 
+  await completar12MesesRezagados(metrics);
+
   cache = { metrics, ts: Date.now() };
   return metrics;
+}
+
+/**
+ * Para los fondos con `rendimiento12Meses == null` (columna vacía en CAFCI)
+ * que tienen categoría mapeada en `CATEGORIA_HISTORICO`, intenta completarlo
+ * con el VCP de hace 12 meses del espejo de argentinadatos. Muta `metrics` en
+ * el lugar; no hace nada si no hay categoría mapeada o si la fuente no
+ * encuentra el punto de hace un año dentro de su tolerancia.
+ */
+async function completar12MesesRezagados(metrics: Map<string, FciMetric>): Promise<void> {
+  const fechaHoyISO = (() => {
+    // La fecha de la planilla viene "DD/MM/AA"; se toma la de cualquier fondo
+    // no rezagado (todos comparten el mismo día de publicación) como ancla.
+    for (const m of metrics.values()) {
+      const iso = fechaOrdenable(m.fecha);
+      if (iso) return iso;
+    }
+    return '';
+  })();
+  if (!fechaHoyISO) return;
+
+  await Promise.all(
+    Object.entries(CATEGORIA_HISTORICO).map(async ([ticker, categoria]) => {
+      const m = metrics.get(ticker);
+      if (!m || m.rendimiento12Meses != null || !categoria) return;
+
+      const rend = await rendimiento12MesesVia(categoria, m.nombreFondo, m.vcp, fechaHoyISO).catch(() => null);
+      if (rend != null) {
+        m.rendimiento12Meses = rend;
+        m.rendimiento12MesesEstimado = true;
+      }
+    }),
+  );
 }
 
 function subconjunto(todas: Map<string, FciMetric>, mapeo: Record<string, string>): Map<string, FciMetric> {

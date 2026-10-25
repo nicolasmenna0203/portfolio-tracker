@@ -205,6 +205,7 @@ export function buildFci(tenencias: Record<string, number>): FciResponse {
       patrimonio: Math.round((50_000_000 + rng() * 200_000_000) * 100) / 100,
       fecha: fechaISO(hoy),
       rezagado: false, // la demo publica todos los fondos al mismo día
+      rendimiento12MesesEstimado: false,
       ...(tenenciaUsd != null ? { tenenciaUsd } : {}),
     };
   });

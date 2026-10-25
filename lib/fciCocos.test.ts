@@ -183,6 +183,44 @@ describe('fetchFciMetrics', () => {
     expect(plus?.rendimiento12Meses).toBeNull();
   });
 
+  // Regresión: COCOUSDPA llega sin 12 meses de CAFCI (rezagado), pero el VCP
+  // de hace 12 meses existe en el espejo de argentinadatos. Antes de este test
+  // el fondo quedaba en "s/d" para esa columna aunque el dato fuera obtenible.
+  it('completa el 12 meses de un fondo rezagado con el espejo de argentinadatos, y lo marca como estimado', async () => {
+    const FONDO_PLUS = 'Cocos Dólares Plus - Clase A';
+    const relleno = Array.from({ length: 500 }, (_, i) => ({ fondo: `Relleno ${i}`, fecha: '2025-07-29', vcp: 100 + i }));
+    const xlsxBuf = buildXlsxFixture(SHEET_XML);
+
+    vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+      if (url.includes('api.pub.cafci.org.ar')) {
+        return {
+          ok: true,
+          status: 200,
+          arrayBuffer: async () => xlsxBuf.buffer.slice(xlsxBuf.byteOffset, xlsxBuf.byteOffset + xlsxBuf.byteLength),
+        };
+      }
+      // COCOUSDPA en el fixture (fila 1834) tiene fecha 29/07/26: hace 12 meses es 2025-07-29.
+      if (url.includes('/rentaFija/2025/7/29')) {
+        return { ok: true, status: 200, json: async () => [...relleno, { fondo: FONDO_PLUS, fecha: '2025-07-29', vcp: 1014.23 }] };
+      }
+      return { ok: false, status: 404 };
+    }));
+
+    const { fetchFciMetrics } = await import('./fciCocos');
+    const plus = (await fetchFciMetrics()).get('COCOUSDPA');
+
+    expect(plus?.variacionDiaria).toBeNull();     // sigue sin dato: esta fuente solo completa 12 meses
+    expect(plus?.rendimientoMes).toBeNull();
+    expect(plus?.rendimientoAnio).toBeNull();
+    expect(plus?.vcp).toBeCloseTo(1061.516);
+    expect(plus?.rendimiento12Meses).toBeCloseTo(1061.516 / 1014.23 - 1, 6);
+    expect(plus?.rendimiento12MesesEstimado).toBe(true);
+
+    // Un fondo que ya tiene 12 meses de CAFCI no se toca ni se marca como estimado.
+    const rma = (await fetchFciMetrics()).get('COCORMA');
+    expect(rma?.rendimiento12MesesEstimado).toBe(false);
+  });
+
   it('marca como rezagado solo al fondo con fecha anterior a la última de la planilla', async () => {
     stubPlanilla();
     const { fetchFciMetrics } = await import('./fciCocos');

@@ -647,7 +647,7 @@ async function rentaFijaFci() {
     fuente: 'Planilla pública diaria de CAFCI (fondos del broker).',
     solo_en_cartera: enCartera.length > 0,
     nota_rendimientos:
-      'Un rendimiento en null significa que la planilla no lo informa para ese fondo (viene con un día de rezago y sin columnas de comparación), no que haya rendido 0%. Decí "sin dato" y, si importa, que el dato es al día que indica fecha_dato.',
+      'Un rendimiento en null significa que la planilla no lo informa para ese fondo (viene con un día de rezago y sin columnas de comparación), no que haya rendido 0%. Decí "sin dato" y, si importa, que el dato es al día que indica fecha_dato. Si rendimiento_12m_estimado=true, el rendimiento_12m_pct no sale de CAFCI sino que se calculó con una fuente secundaria (VCP de hoy vs. hace 12 meses): aclaralo si lo mencionás, no lo presentes igual que el resto.',
     fondos: lista.map((f) => ({
       ticker: f.ticker,
       nombre: f.nombreFondo,
@@ -658,6 +658,7 @@ async function rentaFijaFci() {
       rendimiento_mes_pct: pct(f.rendimientoMes),
       rendimiento_anio_pct: pct(f.rendimientoAnio),
       rendimiento_12m_pct: pct(f.rendimiento12Meses),
+      rendimiento_12m_estimado: f.rendimiento12MesesEstimado,
       patrimonio: f.patrimonio,
       fecha_dato: f.fecha,
       dato_rezagado: f.rezagado,
@@ -1048,7 +1049,7 @@ Las herramientas de mercado (\`calendario_cobros\`, \`renta_fija_bonos\`, \`rent
 - **Montos de dividendos**: van netos de retenciones (30% de origen + 0,6% de impuesto al cheque). No descuentan la comisión del depositario, así que el neto real puede ser 1-2% menor. Los bonos ARG no tienen retención.
 - **Yield vs. cobro**: el yield publicado es bruto (para comparar con screeners); el cobro anual estimado va neto. Son inconsistentes a propósito — no los mezcles en la misma frase sin aclarar.
 - **TIR de bonos**: solo comparables dentro del mismo grupo de tasa. Una TIR de un bono CER contra una de un hard-dollar no dice nada.
-- **Rendimientos de FCI en null**: la planilla de CAFCI publica algunos fondos con un día de rezago y sin columnas de comparación. Un rendimiento en null es "no informado", no 0%: decí que no hay dato a esa fecha en vez de reportar que el fondo no rindió nada.
+- **Rendimientos de FCI en null**: la planilla de CAFCI publica algunos fondos con un día de rezago y sin columnas de comparación. Un rendimiento en null es "no informado", no 0%: decí que no hay dato a esa fecha en vez de reportar que el fondo no rindió nada. El 12m puede venir completado de una fuente secundaria (\`rendimiento_12m_estimado=true\`): si lo usás, aclará que es estimado, no la cifra que publica CAFCI para el resto de los fondos.
 - **Fondos dentro de renta variable**: en \`renta_variable_acciones\`, las posiciones con \`es_fci=true\` son FCI que la cartera clasifica como renta variable. Su "precio" es el VCP en \`moneda_vcp\` (puede ser ARS) y sus variaciones son rendimientos de CAFCI, no variaciones de precio de mercado: no las pongas en el mismo ranking que las acciones sin aclararlo, y no las conviertas a USD por tu cuenta.
 - **Benchmarks**: están en índice base 100, no son precios. Y la serie de la cartera sube también por aportes nuevos, no solo por rendimiento: para rendimiento puro usá \`resumen_cartera\` o \`evolucion_mensual\`.
 

@@ -159,7 +159,14 @@ export default function FciSection({ tenencias }: Props) {
                 <td style={{ padding: '7px 10px', textAlign: 'right', color: colorPct(f.variacionDiaria) }}>{fmtPct1(f.variacionDiaria)}</td>
                 <td style={{ padding: '7px 10px', textAlign: 'right', color: f.rendimientoMes == null ? 'var(--muted)' : 'var(--text-sec)' }}>{fmtPct1(f.rendimientoMes)}</td>
                 <td style={{ padding: '7px 10px', textAlign: 'right', color: f.rendimientoAnio == null ? 'var(--muted)' : 'var(--text-sec)' }}>{fmtPct1(f.rendimientoAnio)}</td>
-                <td style={{ padding: '7px 10px', textAlign: 'right', fontWeight: 700, color: f.rendimiento12Meses == null ? 'var(--muted)' : 'var(--text)' }}>{fmtPct1(f.rendimiento12Meses)}</td>
+                <td
+                  style={{ padding: '7px 10px', textAlign: 'right', fontWeight: 700, color: f.rendimiento12Meses == null ? 'var(--muted)' : 'var(--text)' }}
+                  title={f.rendimiento12MesesEstimado
+                    ? 'Estimado: CAFCI no publica esta columna para el fondo (viene rezagado). Se calculó con el VCP de hoy y el de hace 12 meses de una fuente secundaria (espejo de la planilla), no es la cifra que publica CAFCI para los demás fondos.'
+                    : undefined}
+                >
+                  {fmtPct1(f.rendimiento12Meses)}{f.rendimiento12MesesEstimado ? ' ~' : ''}
+                </td>
               </tr>
             ))}
           </tbody>
@@ -169,6 +176,7 @@ export default function FciSection({ tenencias }: Props) {
       <p style={{ margin: 0, fontSize: 10, color: 'var(--muted)' }}>
         Fuente: Planilla Diaria pública de CAFCI (Cámara Argentina de Fondos Comunes de Inversión), fondos gestionados por Cocos Asset Management S.A.
         {fondos.some((f) => f.rezagado) && ' Los fondos marcados con fecha vienen un día hábil detrás en la planilla y sin columnas de variación: sus rendimientos figuran como "s/d" hasta que CAFCI los publique.'}
+        {fondos.some((f) => f.rendimiento12MesesEstimado) && ' El 12 meses marcado con "~" es estimado de una fuente secundaria, no la cifra que publica CAFCI.'}
       </p>
     </div>
   );

@@ -232,6 +232,12 @@ export interface FciPerformance {
   fecha: string;
   /** La fila viene con fecha anterior a la última publicada en la planilla. */
   rezagado: boolean;
+  /**
+   * `rendimiento12Meses` no vino de CAFCI (estaba vacío por rezago): se
+   * completó con una fuente secundaria (VCP de hace 12 meses). Mostrar con una
+   * aclaración, no como el mismo dato que trae CAFCI para el resto de los fondos.
+   */
+  rendimiento12MesesEstimado: boolean;
   /** Presente solo si el ticker está en la cartera actual. */
   tenenciaUsd?: number;
 }

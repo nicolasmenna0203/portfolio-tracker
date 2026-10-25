@@ -11,7 +11,7 @@ código.
 Los ADRs **no se editan** cuando cambia la decisión: se escribe uno nuevo y el
 viejo pasa a "Reemplazadas". Ver [PLANTILLA.md](PLANTILLA.md) para el flujo completo.
 
-**Próximo número: 0021**
+**Próximo número: 0022**
 
 ## Renta fija
 
@@ -21,6 +21,7 @@ viejo pasa a "Reemplazadas". Ver [PLANTILLA.md](PLANTILLA.md) para el flujo comp
 | [0004](0004-grupos-de-bono-y-tir-no-comparables.md) | Grupos de bono: las TIR de distinto grupo no son comparables | `lib/bondMetrics.ts` |
 | [0005](0005-parsear-cafci-con-zlib-nativo.md) | Parsear la planilla CAFCI con `zlib` nativo, sin librería de xlsx | `lib/fciCocos.ts` |
 | [0019](0019-sin-dato-no-es-cero-en-rendimientos-de-fci.md) | Un rendimiento que la fuente no publica es `null`, no 0 | `lib/fciCocos.ts`, `components/FciSection.tsx` |
+| [0021](0021-fuente-secundaria-para-12-meses-de-fci-rezagado.md) | Completar el 12 meses de un FCI rezagado con un espejo histórico, no mes ni año | `lib/fciHistorico.ts`, `lib/fciCocos.ts` |
 | [0006](0006-sensibilidad-sin-convexidad.md) | Estimar sensibilidad de precio con duration, ignorando convexidad | `lib/performance.ts` |
 
 ## Impuestos y moneda
