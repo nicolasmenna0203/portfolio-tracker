@@ -13,9 +13,9 @@ export const runtime = 'nodejs';
  * no usa la cookie de sesión sino un secret propio (CRON_SECRET) pasado como
  * `Authorization: Bearer <secret>`.
  *
- * El trigger es el workflow `.github/workflows/alerta-semanal.yml` (lunes 11:00
- * UTC). Se eligió GitHub Actions en vez de Vercel Cron por el horario exacto:
- * ver docs/decisiones/0015-cron-semanal-en-github-actions.md
+ * El trigger es el workflow `.github/workflows/alerta-semanal.yml` (domingo
+ * 21:00 ART = lunes 00:00 UTC). Se eligió GitHub Actions en vez de Vercel Cron
+ * por el horario exacto: ver docs/decisiones/0015-cron-semanal-en-github-actions.md
  *
  * Envío por Resend (RESEND_API_KEY) al destinatario de ALERTA_EMAIL.
  */

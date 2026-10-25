@@ -5,8 +5,8 @@ name: Alerta semanal de cobros
 
 on:
   schedule:
-    # Lunes 11:00 UTC = 08:00 ART (Argentina no tiene horario de verano).
-    - cron: '0 11 * * 1'
+    # Domingo 21:00 ART = lunes 00:00 UTC (Argentina no tiene horario de verano).
+    - cron: '0 0 * * 1'
   workflow_dispatch: {} # permite disparar manualmente desde la pestaña Actions
 
 jobs:

@@ -62,7 +62,7 @@ afterEach(() => {
 });
 
 describe('calcularAlertaSemanal', () => {
-  it('pide el calendario para el rango [hoy, hoy+7d] con los tickers de la cartera', async () => {
+  it('pide el calendario para el rango [hoy, hoy+6d] con los tickers de la cartera', async () => {
     fetchCalendarioFinancieroMock.mockResolvedValue({ eventos: [], yields: [], errores: [], generatedAt: Date.now() });
 
     const data = dataConTenencia('AAPL', 1000);
@@ -72,7 +72,7 @@ describe('calcularAlertaSemanal', () => {
       ['AAPL'],
       [],
       '2026-07-27',
-      '2026-08-03',
+      '2026-08-02',
       { AAPL: 1000 },
     );
   });
@@ -104,7 +104,7 @@ describe('calcularAlertaSemanal', () => {
 
     // Solo el ticker del mes más reciente (2026-07), no "VIEJO" de 2026-06.
     expect(fetchCalendarioFinancieroMock).toHaveBeenCalledWith(
-      ['AAPL'], [], '2026-07-27', '2026-08-03', { AAPL: 1000 },
+      ['AAPL'], [], '2026-07-27', '2026-08-02', { AAPL: 1000 },
     );
   });
 });

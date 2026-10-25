@@ -11,13 +11,13 @@ codigo: .github/workflows/alerta-semanal.yml, app/api/alertas/semanal/route.ts
 ## Contexto
 
 La alerta semanal de cobros (`GET /api/alertas/semanal`) resume los cobros esperados
-de los próximos 7 días y los manda por mail. Tiene que dispararse **los lunes a la
-mañana**: el horario importa, porque el contenido es la agenda de la semana que
-arranca.
+de los próximos 7 días y los manda por mail. Tiene que dispararse a un **horario
+exacto**: el contenido es la agenda de la semana que arranca, así que llegar tarde o
+en un horario variable le resta utilidad.
 
 El dashboard está deployado en Vercel, así que Vercel Cron era la opción por defecto.
 Pero en el plan Hobby los cron jobs corren **como máximo una vez por día y sin
-garantía de horario preciso**: no se puede pedir "los lunes a las 8".
+garantía de horario preciso**: no se puede pedir un horario fijo exacto.
 
 ## Alternativas descartadas
 
@@ -33,8 +33,11 @@ garantía de horario preciso**: no se puede pedir "los lunes a las 8".
 ## Decisión
 
 El trigger es un workflow de **GitHub Actions** (`.github/workflows/alerta-semanal.yml`)
-con `schedule: '0 11 * * 1'` — lunes 11:00 UTC = 08:00 ART (Argentina no tiene horario
-de verano, así que el offset es fijo y no hace falta corregirlo dos veces por año).
+con `schedule: '0 0 * * 1'` — domingo 21:00 ART = lunes 00:00 UTC (Argentina no tiene
+horario de verano, así que el offset es fijo y no hace falta corregirlo dos veces por
+año). El rango de cobros que calcula `calcularAlertaSemanal` (lunes→domingo) usa ese
+mismo instante como ancla de "hoy", así que el horario del cron y el rango mostrado en
+el mail están acoplados: si se cambia uno, hay que revisar el otro.
 
 El workflow hace `curl` al endpoint y **falla el job si la respuesta no es 200**, de
 modo que un envío roto aparece como un check rojo en GitHub en vez de pasar

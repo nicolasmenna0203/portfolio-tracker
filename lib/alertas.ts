@@ -46,7 +46,9 @@ function fmtFecha(d: Date): string {
 
 /**
  * Calcula los eventos de calendario financiero de la cartera actual que caen
- * en los próximos `dias` días (por defecto 7, desde hoy inclusive).
+ * en los próximos `dias` días (por defecto 7, desde hoy inclusive). El cron
+ * dispara domingo 21hs ART (lunes 00:00 UTC), así que `hoy` cae en el lunes y
+ * el rango por defecto queda lunes→domingo de la semana que arranca.
  */
 export async function calcularAlertaSemanal(
   data: DashboardData,
@@ -60,7 +62,7 @@ export async function calcularAlertaSemanal(
   const hoy = new Date();
   const desde = fmtFecha(hoy);
   const hastaDate = new Date(hoy);
-  hastaDate.setUTCDate(hastaDate.getUTCDate() + dias);
+  hastaDate.setUTCDate(hastaDate.getUTCDate() + dias - 1);
   const hasta = fmtFecha(hastaDate);
 
   // El rango puede cruzar fin de año (ej. 28-dic a 4-ene); fetchCalendarioFinanciero
