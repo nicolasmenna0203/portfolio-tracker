@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { usePathname } from 'next/navigation';
 import type { GastosFijosResponse, GastoFijo, FrecuenciaGasto } from '@/types';
-import { fmtARS, fmtUSD, type Moneda } from '@/lib/parser';
+import { formatMoney, type Moneda } from '@/lib/format';
 import KPICard from './KPICard';
 
 interface Props {
@@ -152,14 +152,14 @@ export default function GastosFijosSection({ hideValues, moneda = 'ARS', mepActu
 
       <div className="kpi-grid">
         <KPICard
-          label={`Total mensual (${moneda})`}
-          value={hideValues ? '***' : moneda === 'ARS' ? fmtARS(totalMensual) : fmtUSD(totalMensual)}
+          label="Total mensual"
+          value={formatMoney(totalMensual, { currency: moneda, hidden: hideValues })}
           sub={hayInconvertibles ? 'sin MEP para convertir algún gasto' : `${resp?.gastos.length ?? 0} gasto${resp?.gastos.length !== 1 ? 's' : ''} fijo${resp?.gastos.length !== 1 ? 's' : ''}`}
           accentColor="var(--primary)"
         />
         <KPICard
           label="Total anual estimado"
-          value={hideValues ? '***' : moneda === 'ARS' ? fmtARS(totalMensual * 12) : fmtUSD(totalMensual * 12)}
+          value={formatMoney(totalMensual * 12, { currency: moneda, hidden: hideValues })}
           sub="12 × el mensual equivalente"
           accentColor="var(--down)"
         />
@@ -203,8 +203,8 @@ export default function GastosFijosSection({ hideValues, moneda = 'ARS', mepActu
                       <span style={{ color: 'var(--muted)', fontSize: 11, flexShrink: 0 }}>
                         {g.frecuencia === 'anual' ? 'anual' : 'mensual'}
                       </span>
-                      <span style={{ color: 'var(--down)', fontWeight: 600, flexShrink: 0, minWidth: 90, textAlign: 'right' }}>
-                        {hideValues ? '***' : g.moneda === 'ARS' ? fmtARS(g.monto) : fmtUSD(g.monto)}
+                      <span style={{ color: 'var(--down)', fontWeight: 600, flexShrink: 0, minWidth: 90, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
+                        {formatMoney(g.monto, { currency: g.moneda, hidden: hideValues })}
                       </span>
                       {!esDemo && (
                         <button

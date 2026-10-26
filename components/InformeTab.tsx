@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react';
 import type { ResumenRow, TenenciaActual } from '@/types';
-import { fmtUSD, fmtARS, fmtPct, type Moneda } from '@/lib/parser';
+import { formatMoney, formatPercent, type Moneda } from '@/lib/format';
 import {
   PALETA_TIPO, RIESGO_COLOR, RIESGO_LABEL, MONEDA_COLOR,
   RENTA_COLOR, GEO_COLOR, MONEDA_LABEL, RENTA_LABEL, GEO_LABEL,
@@ -29,8 +29,8 @@ function signo(n: number) { return n >= 0 ? '▲' : '▼'; }
 function VariacionBadge({ value, pct, fmt }: { value: number; pct: number; fmt: (n: number) => string }) {
   const color = value >= 0 ? 'var(--up)' : 'var(--down)';
   return (
-    <span style={{ color, fontWeight: 700, fontSize: 12, whiteSpace: 'nowrap' }}>
-      {signo(value)} {fmt(Math.abs(value))} ({fmtPct(pct)})
+    <span style={{ color, fontWeight: 700, fontSize: 12, whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>
+      {signo(value)} {fmt(Math.abs(value))} ({formatPercent(pct)})
     </span>
   );
 }
@@ -113,7 +113,7 @@ function DimChips({ rows, totalAnterior: _, moneda }: { rows: DimRow[]; totalAnt
 
   // actual/anterior ya vienen en la moneda correcta (tenencia_ars o tenencia_usd
   // reales del Sheet, según corresponda) — acá solo se elige el formateador.
-  const fmt = moneda === 'ARS' ? fmtARS : fmtUSD;
+  const fmt = (n: number) => formatMoney(n, { currency: moneda });
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -146,11 +146,11 @@ function DimChips({ rows, totalAnterior: _, moneda }: { rows: DimRow[]; totalAnt
             <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 8 }}>
               <div style={{ width: 7, height: 7, borderRadius: '50%', background: r.color, flexShrink: 0 }} />
               <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-sec)', letterSpacing: '0.05em', textTransform: 'uppercase' }}>{r.label}</span>
-              <span style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)', lineHeight: 1 }}>{fmt(r.actual)}</span>
-              <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-sec)', lineHeight: 1 }}>{r.pctAct.toFixed(1)}%</span>
+              <span style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>{fmt(r.actual)}</span>
+              <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-sec)', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>{formatPercent(r.pctAct, { sign: false })}</span>
               {r.anterior > 0 && (
-                <span style={{ fontSize: 10, fontWeight: 600, color: delta >= 0 ? 'var(--up)' : 'var(--down)', lineHeight: 1 }}>
-                  {(r.pctAct - r.pctAnt) >= 0 ? '+' : ''}{(r.pctAct - r.pctAnt).toFixed(1)}pp
+                <span style={{ fontSize: 10, fontWeight: 600, color: delta >= 0 ? 'var(--up)' : 'var(--down)', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>
+                  {formatPercent(r.pctAct - r.pctAnt, { pp: true })}
                 </span>
               )}
             </div>
@@ -194,9 +194,9 @@ function DimChips({ rows, totalAnterior: _, moneda }: { rows: DimRow[]; totalAnt
                 left: `${labelAt}%`, top: 0,
                 transform: 'translateX(-50%)',
                 fontSize: 10, fontWeight: 700, color: varColor,
-                whiteSpace: 'nowrap', lineHeight: '16px',
+                whiteSpace: 'nowrap', lineHeight: '16px', fontVariantNumeric: 'tabular-nums',
               }}>
-                {deltaPositivo ? '+' : ''}{fmt(delta)}{r.anterior > 0 ? ` (${deltaPositivo ? '+' : ''}${deltaPct.toFixed(1)}%)` : ''}
+                {formatMoney(delta, { currency: moneda, sign: true })}{r.anterior > 0 ? ` (${formatPercent(deltaPct)})` : ''}
               </span>
             </div>
           </div>

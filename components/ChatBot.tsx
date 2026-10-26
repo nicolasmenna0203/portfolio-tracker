@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import type { DashboardData } from '@/types';
-import { fmtUSD, fmtPct } from '@/lib/parser';
+import { formatMoney, formatPercent } from '@/lib/format';
 import { RIESGO_LABEL, RENTA_LABEL, GEO_LABEL } from '@/lib/constants';
 
 interface Message {
@@ -69,27 +69,25 @@ function getAnswer(question: string, data: DashboardData): string {
 
   // ── Total cartera
   if (q.includes('total') || q.includes('cartera') || q.includes('patrimonio') || q.includes('vale')) {
-    return `Tu cartera total es de **${fmtUSD(total)}** al ${kpis.fechaStr}.`;
+    return `Tu cartera total es de **${formatMoney(total, { currency: 'USD' })}** al ${kpis.fechaStr}.`;
   }
 
   // ── Rendimiento / ganancia
   if (q.includes('rendimiento') || q.includes('ganancia') || q.includes('retorno') || q.includes('rentabilidad') || q.includes('resultado')) {
-    const signo = kpis.rendimientoNeto >= 0 ? '+' : '';
-    return `Tu rendimiento neto acumulado es de **${signo}${fmtUSD(kpis.rendimientoNeto)}** (${fmtPct(kpis.rendimientoPct)} sobre aportes).`;
+    return `Tu rendimiento neto acumulado es de **${formatMoney(kpis.rendimientoNeto, { currency: 'USD', sign: true })}** (${formatPercent(kpis.rendimientoPct)} sobre aportes).`;
   }
 
   // ── TIR
   if (q.includes('tir') || q.includes('anual') || q.includes('xirr')) {
     if (kpis.tirAnual == null) return 'La TIR anual no está disponible todavía (se necesitan más datos históricos).';
-    const signo = kpis.tirAnual >= 0 ? '+' : '';
-    return `Tu TIR anual (sobre flujos históricos) es de **${signo}${kpis.tirAnual.toFixed(1)}%**.`;
+    return `Tu TIR anual (sobre flujos históricos) es de **${formatPercent(kpis.tirAnual)}**.`;
   }
 
   // ── Activo top / mayor peso
   if (q.includes('mayor') || q.includes('top') || q.includes('principal') || q.includes('más grande') || q.includes('mas grande') || q.includes('activo')) {
     if (!topActivo) return 'No hay tenencias registradas para el último mes.';
     const pct = total > 0 ? (topActivo.tenencia_usd / total) * 100 : 0;
-    return `El activo con mayor peso es **${topActivo.ticker}** con ${fmtUSD(topActivo.tenencia_usd)} (${pct.toFixed(1)}% de la cartera).`;
+    return `El activo con mayor peso es **${topActivo.ticker}** con ${formatMoney(topActivo.tenencia_usd, { currency: 'USD' })} (${formatPercent(pct, { sign: false })} de la cartera).`;
   }
 
   // ── Cuántos activos
@@ -102,7 +100,7 @@ function getAnswer(question: string, data: DashboardData): string {
     if (Object.keys(porTipo).length === 0) return 'No hay datos de tipo de activo disponibles.';
     const lineas = Object.entries(porTipo)
       .sort((a, b) => b[1] - a[1])
-      .map(([tipo, monto]) => `• ${tipo}: ${fmtUSD(monto)} (${total > 0 ? ((monto / total) * 100).toFixed(1) : 0}%)`)
+      .map(([tipo, monto]) => `• ${tipo}: ${formatMoney(monto, { currency: 'USD' })} (${formatPercent(total > 0 ? (monto / total) * 100 : 0, { sign: false })})`)
       .join('\n');
     return `Distribución por tipo de activo:\n${lineas}`;
   }
@@ -112,7 +110,7 @@ function getAnswer(question: string, data: DashboardData): string {
     if (Object.keys(porGeo).length === 0) return 'No hay datos de geografía disponibles.';
     const lineas = Object.entries(porGeo)
       .sort((a, b) => b[1] - a[1])
-      .map(([geo, monto]) => `• ${geo}: ${fmtUSD(monto)} (${total > 0 ? ((monto / total) * 100).toFixed(1) : 0}%)`)
+      .map(([geo, monto]) => `• ${geo}: ${formatMoney(monto, { currency: 'USD' })} (${formatPercent(total > 0 ? (monto / total) * 100 : 0, { sign: false })})`)
       .join('\n');
     return `Distribución geográfica:\n${lineas}`;
   }
@@ -122,7 +120,7 @@ function getAnswer(question: string, data: DashboardData): string {
     if (Object.keys(porRenta).length === 0) return 'No hay datos de tipo de renta disponibles.';
     const lineas = Object.entries(porRenta)
       .sort((a, b) => b[1] - a[1])
-      .map(([r, monto]) => `• ${r}: ${fmtUSD(monto)} (${total > 0 ? ((monto / total) * 100).toFixed(1) : 0}%)`)
+      .map(([r, monto]) => `• ${r}: ${formatMoney(monto, { currency: 'USD' })} (${formatPercent(total > 0 ? (monto / total) * 100 : 0, { sign: false })})`)
       .join('\n');
     return `Distribución por tipo de renta:\n${lineas}`;
   }
@@ -130,21 +128,20 @@ function getAnswer(question: string, data: DashboardData): string {
   // ── Mejor mes
   if (q.includes('mejor') || q.includes('máximo') || q.includes('maximo')) {
     if (!mejorMes) return 'No hay datos históricos suficientes.';
-    return `El mejor mes fue **${mejorMes.fecha}** con un rendimiento de ${fmtUSD(mejorMes.rendimiento)}.`;
+    return `El mejor mes fue **${mejorMes.fecha}** con un rendimiento de ${formatMoney(mejorMes.rendimiento, { currency: 'USD' })}.`;
   }
 
   // ── Peor mes
   if (q.includes('peor') || q.includes('mínimo') || q.includes('minimo') || q.includes('baj')) {
     if (!peorMes) return 'No hay datos históricos suficientes.';
-    return `El peor mes fue **${peorMes.fecha}** con un rendimiento de ${fmtUSD(peorMes.rendimiento)}.`;
+    return `El peor mes fue **${peorMes.fecha}** con un rendimiento de ${formatMoney(peorMes.rendimiento, { currency: 'USD' })}.`;
   }
 
   // ── Evolución / crecimiento
   if (q.includes('evolución') || q.includes('evolucion') || q.includes('creció') || q.includes('crecio') || q.includes('crecimiento') || q.includes('histórico') || q.includes('historico')) {
     if (!primerMes || !ultimoMes) return 'No hay datos históricos suficientes.';
     const diff = ultimoMes.total_cartera - primerMes.total_cartera;
-    const signo = diff >= 0 ? '+' : '';
-    return `Desde **${primerMes.fecha}** hasta **${ultimoMes.fecha}** la cartera pasó de ${fmtUSD(primerMes.total_cartera)} a ${fmtUSD(ultimoMes.total_cartera)} (${signo}${fmtUSD(diff)}).`;
+    return `Desde **${primerMes.fecha}** hasta **${ultimoMes.fecha}** la cartera pasó de ${formatMoney(primerMes.total_cartera, { currency: 'USD' })} a ${formatMoney(ultimoMes.total_cartera, { currency: 'USD' })} (${formatMoney(diff, { currency: 'USD', sign: true })}).`;
   }
 
   // ── Meses disponibles / historial
@@ -154,13 +151,12 @@ function getAnswer(question: string, data: DashboardData): string {
 
   // ── Aportes
   if (q.includes('aporte') || q.includes('inversión') || q.includes('inversion') || q.includes('invertido')) {
-    return `Los aportes acumulados son **${fmtUSD(kpis.aporteAcumulados)}**.`;
+    return `Los aportes acumulados son **${formatMoney(kpis.aporteAcumulados, { currency: 'USD' })}**.`;
   }
 
   // ── Delta mes anterior
   if (q.includes('mes anterior') || q.includes('último mes') || q.includes('ultimo mes') || q.includes('cambio') || q.includes('variación') || q.includes('variacion')) {
-    const signo = kpis.deltaCartera >= 0 ? '+' : '';
-    return `Respecto al mes anterior la cartera cambió **${signo}${fmtUSD(kpis.deltaCartera)}**.`;
+    return `Respecto al mes anterior la cartera cambió **${formatMoney(kpis.deltaCartera, { currency: 'USD', sign: true })}**.`;
   }
 
   return 'No encontré una respuesta para esa pregunta. Probá con una de las preguntas sugeridas o reformulá la consulta.';

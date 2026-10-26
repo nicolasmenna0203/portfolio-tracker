@@ -7,7 +7,7 @@ import {
   CartesianGrid, ResponsiveContainer, ReferenceLine,
 } from 'recharts';
 import type { DashboardData, TenenciaActual } from '@/types';
-import { fmtUSD } from '@/lib/parser';
+import { formatMoney, formatPercent, formatNumber } from '@/lib/format';
 import {
   RIESGO_LABEL, RENTA_LABEL, GEO_LABEL, MONEDA_LABEL,
   PALETA_TIPO, RIESGO_COLOR, RENTA_COLOR, GEO_COLOR, MONEDA_COLOR,
@@ -33,7 +33,7 @@ function SliderRow({
         <span style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
           {label}
         </span>
-        <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--primary)' }}>
+        <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--primary)', fontVariantNumeric: 'tabular-nums' }}>
           {fmt(value)}
         </span>
       </div>
@@ -43,8 +43,8 @@ function SliderRow({
         style={{ width: '100%', accentColor: 'var(--primary)', cursor: 'pointer' }}
       />
       <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-        <span style={{ fontSize: 10, color: 'var(--muted)' }}>{fmt(min)}</span>
-        <span style={{ fontSize: 10, color: 'var(--muted)' }}>{fmt(max)}</span>
+        <span style={{ fontSize: 10, color: 'var(--muted)', fontVariantNumeric: 'tabular-nums' }}>{fmt(min)}</span>
+        <span style={{ fontSize: 10, color: 'var(--muted)', fontVariantNumeric: 'tabular-nums' }}>{fmt(max)}</span>
       </div>
     </div>
   );
@@ -68,7 +68,7 @@ function CustomTooltip({ active, payload, label }: { active?: boolean; payload?:
       {payload.map((p) => (
         p.value != null && (
           <p key={p.dataKey} style={{ margin: '2px 0', color: p.color }}>
-            {p.name}: <strong>{fmtUSD(p.value)}</strong>
+            {p.name}: <strong style={{ fontVariantNumeric: 'tabular-nums' }}>{formatMoney(p.value, { currency: 'USD' })}</strong>
           </p>
         )
       ))}
@@ -184,7 +184,7 @@ function BarraObjetivo({
 }) {
   const tieneObjetivo = pctObj > 0;
   const diff = pctReal - pctObj;
-  const diffLabel = diff > 0 ? `+${diff.toFixed(1)}%` : `${diff.toFixed(1)}%`;
+  const diffLabel = formatPercent(diff);
   const diffColor = Math.abs(diff) <= 3 ? 'var(--up)' : Math.abs(diff) <= 8 ? '#ffa15a' : 'var(--down)';
   const enRango = tieneObjetivo && Math.abs(diff) <= 3;
 
@@ -194,11 +194,11 @@ function BarraObjetivo({
         <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)' }}>{categoria}</span>
         <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
           <span style={{ fontSize: 11, color: 'var(--muted)' }}>
-            Real: <strong style={{ color: 'var(--text)' }}>{pctReal.toFixed(1)}%</strong>
+            Real: <strong style={{ color: 'var(--text)', fontVariantNumeric: 'tabular-nums' }}>{formatPercent(pctReal, { sign: false })}</strong>
           </span>
           <span style={{ fontSize: 11, color: 'var(--muted)' }}>
-            Obj: <strong style={{ color: tieneObjetivo ? color : 'var(--muted)' }}>
-              {tieneObjetivo ? `${pctObj.toFixed(0)}%` : '—'}
+            Obj: <strong style={{ color: tieneObjetivo ? color : 'var(--muted)', fontVariantNumeric: 'tabular-nums' }}>
+              {tieneObjetivo ? formatPercent(pctObj, { sign: false, decimals: 0 }) : '—'}
             </strong>
           </span>
           {tieneObjetivo && (
@@ -207,6 +207,7 @@ function BarraObjetivo({
               background: enRango ? 'rgba(45,198,83,0.12)' : 'transparent',
               padding: '1px 5px',
               borderRadius: 4,
+              fontVariantNumeric: 'tabular-nums',
             }}>
               {enRango ? '✓' : diffLabel}
             </span>
@@ -444,13 +445,13 @@ function ObjetivosComposicion({ tenencias }: { tenencias: TenenciaActual[] }) {
         <span style={{
           fontSize: 11, fontWeight: 700,
           color: suma > 100 ? 'var(--down)' : suma === 100 ? 'var(--up)' : 'var(--muted)',
-          minWidth: 90, textAlign: 'right',
+          minWidth: 90, textAlign: 'right', fontVariantNumeric: 'tabular-nums',
         }}>
           {suma > 100
-            ? `Excede ${(suma - 100).toFixed(0)}%`
+            ? `Excede ${formatPercent(suma - 100, { sign: false, decimals: 0 })}`
             : suma === 100
             ? 'Suma 100% ✓'
-            : `Disponible: ${resta.toFixed(0)}%`}
+            : `Disponible: ${formatPercent(resta, { sign: false, decimals: 0 })}`}
         </span>
       </div>
 
@@ -600,25 +601,25 @@ export default function ProyeccionesTab({ data, hideValues }: Props) {
           <SliderRow
             label="Aporte mensual"
             value={aporte} min={0} max={5000} step={50}
-            fmt={v => fmtUSD(v)}
+            fmt={v => formatMoney(v, { currency: 'USD' })}
             onChange={updateAporte}
           />
           <SliderRow
             label="Tasa anual estimada"
             value={tasa} min={1} max={30} step={0.5}
-            fmt={v => `${v.toFixed(1)}%`}
+            fmt={v => formatPercent(v, { sign: false })}
             onChange={updateTasa}
           />
           <SliderRow
             label="Horizonte"
             value={horizonte} min={6} max={120} step={6}
-            fmt={v => v >= 12 ? `${(v / 12).toFixed(1)} años` : `${v} meses`}
+            fmt={v => v >= 12 ? `${formatNumber(v / 12, { decimals: 1 })} años` : `${v} meses`}
             onChange={updateHorizonte}
           />
           <SliderRow
             label="Objetivo de capital"
             value={objetivo} min={10000} max={1000000} step={5000}
-            fmt={v => fmtUSD(v)}
+            fmt={v => formatMoney(v, { currency: 'USD' })}
             onChange={updateObjetivo}
           />
         </div>
@@ -631,11 +632,11 @@ export default function ProyeccionesTab({ data, hideValues }: Props) {
             <p style={{ margin: '0 0 4px', fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--muted)' }}>
               Capital proyectado
             </p>
-            <p style={{ margin: 0, fontSize: 22, fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.03em' }}>
-              {hideValues ? '***' : fmtUSD(finalProyectado)}
+            <p style={{ margin: 0, fontSize: 22, fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.03em', fontVariantNumeric: 'tabular-nums' }}>
+              {formatMoney(finalProyectado, { currency: 'USD', hidden: hideValues })}
             </p>
             <p style={{ margin: '4px 0 0', fontSize: 11, color: 'var(--muted)' }}>
-              en {horizonte >= 12 ? `${(horizonte / 12).toFixed(1)} años` : `${horizonte} meses`}
+              en {horizonte >= 12 ? `${formatNumber(horizonte / 12, { decimals: 1 })} años` : `${horizonte} meses`}
             </p>
           </div>
 
@@ -644,13 +645,13 @@ export default function ProyeccionesTab({ data, hideValues }: Props) {
             <p style={{ margin: '0 0 4px', fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--muted)' }}>
               Ganancia total
             </p>
-            <p style={{ margin: 0, fontSize: 22, fontWeight: 700, color: interesGenerado >= 0 ? 'var(--up)' : 'var(--down)', letterSpacing: '-0.03em' }}>
-              {hideValues ? '***' : `${interesGenerado >= 0 ? '+' : '−'}${fmtUSD(Math.abs(interesGenerado))}`}
+            <p style={{ margin: 0, fontSize: 22, fontWeight: 700, color: interesGenerado >= 0 ? 'var(--up)' : 'var(--down)', letterSpacing: '-0.03em', fontVariantNumeric: 'tabular-nums' }}>
+              {formatMoney(interesGenerado, { currency: 'USD', sign: true, hidden: hideValues })}
             </p>
             <p style={{ margin: '4px 0 0', fontSize: 11, color: 'var(--muted)' }}>
               {hideValues
-                ? '***'
-                : `cartera hoy ${fmtUSD(totalActual)} + aportes ${fmtUSD(aportesTotales)} + interés ${fmtUSD(interesGenerado)}`}
+                ? '••••'
+                : `cartera hoy ${formatMoney(totalActual, { currency: 'USD' })} + aportes ${formatMoney(aportesTotales, { currency: 'USD' })} + interés ${formatMoney(interesGenerado, { currency: 'USD' })}`}
             </p>
           </div>
 
@@ -661,8 +662,8 @@ export default function ProyeccionesTab({ data, hideValues }: Props) {
             borderRadius: 12, padding: '14px 18px',
             display: 'flex', flexDirection: 'column', justifyContent: 'center',
           }}>
-            <p style={{ margin: '0 0 4px', fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--muted)' }}>
-              Objetivo {hideValues ? '' : fmtUSD(objetivo)}
+            <p style={{ margin: '0 0 4px', fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--muted)', fontVariantNumeric: 'tabular-nums' }}>
+              Objetivo {hideValues ? '' : formatMoney(objetivo, { currency: 'USD' })}
             </p>
             {objetivo <= totalActual ? (
               <p style={{ margin: 0, fontSize: 18, fontWeight: 700, color: 'var(--up)' }}>¡Ya alcanzado!</p>
@@ -672,7 +673,7 @@ export default function ProyeccionesTab({ data, hideValues }: Props) {
                   {labelMesObj}
                 </p>
                 <p style={{ margin: '4px 0 0', fontSize: 11, color: 'var(--muted)' }}>
-                  en {mesObjetivo! >= 12 ? `${(mesObjetivo! / 12).toFixed(1)} años` : `${mesObjetivo} meses`}
+                  en {mesObjetivo! >= 12 ? `${formatNumber(mesObjetivo! / 12, { decimals: 1 })} años` : `${mesObjetivo} meses`}
                 </p>
               </>
             ) : (
@@ -685,8 +686,8 @@ export default function ProyeccionesTab({ data, hideValues }: Props) {
             <p style={{ margin: '0 0 4px', fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--muted)' }}>
               Cartera hoy
             </p>
-            <p style={{ margin: 0, fontSize: 22, fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.03em' }}>
-              {hideValues ? '***' : fmtUSD(totalActual)}
+            <p style={{ margin: 0, fontSize: 22, fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.03em', fontVariantNumeric: 'tabular-nums' }}>
+              {formatMoney(totalActual, { currency: 'USD', hidden: hideValues })}
             </p>
             <p style={{ margin: '4px 0 0', fontSize: 11, color: 'var(--muted)' }}>
               al {kpis.fechaStr}
@@ -726,7 +727,7 @@ export default function ProyeccionesTab({ data, hideValues }: Props) {
               tick={{ fontSize: 10, fill: 'var(--muted)' }}
               tickLine={false}
               axisLine={false}
-              tickFormatter={v => hideValues ? '***' : `$${(v / 1000).toFixed(0)}k`}
+              tickFormatter={v => formatMoney(v, { currency: 'USD', mode: 'compact', hidden: hideValues })}
               width={52}
             />
             <Tooltip content={<CustomTooltip />} />
@@ -763,7 +764,7 @@ export default function ProyeccionesTab({ data, hideValues }: Props) {
                 strokeDasharray="4 3"
                 strokeOpacity={0.5}
                 label={{
-                  value: hideValues ? 'Objetivo' : `Objetivo ${fmtUSD(objetivo)}`,
+                  value: hideValues ? 'Objetivo' : `Objetivo ${formatMoney(objetivo, { currency: 'USD' })}`,
                   position: 'insideTopRight',
                   fontSize: 10,
                   fill: 'var(--primary)',

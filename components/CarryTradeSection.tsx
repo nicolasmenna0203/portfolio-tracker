@@ -9,21 +9,18 @@ import type { CarryTradeItem } from '@/types';
 import { usePerformance } from '@/lib/usePerformance';
 import { calcularCarryTrade, techoBandaEnFecha } from '@/lib/carryTrade';
 import { formatMesLabel } from '@/lib/parser';
+import { formatMoney, formatPercent, formatFx } from '@/lib/format';
 
 interface Props {
   tenencias: Record<string, number>;
 }
 
 function fmtPct1(v: number): string {
-  return `${(v * 100).toFixed(1)}%`;
+  return formatPercent(v * 100, { sign: false });
 }
 
 function fmtPct2(v: number): string {
-  return `${(v * 100).toFixed(2)}%`;
-}
-
-function fmtArs(v: number): string {
-  return v.toLocaleString('es-AR', { maximumFractionDigits: 2 });
+  return formatPercent(v * 100, { sign: false, decimals: 2 });
 }
 
 function fmtFecha(iso: string): string {
@@ -133,16 +130,16 @@ function CarryTooltip({ active, payload }: { active?: boolean; payload?: Tooltip
           <p style={{ margin: '2px 0', color: 'var(--text-sec)' }}>TIR (ARS): <strong>{fmtPct1(b.tir)}</strong></p>
           <p style={{ margin: '2px 0', color: 'var(--text-sec)' }}>Retorno directo (ARS): <strong>{fmtPct1(b.retornoDirectoArs)}</strong></p>
           {!Number.isNaN(b.mepBreakeven) && (
-            <p style={{ margin: '2px 0', color: 'var(--text-sec)' }}>MEP breakeven: <strong>${fmtArs(b.mepBreakeven)}</strong> ({fmtPct1(b.devaluacionBreakeven)})</p>
+            <p style={{ margin: '2px 0', color: 'var(--text-sec)' }}>MEP breakeven: <strong>{formatFx(b.mepBreakeven, { decimals: 2 })}</strong> ({fmtPct1(b.devaluacionBreakeven)})</p>
           )}
-          <p style={{ margin: '2px 0', color: '#2a78d6' }}>Banda superior a esa fecha: <strong>${fmtArs(b.techoBandaVto)}</strong></p>
+          <p style={{ margin: '2px 0', color: '#2a78d6' }}>Banda superior a esa fecha: <strong>{formatFx(b.techoBandaVto, { decimals: 2 })}</strong></p>
           {b.tenenciaUsd != null && <p style={{ margin: '6px 0 0', color: 'var(--primary)', fontSize: 11 }}>En cartera</p>}
         </>
       ) : itemBanda ? (
         <>
           <p style={{ margin: '0 0 4px', fontWeight: 700, color: '#2a78d6' }}>Banda superior proyectada</p>
           <p style={{ margin: '0 0 6px', color: 'var(--muted)', fontSize: 11 }}>{formatMesLabel(itemBanda.fechaTs)}</p>
-          <p style={{ margin: '2px 0', color: 'var(--text-sec)' }}>Techo estimado: <strong>${fmtArs(itemBanda.techoBanda)}</strong></p>
+          <p style={{ margin: '2px 0', color: 'var(--text-sec)' }}>Techo estimado: <strong>{formatFx(itemBanda.techoBanda, { decimals: 2 })}</strong></p>
         </>
       ) : null}
     </div>
@@ -211,7 +208,7 @@ export default function CarryTradeSection({ tenencias }: Props) {
       fijas.map((f) => ({ key: f.key, label: f.label, custom: false }));
     if (carryCustom != null) {
       const idx = fijas.findIndex((f) => carryCustom < f.mep);
-      const entrada = { key: 'custom' as const, label: `Carry ${fmtArs(carryCustom)} (custom)`, custom: true };
+      const entrada = { key: 'custom' as const, label: `Carry ${formatFx(carryCustom, { decimals: 2 })} (custom)`, custom: true };
       if (idx === -1) columnas.push(entrada);
       else columnas.splice(idx, 0, entrada);
     }
@@ -416,29 +413,29 @@ export default function CarryTradeSection({ tenencias }: Props) {
                 <td style={{ padding: '7px 10px', fontWeight: 700, color: 'var(--text)' }}>
                   {i.ticker}{i.tenenciaUsd ? ' ★' : ''}
                 </td>
-                <td style={{ padding: '7px 10px', textAlign: 'right', color: 'var(--text-sec)' }}>
-                  {i.precio != null ? `$${fmtArs(i.precio)}` : '—'}
+                <td style={{ padding: '7px 10px', textAlign: 'right', color: 'var(--text-sec)', fontVariantNumeric: 'tabular-nums' }}>
+                  {i.precio != null ? formatMoney(i.precio, { currency: 'ARS', mode: 'price' }) : '—'}
                 </td>
-                <td style={{ padding: '7px 10px', textAlign: 'right', color: 'var(--text-sec)' }}>{i.diasAlVencimiento}</td>
-                <td style={{ padding: '7px 10px', textAlign: 'right', color: 'var(--text-sec)', whiteSpace: 'nowrap' }}>{fmtFecha(i.vencimiento)}</td>
-                <td style={{ padding: '7px 10px', textAlign: 'right', color: 'var(--text-sec)' }}>
-                  {i.prFinish != null ? `$${fmtArs(i.prFinish)}` : '—'}
+                <td style={{ padding: '7px 10px', textAlign: 'right', color: 'var(--text-sec)', fontVariantNumeric: 'tabular-nums' }}>{i.diasAlVencimiento}</td>
+                <td style={{ padding: '7px 10px', textAlign: 'right', color: 'var(--text-sec)', whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>{fmtFecha(i.vencimiento)}</td>
+                <td style={{ padding: '7px 10px', textAlign: 'right', color: 'var(--text-sec)', fontVariantNumeric: 'tabular-nums' }}>
+                  {i.prFinish != null ? formatMoney(i.prFinish, { currency: 'ARS', mode: 'price' }) : '—'}
                 </td>
-                <td style={{ padding: '7px 10px', textAlign: 'right', fontWeight: 700, color: 'var(--text)' }}>
+                <td style={{ padding: '7px 10px', textAlign: 'right', fontWeight: 700, color: 'var(--text)', fontVariantNumeric: 'tabular-nums' }}>
                   {fmtPct1(modoTasa === 'directa' ? i.retornoDirectoArs : i.tir)}
                 </td>
                 {columnasCarry.map((c) => (
                   <td
                     key={c.key}
                     style={{
-                      padding: '7px 10px', textAlign: 'right', fontWeight: 700,
+                      padding: '7px 10px', textAlign: 'right', fontWeight: 700, fontVariantNumeric: 'tabular-nums',
                       background: colorHeatmap(i.carryPorTarget[c.key]), color: colorHeatmapTexto(i.carryPorTarget[c.key]),
                     }}
                   >
                     {i.carryPorTarget[c.key] != null ? fmtPct1(i.carryPorTarget[c.key]!) : '—'}
                   </td>
                 ))}
-                <td style={{ padding: '7px 10px', textAlign: 'right', fontWeight: 700, background: colorHeatmap(i.bandaSuperior), color: colorHeatmapTexto(i.bandaSuperior) }}>
+                <td style={{ padding: '7px 10px', textAlign: 'right', fontWeight: 700, fontVariantNumeric: 'tabular-nums', background: colorHeatmap(i.bandaSuperior), color: colorHeatmapTexto(i.bandaSuperior) }}>
                   {i.bandaSuperior != null ? fmtPct1(i.bandaSuperior) : '—'}
                 </td>
               </tr>
@@ -473,7 +470,7 @@ export default function CarryTradeSection({ tenencias }: Props) {
               />
               <YAxis
                 type="number" dataKey="mepBreakeven" name="MEP breakeven"
-                tickFormatter={(v) => `$${fmtArs(v)}`}
+                tickFormatter={(v) => formatFx(v)}
                 tick={{ fill: 'var(--muted)', fontSize: 11 }}
                 tickLine={false} axisLine={false} width={64}
                 domain={dominioBreakeven} allowDataOverflow

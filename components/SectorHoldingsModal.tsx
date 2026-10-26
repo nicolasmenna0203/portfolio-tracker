@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import { useSectorHoldings } from '@/lib/useSectorHoldings';
-import { fmtPct } from '@/lib/parser';
+import { formatPercent } from '@/lib/format';
 
 interface Props {
   ticker: string;
@@ -11,7 +11,7 @@ interface Props {
 }
 
 function fmtPct1(v: number): string {
-  return fmtPct(v * 100);
+  return formatPercent(v * 100);
 }
 
 /** Panel modal con la composición (top holdings, gestora, expense ratio) de un ETF sectorial. */
@@ -68,7 +68,7 @@ export default function SectorHoldingsModal({ ticker, label, onClose }: Props) {
           <>
             <div style={{ display: 'flex', gap: 16, marginBottom: 12, fontSize: 11, color: 'var(--muted)' }}>
               {data.gestora && <span>Gestora: <strong style={{ color: 'var(--text-sec)' }}>{data.gestora}</strong></span>}
-              {data.expenseRatio != null && <span>Expense ratio: <strong style={{ color: 'var(--text-sec)' }}>{fmtPct1(data.expenseRatio)}</strong></span>}
+              {data.expenseRatio != null && <span>Expense ratio: <strong style={{ color: 'var(--text-sec)', fontVariantNumeric: 'tabular-nums' }}>{fmtPct1(data.expenseRatio)}</strong></span>}
             </div>
 
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
@@ -85,7 +85,7 @@ export default function SectorHoldingsModal({ ticker, label, onClose }: Props) {
                       <div style={{ fontWeight: 700, color: 'var(--text)' }}>{h.symbol}</div>
                       <div style={{ fontSize: 10, color: 'var(--muted)' }}>{h.nombre}</div>
                     </td>
-                    <td style={{ padding: '6px 6px', textAlign: 'right', color: 'var(--text-sec)', fontWeight: 600 }}>
+                    <td style={{ padding: '6px 6px', textAlign: 'right', color: 'var(--text-sec)', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>
                       {fmtPct1(h.peso)}
                     </td>
                   </tr>

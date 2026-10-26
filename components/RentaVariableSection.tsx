@@ -8,7 +8,7 @@ import {
 import type { RangoHistorico, StockPerformance } from '@/types';
 import { usePerformanceVariable } from '@/lib/usePerformanceVariable';
 import { useHistoricoTicker } from '@/lib/useHistoricoTicker';
-import { fmtUSD, fmtPct } from '@/lib/parser';
+import { formatMoney, formatPercent, formatNumber, CURRENCY_PREFIX } from '@/lib/format';
 import { PALETA_TIPO } from '@/lib/constants';
 import KPICard from './KPICard';
 import SectoresMercado from './SectoresMercado';
@@ -28,19 +28,19 @@ const RANGOS: { id: RangoHistorico; label: string }[] = [
   { id: '10a', label: '10A' },
 ];
 
+/** Precio de acciones/CEDEARs/ETFs: siempre cotiza en USD en el proveedor de precios. */
 function fmtPx(v: number): string {
-  return `$${v.toFixed(2)}`;
+  return formatMoney(v, { currency: 'USD', mode: 'price' });
 }
 
 /** Los fondos cotizan por VCP, que puede estar en pesos: la moneda tiene que ir explícita. */
 function fmtPrecio(a: StockPerformance): string {
   if (!a.esFci) return fmtPx(a.px);
-  const prefijo = a.fciMoneda === 'USD' ? 'US$' : '$';
-  return `${prefijo}${a.px.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  return formatMoney(a.px, { currency: a.fciMoneda === 'USD' ? 'USD' : 'ARS', mode: 'price' });
 }
 
 function fmtPct1(v: number): string {
-  return fmtPct(v * 100);
+  return formatPercent(v * 100);
 }
 
 function colorVar(v: number | null): string {
@@ -48,11 +48,16 @@ function colorVar(v: number | null): string {
   return v >= 0 ? 'var(--up)' : 'var(--down)';
 }
 
+/** Market cap con sufijos T/B/M: caso de dominio específico de capitalización
+ * bursátil, no un monto de cartera, así que no pasa por formatMoney — pero
+ * respeta la misma convención es-AR (coma decimal) y el prefijo de moneda
+ * centralizado en vez de un "$" literal. */
 function fmtCompact(v: number): string {
-  if (v >= 1e12) return `$${(v / 1e12).toFixed(2)}T`;
-  if (v >= 1e9) return `$${(v / 1e9).toFixed(2)}B`;
-  if (v >= 1e6) return `$${(v / 1e6).toFixed(1)}M`;
-  return fmtUSD(v);
+  const prefijo = CURRENCY_PREFIX.USD;
+  if (v >= 1e12) return `${prefijo} ${formatNumber(v / 1e12, { decimals: 2 })}T`;
+  if (v >= 1e9) return `${prefijo} ${formatNumber(v / 1e9, { decimals: 2 })}B`;
+  if (v >= 1e6) return `${prefijo} ${formatNumber(v / 1e6, { decimals: 1 })}M`;
+  return formatMoney(v, { currency: 'USD' });
 }
 
 type SortKey = 'ticker' | 'variacion1d' | 'variacionYtd' | 'peRatio' | 'marketCap' | 'dividendYield';
@@ -182,7 +187,7 @@ export default function RentaVariableSection({ tickersUsa, tenencias, tickersFci
       <div className="kpi-grid">
         <KPICard
           label="Valor en cartera"
-          value={fmtUSD(valorTotalCartera)}
+          value={formatMoney(valorTotalCartera, { currency: 'USD' })}
           sub={`${acciones.filter((a) => a.tenenciaUsd).length} de ${acciones.length} posiciones${hayFci ? ' · incluye fondos (VCP de CAFCI)' : ''}`}
           accentColor="var(--primary)"
         />
@@ -309,17 +314,17 @@ export default function RentaVariableSection({ tickersUsa, tenencias, tickersFci
                       >FCI</span>
                     )}
                   </td>
-                  <td style={{ padding: '7px 10px', textAlign: 'right', fontWeight: 700, color: 'var(--text)' }}>{fmtPrecio(a)}</td>
-                  <td style={{ padding: '7px 10px', textAlign: 'right', color: colorVar(a.variacion1d) }}>{a.variacion1d != null ? fmtPct1(a.variacion1d) : '—'}</td>
-                  <td style={{ padding: '7px 10px', textAlign: 'right', color: colorVar(a.variacion1m) }}>{a.variacion1m != null ? fmtPct1(a.variacion1m) : '—'}</td>
-                  <td style={{ padding: '7px 10px', textAlign: 'right', color: colorVar(a.variacionYtd) }}>{a.variacionYtd != null ? fmtPct1(a.variacionYtd) : '—'}</td>
-                  <td style={{ padding: '7px 10px', textAlign: 'right', color: colorVar(a.variacion1a) }}>{a.variacion1a != null ? fmtPct1(a.variacion1a) : '—'}</td>
-                  <td style={{ padding: '7px 10px', textAlign: 'right', color: 'var(--text-sec)' }}>{a.peRatio != null ? a.peRatio.toFixed(1) : '—'}</td>
-                  <td style={{ padding: '7px 10px', textAlign: 'right', color: 'var(--text-sec)' }}>{a.marketCap != null ? fmtCompact(a.marketCap) : '—'}</td>
-                  <td style={{ padding: '7px 10px', textAlign: 'right', color: 'var(--muted)', fontSize: 11, whiteSpace: 'nowrap' }}>
+                  <td style={{ padding: '7px 10px', textAlign: 'right', fontWeight: 700, color: 'var(--text)', fontVariantNumeric: 'tabular-nums' }}>{fmtPrecio(a)}</td>
+                  <td style={{ padding: '7px 10px', textAlign: 'right', color: colorVar(a.variacion1d), fontVariantNumeric: 'tabular-nums' }}>{a.variacion1d != null ? fmtPct1(a.variacion1d) : '—'}</td>
+                  <td style={{ padding: '7px 10px', textAlign: 'right', color: colorVar(a.variacion1m), fontVariantNumeric: 'tabular-nums' }}>{a.variacion1m != null ? fmtPct1(a.variacion1m) : '—'}</td>
+                  <td style={{ padding: '7px 10px', textAlign: 'right', color: colorVar(a.variacionYtd), fontVariantNumeric: 'tabular-nums' }}>{a.variacionYtd != null ? fmtPct1(a.variacionYtd) : '—'}</td>
+                  <td style={{ padding: '7px 10px', textAlign: 'right', color: colorVar(a.variacion1a), fontVariantNumeric: 'tabular-nums' }}>{a.variacion1a != null ? fmtPct1(a.variacion1a) : '—'}</td>
+                  <td style={{ padding: '7px 10px', textAlign: 'right', color: 'var(--text-sec)', fontVariantNumeric: 'tabular-nums' }}>{a.peRatio != null ? formatNumber(a.peRatio, { decimals: 1 }) : '—'}</td>
+                  <td style={{ padding: '7px 10px', textAlign: 'right', color: 'var(--text-sec)', fontVariantNumeric: 'tabular-nums' }}>{a.marketCap != null ? fmtCompact(a.marketCap) : '—'}</td>
+                  <td style={{ padding: '7px 10px', textAlign: 'right', color: 'var(--muted)', fontSize: 11, whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>
                     {a.fiftyTwoWeekLow != null && a.fiftyTwoWeekHigh != null ? `${fmtPx(a.fiftyTwoWeekLow)} – ${fmtPx(a.fiftyTwoWeekHigh)}` : '—'}
                   </td>
-                  <td style={{ padding: '7px 10px', textAlign: 'right', color: 'var(--text-sec)' }}>{a.dividendYield != null ? fmtPct1(a.dividendYield) : '—'}</td>
+                  <td style={{ padding: '7px 10px', textAlign: 'right', color: 'var(--text-sec)', fontVariantNumeric: 'tabular-nums' }}>{a.dividendYield != null ? fmtPct1(a.dividendYield) : '—'}</td>
                 </tr>
               );
             })}

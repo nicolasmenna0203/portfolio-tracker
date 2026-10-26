@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import type { DashboardData, TenenciaActual } from '@/types';
-import { fmtUSD, fmtARS, fmtPct, toMesKey, type Moneda } from '@/lib/parser';
+import { toMesKey } from '@/lib/parser';
+import { formatMoney, formatPercent, formatFx, type Moneda } from '@/lib/format';
 import { useFx } from '@/lib/useFx';
 import { RIESGO_LABEL, RENTA_LABEL, GEO_LABEL, MONEDA_LABEL } from '@/lib/constants';
 import KPICard from './KPICard';
@@ -291,7 +292,7 @@ const [uploadOpen, setUploadOpen] = useState(false);
           </p>
           {moneda === 'ARS' && mepActual != null && (
             <p title="Dólar MEP usado para convertir a pesos" style={{ fontSize: 12, color: 'var(--muted)', margin: 0, whiteSpace: 'nowrap' }}>
-              MEP <span style={{ color: 'var(--text-sec)', fontWeight: 600 }}>${mepActual.toFixed(0)}</span>
+              MEP <span style={{ color: 'var(--text-sec)', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>{formatFx(mepActual)}</span>
             </p>
           )}
           <button
@@ -462,13 +463,17 @@ const [uploadOpen, setUploadOpen] = useState(false);
           <div className="kpi-grid">
             <KPICard
               label="Total Cartera"
-              value={hideValues ? '***' : moneda === 'USD' ? fmtUSD(kpis.totalCartera) : fmtARS(kpis.totalCarteraArs)}
-              sub={
-                hideValues ? '***' :
+              value={
                 moneda === 'USD'
-                  ? `${kpis.deltaCartera >= 0 ? '▲' : '▼'} ${fmtUSD(Math.abs(kpis.deltaCartera))} vs mes anterior`
+                  ? formatMoney(kpis.totalCartera, { currency: 'USD', hidden: hideValues })
+                  : formatMoney(kpis.totalCarteraArs, { currency: 'ARS', hidden: hideValues })
+              }
+              sub={
+                hideValues ? '••••' :
+                moneda === 'USD'
+                  ? `${kpis.deltaCartera >= 0 ? '▲' : '▼'} ${formatMoney(Math.abs(kpis.deltaCartera), { currency: 'USD' })} vs mes anterior`
                   : kpisArs
-                    ? `${kpisArs.deltaCarteraArs >= 0 ? '▲' : '▼'} ${fmtARS(Math.abs(kpisArs.deltaCarteraArs))} vs mes anterior`
+                    ? `${kpisArs.deltaCarteraArs >= 0 ? '▲' : '▼'} ${formatMoney(Math.abs(kpisArs.deltaCarteraArs), { currency: 'ARS' })} vs mes anterior`
                     : 's/d vs mes anterior'
               }
               subColor={deltaColor}
@@ -477,22 +482,24 @@ const [uploadOpen, setUploadOpen] = useState(false);
             <KPICard
               label="Rendimiento Neto"
               value={
-                hideValues ? '***' :
-                moneda === 'USD' ? fmtUSD(kpis.rendimientoNeto) :
-                kpisArs ? fmtARS(kpisArs.rendimientoNetoArs) : 's/d'
+                moneda === 'USD'
+                  ? formatMoney(kpis.rendimientoNeto, { currency: 'USD', hidden: hideValues, sign: true })
+                  : kpisArs
+                    ? formatMoney(kpisArs.rendimientoNetoArs, { currency: 'ARS', hidden: hideValues, sign: true })
+                    : formatMoney(null, { currency: 'ARS' })
               }
               sub={
-                hideValues ? '***' :
+                hideValues ? '••••' :
                 moneda === 'USD'
-                  ? `${fmtPct(kpis.rendimientoPct)} sobre aportes`
-                  : kpisArs ? `${fmtPct(kpisArs.rendimientoPctArs)} sobre aportes` : 'sin dato de MEP'
+                  ? `${formatPercent(kpis.rendimientoPct)} sobre aportes`
+                  : kpisArs ? `${formatPercent(kpisArs.rendimientoPctArs)} sobre aportes` : 'sin dato de MEP'
               }
               subColor={rendColor}
               accentColor={rendColor}
             />
             <KPICard
               label={moneda === 'ARS' ? 'TIR Anual (USD)' : 'TIR Anual'}
-              value={kpis.tirAnual != null ? `${kpis.tirAnual.toFixed(1)}%` : 'N/D'}
+              value={kpis.tirAnual != null ? formatPercent(kpis.tirAnual, { sign: false }) : 'N/D'}
               sub="sobre flujos históricos"
               subColor={tirColor}
               accentColor={tirColor}

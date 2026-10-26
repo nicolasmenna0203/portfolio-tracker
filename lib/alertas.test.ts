@@ -123,7 +123,7 @@ describe('armarContenidoMail', () => {
     const { asunto, texto, html } = armarContenidoMail({ desde: '2026-07-27', hasta: '2026-08-03', eventos, totalUsdEstimado: 12.5 });
 
     expect(asunto).toContain('1 evento');
-    expect(asunto).toContain('12.50');
+    expect(asunto).toContain('12,50');
     expect(texto).toContain('AAPL');
     expect(texto).toContain('Dividendo');
     expect(html).toContain('AAPL');
@@ -175,8 +175,8 @@ describe('armarContenidoMail', () => {
     it('lidera el asunto con la variación de cartera y del MEP', () => {
       const { asunto } = armarContenidoMail(alertaConVariacion);
       // Promedio simple de +5% y -1% = +2%.
-      expect(asunto).toContain('cartera +2.0% USD');
-      expect(asunto).toContain('MEP +1.5%');
+      expect(asunto).toContain('cartera +2,0% USD');
+      expect(asunto).toContain('MEP +1,5%');
     });
 
     it('agrupa los activos por tipo con su promedio en USD y ARS', () => {
@@ -184,9 +184,9 @@ describe('armarContenidoMail', () => {
       expect(html).toContain('Acciones');
       expect(html).toContain('Fondos comunes');
       expect(html).toContain('AAPL');
-      expect(html).toContain('+5.00%');
-      expect(html).toContain('−1.00%');
-      expect(html).toContain('+6.61%');
+      expect(html).toContain('+5,00%');
+      expect(html).toContain('-1,00%');
+      expect(html).toContain('+6,61%');
     });
 
     it('muestra el movimiento del dólar con sus dos puntas', () => {

@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { AreaChart, Area, ResponsiveContainer, YAxis } from 'recharts';
 import { usePerformanceVariable } from '@/lib/usePerformanceVariable';
 import { useHistoricoTicker } from '@/lib/useHistoricoTicker';
-import { fmtPct } from '@/lib/parser';
+import { formatPercent } from '@/lib/format';
 import type { RangoHistorico } from '@/types';
 import SectorHoldingsModal from './SectorHoldingsModal';
 
@@ -38,7 +38,7 @@ const RANGOS: { id: RangoHistorico; label: string; variacionKey: 'variacionYtd' 
 ];
 
 function fmtPct1(v: number): string {
-  return fmtPct(v * 100);
+  return formatPercent(v * 100);
 }
 
 function colorVar(v: number | null): string {
@@ -77,7 +77,7 @@ function SectorCard({
       <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text)' }}>{label}</span>
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
         <span style={{ fontSize: 9, color: 'var(--muted)' }}>{ticker}</span>
-        <span style={{ fontSize: 12, fontWeight: 700, color }}>
+        <span style={{ fontSize: 12, fontWeight: 700, color, fontVariantNumeric: 'tabular-nums' }}>
           {variacion != null ? fmtPct1(variacion) : '—'}
         </span>
       </div>

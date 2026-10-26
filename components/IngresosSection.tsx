@@ -7,7 +7,7 @@ import {
   CartesianGrid, ResponsiveContainer,
 } from 'recharts';
 import type { IngresosResponse, IngresoRow } from '@/types';
-import { fmtARS, fmtUSD, type Moneda } from '@/lib/parser';
+import { formatMoney, type Moneda } from '@/lib/format';
 import KPICard from './KPICard';
 
 interface Props {
@@ -32,7 +32,7 @@ interface TooltipPayload {
 
 function CustomTooltip({ active, payload, label, moneda }: { active?: boolean; payload?: TooltipPayload[]; label?: string; moneda?: Moneda }) {
   if (!active || !payload?.length) return null;
-  const fmt = moneda === 'USD' ? fmtUSD : fmtARS;
+  const currency: Moneda = moneda === 'USD' ? 'USD' : 'ARS';
   return (
     <div style={{
       background: 'var(--card)', border: '1px solid var(--border)',
@@ -44,7 +44,7 @@ function CustomTooltip({ active, payload, label, moneda }: { active?: boolean; p
         p.value > 0 && (
           <p key={p.dataKey} style={{ margin: '2px 0', color: p.color, display: 'flex', justifyContent: 'space-between', gap: 12 }}>
             <span>{p.name}</span>
-            <strong>{fmt(p.value)}</strong>
+            <strong style={{ fontVariantNumeric: 'tabular-nums' }}>{formatMoney(p.value, { currency })}</strong>
           </p>
         )
       ))}
@@ -159,21 +159,27 @@ export default function IngresosSection({ hideValues, moneda = 'ARS' }: Props) {
       <div className="kpi-grid">
         <KPICard
           label={`Total acumulado (${moneda})`}
-          value={hideValues ? '***' : moneda === 'ARS' ? fmtARS(kpis!.totalArs) : fmtUSD(kpis!.totalUsd)}
+          value={moneda === 'ARS'
+            ? formatMoney(kpis!.totalArs, { currency: 'ARS', hidden: hideValues })
+            : formatMoney(kpis!.totalUsd, { currency: 'USD', hidden: hideValues })}
           sub={`${resp.empleadores.length} empleador${resp.empleadores.length !== 1 ? 'es' : ''}`}
           accentColor="var(--primary)"
         />
         <KPICard
           label={`Total acumulado (${moneda === 'ARS' ? 'USD' : 'ARS'})`}
-          value={hideValues ? '***' : moneda === 'ARS'
-            ? (kpis!.totalUsd > 0 ? fmtUSD(kpis!.totalUsd) : 's/d')
-            : fmtARS(kpis!.totalArs)}
-          sub="equivalente en la otra moneda"
+          value={hideValues
+            ? formatMoney(null, { currency: moneda === 'ARS' ? 'USD' : 'ARS', hidden: true })
+            : moneda === 'ARS'
+              ? (kpis!.totalUsd > 0 ? formatMoney(kpis!.totalUsd, { currency: 'USD' }) : 's/d')
+              : formatMoney(kpis!.totalArs, { currency: 'ARS' })}
+          sub={`equivalente en ${moneda === 'ARS' ? 'USD' : 'ARS'}`}
           accentColor="var(--primary)"
         />
         <KPICard
           label="Último mes"
-          value={hideValues ? '***' : kpis!.ultimoMesPrincipal != null ? (moneda === 'ARS' ? fmtARS(kpis!.ultimoMesPrincipal) : fmtUSD(kpis!.ultimoMesPrincipal)) : 's/d'}
+          value={kpis!.ultimoMesPrincipal != null
+            ? formatMoney(kpis!.ultimoMesPrincipal, { currency: moneda === 'ARS' ? 'ARS' : 'USD', hidden: hideValues })
+            : 's/d'}
           sub={kpis!.ultimoMes?.fecha ?? ''}
           accentColor="var(--up)"
         />
@@ -205,7 +211,7 @@ export default function IngresosSection({ hideValues, moneda = 'ARS' }: Props) {
               tick={{ fontSize: 11, fill: 'var(--muted)' }}
               axisLine={false}
               tickLine={false}
-              tickFormatter={(v) => hideValues ? '***' : new Intl.NumberFormat('es-AR', { notation: 'compact' }).format(v)}
+              tickFormatter={(v) => formatMoney(v, { currency: moneda === 'ARS' ? 'ARS' : 'USD', mode: 'compact', hidden: hideValues })}
               width={hideValues ? 40 : 56}
             />
             <Tooltip content={hideValues ? () => null : <CustomTooltip moneda={moneda} />} />
@@ -240,8 +246,10 @@ export default function IngresosSection({ hideValues, moneda = 'ARS' }: Props) {
               }} />
               <span style={{ color: 'var(--muted)', width: 90, flexShrink: 0 }}>{r.fechaStr}</span>
               <span style={{ color: 'var(--text)', fontWeight: 600, flex: 1, textTransform: 'uppercase' }}>{r.empleador}</span>
-              <span style={{ color: 'var(--up)', fontWeight: 600, flexShrink: 0 }}>
-                {hideValues ? '***' : r.montoArs > 0 ? fmtARS(r.montoArs) : fmtUSD(r.montoUsd)}
+              <span style={{ color: 'var(--up)', fontWeight: 600, flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>
+                {r.montoArs > 0
+                  ? formatMoney(r.montoArs, { currency: 'ARS', hidden: hideValues })
+                  : formatMoney(r.montoUsd, { currency: 'USD', hidden: hideValues })}
               </span>
             </div>
           ))}

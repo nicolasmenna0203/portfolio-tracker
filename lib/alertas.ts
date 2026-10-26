@@ -9,6 +9,7 @@ import type { DashboardData, EventoCalendario } from '@/types';
 import { fetchCalendarioFinanciero } from './calendario';
 import { tickersDeCartera } from './tickersElegibles';
 import { calcularVariacionSemanal, type VariacionSemanal, type VariacionActivo } from './variacionSemanal';
+import { formatMoney, formatPercent, formatFx } from './format';
 
 const TIPO_LABEL: Record<EventoCalendario['tipo'], string> = {
   dividendo: 'Dividendo',
@@ -99,8 +100,7 @@ function fmtFechaLarga(fecha: string): string {
 }
 
 function fmtMonto(monto: number, moneda = 'USD'): string {
-  const simbolo = moneda === 'ARS' ? '$' : 'US$';
-  return `≈ ${simbolo} ${monto.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  return `≈ ${formatMoney(monto, { currency: moneda === 'ARS' ? 'ARS' : 'USD', mode: 'price' })}`;
 }
 
 // ── Design tokens del mail ───────────────────────────────────────────────────
@@ -140,7 +140,7 @@ function esc(s: string): string {
 
 function fmtPct(v: number | null, decimales = 2): string {
   if (v == null) return '—';
-  return `${v >= 0 ? '+' : '−'}${Math.abs(v * 100).toFixed(decimales)}%`;
+  return formatPercent(v * 100, { decimals: decimales });
 }
 
 function colorDe(v: number | null): string {
@@ -271,7 +271,7 @@ function bloqueVariacion(v: VariacionSemanal): string {
   if (v.grupos.length === 0) return '';
 
   const mepSub = v.mepPrevio != null && v.mepActual != null
-    ? `$ ${v.mepPrevio.toLocaleString('es-AR', { maximumFractionDigits: 0 })} → $ ${v.mepActual.toLocaleString('es-AR', { maximumFractionDigits: 0 })}`
+    ? `${formatFx(v.mepPrevio)} → ${formatFx(v.mepActual)}`
     : 'sin dato';
 
   // Promedio simple de todos los activos con dato, transversal a los tipos.
@@ -352,7 +352,7 @@ function bloqueEventos(alerta: AlertaSemanal): string {
       ${filas}
       <tr>
         <td colspan="3" style="padding:10px 12px;background-color:${C.cardAlt};border-top:2px solid ${C.borderStrong}"><span style="font-family:${FONT};font-size:12px;font-weight:700;color:${C.text}">Total estimado</span></td>
-        <td align="right" style="padding:10px 12px;background-color:${C.cardAlt};border-top:2px solid ${C.borderStrong};white-space:nowrap"><span style="font-family:${MONO};font-size:14px;font-weight:700;color:${C.accent}">≈ US$ ${totalUsdEstimado.toFixed(2)}</span></td>
+        <td align="right" style="padding:10px 12px;background-color:${C.cardAlt};border-top:2px solid ${C.borderStrong};white-space:nowrap"><span style="font-family:${MONO};font-size:14px;font-weight:700;color:${C.accent}">≈ ${formatMoney(totalUsdEstimado, { currency: 'USD', mode: 'price' })}</span></td>
       </tr>
     </table>
   </td></tr>`;
@@ -365,7 +365,7 @@ function armarTexto(alerta: AlertaSemanal): string {
 
   if (v && v.grupos.length > 0) {
     lineas.push(`VARIACIÓN SEMANAL (${v.desde} → ${v.hasta})`, '');
-    lineas.push(`Dólar MEP: ${fmtPct(v.variacionMep)}${v.mepActual != null ? ` (a $ ${v.mepActual.toFixed(0)})` : ''}`, '');
+    lineas.push(`Dólar MEP: ${fmtPct(v.variacionMep)}${v.mepActual != null ? ` (a ${formatFx(v.mepActual)})` : ''}`, '');
     for (const g of v.grupos) {
       const label = TIPO_ACTIVO_LABEL[g.tipo] ?? g.tipo;
       lineas.push(`${label} — prom. USD ${fmtPct(g.promedioUsd)} · ARS ${fmtPct(g.promedioArs)}`);
@@ -384,7 +384,7 @@ function armarTexto(alerta: AlertaSemanal): string {
       const monto = e.montoEstimado != null ? fmtMonto(e.montoEstimado, e.monedaMonto) : '—';
       lineas.push(`${fmtFechaLegible(e.fecha)}  ${e.ticker.padEnd(8)}  ${TIPO_LABEL[e.tipo].padEnd(24)}  ${monto}`);
     }
-    lineas.push('', `Total estimado: ≈ US$ ${alerta.totalUsdEstimado.toFixed(2)}`);
+    lineas.push('', `Total estimado: ≈ ${formatMoney(alerta.totalUsdEstimado, { currency: 'USD', mode: 'price' })}`);
   }
 
   return lineas.join('\n');
@@ -406,7 +406,7 @@ export function armarContenidoMail(alerta: AlertaSemanal): { asunto: string; tex
     if (variacion.variacionMep != null) partes.push(`MEP ${fmtPct(variacion.variacionMep, 1)}`);
   }
   if (eventos.length > 0) {
-    partes.push(`${eventos.length} evento${eventos.length === 1 ? '' : 's'} (≈ US$ ${totalUsdEstimado.toFixed(2)})`);
+    partes.push(`${eventos.length} evento${eventos.length === 1 ? '' : 's'} (≈ ${formatMoney(totalUsdEstimado, { currency: 'USD', mode: 'price' })})`);
   }
   const asunto = partes.length > 0
     ? `Portfolio — ${partes.join(' · ')}`

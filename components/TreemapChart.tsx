@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Treemap, ResponsiveContainer, Tooltip } from 'recharts';
 import type { TenenciaActual } from '@/types';
 import { PALETA_TIPO, RIESGO_COLOR, RIESGO_LABEL, RENTA_LABEL, GEO_LABEL, MONEDA_LABEL, MONEDA_COLOR, RENTA_COLOR, GEO_COLOR, colorPorCategoria } from '@/lib/constants';
-import { fmtUSD, fmtARS, type Moneda } from '@/lib/parser';
+import { formatMoney, type Moneda } from '@/lib/format';
 
 interface Props {
   tenencias: TenenciaActual[];
@@ -157,7 +157,7 @@ function CustomCell({ x, y, width, height, name, value, depth, root, group, colo
 function TooltipContent({ active, payload, hideValues, moneda }: any) {
   if (!active || !payload?.length) return null;
   const d = payload[0].payload;
-  const fmt = moneda === 'ARS' ? fmtARS : fmtUSD;
+  const currency: Moneda = moneda === 'ARS' ? 'ARS' : 'USD';
   return (
     <div style={{
       background: 'var(--card)', border: '1px solid var(--border)',
@@ -165,7 +165,7 @@ function TooltipContent({ active, payload, hideValues, moneda }: any) {
       boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
     }}>
       <p style={{ fontWeight: 600, color: 'var(--text)', marginBottom: 4 }}>{d.name}</p>
-      <p style={{ color: 'var(--text-sec)' }}>{hideValues ? '···' : fmt(d.value)}</p>
+      <p style={{ color: 'var(--text-sec)', fontVariantNumeric: 'tabular-nums' }}>{formatMoney(d.value, { currency, hidden: hideValues })}</p>
       {d.group && <p style={{ color: d.color ?? 'var(--muted)', marginTop: 2, fontSize: 11 }}>{d.group}</p>}
     </div>
   );

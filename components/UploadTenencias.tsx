@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useCallback } from 'react';
+import { formatMoney, formatFx } from '@/lib/format';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -35,7 +36,7 @@ function Row({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
       <span style={{ color: 'var(--muted)' }}>{label}</span>
-      <span style={{ color: 'var(--text)', fontWeight: 600 }}>{value}</span>
+      <span style={{ color: 'var(--text)', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>{value}</span>
     </div>
   );
 }
@@ -431,7 +432,7 @@ function PreviewTenencias({ p }: { p: Record<string, unknown> }) {
     <>
       <Row label="Mes detectado"   value={<MesLabel mesKey={p.mes as string} />} />
       <Row label="Fecha de cierre" value={p.fecha as string} />
-      <Row label="Dólar MEP"       value={`$${(p.dolarMep as number).toLocaleString('es-AR')}`} />
+      <Row label="Dólar MEP"       value={formatFx(p.dolarMep as number, { decimals: 2 })} />
       <Row label="Instrumentos"    value={`${p.filas} posiciones`} />
       <div style={{ borderTop: '1px solid var(--border)', paddingTop: 8, marginTop: 2 }}>
         <p style={{ fontSize: 11, color: 'var(--muted)', margin: '0 0 6px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
@@ -440,8 +441,8 @@ function PreviewTenencias({ p }: { p: Record<string, unknown> }) {
         {rows.map((r) => (
           <div key={r.ticker} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 4 }}>
             <span style={{ color: 'var(--text)', fontWeight: 600 }}>{r.ticker}</span>
-            <span style={{ color: 'var(--muted)' }}>
-              USD {r.tenenciaUSD.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            <span style={{ color: 'var(--muted)', fontVariantNumeric: 'tabular-nums' }}>
+              {formatMoney(r.tenenciaUSD, { currency: 'USD', mode: 'price' })}
             </span>
           </div>
         ))}
@@ -455,7 +456,7 @@ function DoneTenencias({ p }: { p: Record<string, unknown> }) {
     <>
       <Row label="Mes cargado"         value={<MesLabel mesKey={p.mes as string} />} />
       <Row label="Fecha en sheet"      value={p.fecha as string} />
-      <Row label="Dólar MEP usado"     value={`$${(p.dolarMep as number).toLocaleString('es-AR')}`} />
+      <Row label="Dólar MEP usado"     value={formatFx(p.dolarMep as number, { decimals: 2 })} />
       <Row label="Instrumentos subidos" value={`${p.filas} filas`} />
     </>
   );
@@ -481,8 +482,8 @@ function PreviewMovimientos({ p }: { p: Record<string, unknown> }) {
           {movs.map((m, i) => (
             <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 3 }}>
               <span style={{ color: 'var(--muted)' }}>{m.fecha}</span>
-              <span style={{ color: m.tipo === 'Ingreso' ? 'var(--up)' : 'var(--down)', fontWeight: 600 }}>
-                {m.tipo === 'Ingreso' ? '+' : '-'} USD {m.montoUSD.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              <span style={{ color: m.tipo === 'Ingreso' ? 'var(--up)' : 'var(--down)', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>
+                {formatMoney(m.tipo === 'Ingreso' ? m.montoUSD : -m.montoUSD, { currency: 'USD', mode: 'price', sign: true })}
               </span>
               <span style={{ color: 'var(--muted)', fontSize: 11 }}>{m.tipo}</span>
             </div>
@@ -503,8 +504,8 @@ function DoneMovimientos({ p }: { p: Record<string, unknown> }) {
     <>
       <Row label="Mes cargado"              value={<MesLabel mesKey={p.mes as string} />} />
       <Row label="Filas subidas"            value={`${p.filas}`} />
-      <Row label="Retiros (ingresos TIR)"   value={`${ingresos.length} × +$${totalIng.toFixed(0)} USD`} />
-      <Row label="Depósitos (egresos TIR)"  value={`${salidas.length} × -$${totalSal.toFixed(0)} USD`} />
+      <Row label="Retiros (ingresos TIR)"   value={`${ingresos.length} × ${formatMoney(totalIng, { currency: 'USD', sign: true })}`} />
+      <Row label="Depósitos (egresos TIR)"  value={`${salidas.length} × ${formatMoney(-totalSal, { currency: 'USD', sign: true })}`} />
     </>
   );
 }
@@ -515,8 +516,8 @@ interface HaberRow { fecha: string; empleador: string; montoArs: number; montoUs
 
 function fmtHaberMonto(r: { montoArs: number; montoUsd: number }): string {
   const partes: string[] = [];
-  if (r.montoArs > 0) partes.push(`$${r.montoArs.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
-  if (r.montoUsd > 0) partes.push(`USD ${r.montoUsd.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
+  if (r.montoArs > 0) partes.push(formatMoney(r.montoArs, { currency: 'ARS', mode: 'price' }));
+  if (r.montoUsd > 0) partes.push(formatMoney(r.montoUsd, { currency: 'USD', mode: 'price' }));
   return partes.join(' · ') || 's/d';
 }
 
@@ -538,7 +539,7 @@ function PreviewHaberes({ p }: { p: Record<string, unknown> }) {
           <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 4, gap: 8 }}>
             <span style={{ color: 'var(--muted)', flexShrink: 0 }}>{r.fecha}</span>
             <span style={{ color: 'var(--text)', fontWeight: 600, flex: 1, textAlign: 'left' }}>{r.empleador}</span>
-            <span style={{ color: 'var(--up)', flexShrink: 0 }}>{fmtHaberMonto(r)}</span>
+            <span style={{ color: 'var(--up)', flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>{fmtHaberMonto(r)}</span>
           </div>
         ))}
       </div>
@@ -553,8 +554,8 @@ function DoneHaberes({ p }: { p: Record<string, unknown> }) {
   return (
     <>
       <Row label="Filas subidas" value={`${p.filas}`} />
-      {totalArs > 0 && <Row label="Total ARS" value={`$${totalArs.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} />}
-      {totalUsd > 0 && <Row label="Total USD (según MEP del día)" value={`USD ${totalUsd.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} />}
+      {totalArs > 0 && <Row label="Total ARS" value={formatMoney(totalArs, { currency: 'ARS', mode: 'price' })} />}
+      {totalUsd > 0 && <Row label="Total USD (según MEP del día)" value={formatMoney(totalUsd, { currency: 'USD', mode: 'price' })} />}
     </>
   );
 }

@@ -77,42 +77,6 @@ export function toMesKey(ts: number): string {
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
 }
 
-export function fmtUSD(n: number): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(n);
-}
-
-export function fmtPct(n: number, decimals = 1): string {
-  return `${n >= 0 ? '+' : ''}${n.toFixed(decimals)}%`;
-}
-
-export function fmtARS(n: number): string {
-  return new Intl.NumberFormat('es-AR', {
-    style: 'currency',
-    currency: 'ARS',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(n);
-}
-
-export type Moneda = 'USD' | 'ARS';
-
-/** Convierte y formatea un monto que solo existe en USD (ej. aportes), usando el MEP del mes. */
-export function fmtMonto(usd: number, moneda: Moneda, mepValor?: number | null): string {
-  if (moneda === 'USD') return fmtUSD(usd);
-  if (mepValor == null) return 's/d';
-  return fmtARS(usd * mepValor);
-}
-
-/** Elige entre un valor que ya tiene ambas monedas disponibles (ej. tenencias, total_cartera). */
-export function valorSegunMoneda(usd: number, ars: number, moneda: Moneda): number {
-  return moneda === 'ARS' ? ars : usd;
-}
-
 // ── Entidades HTML ────────────────────────────────────────────────────────────
 // Los títulos de noticias llegan escapados: Yahoo (v1/finance/search) devuelve
 // `&quot;` en los titulares y los RSS de Ámbito pasan por un parser propio que

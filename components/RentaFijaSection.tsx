@@ -7,6 +7,7 @@ import {
 } from 'recharts';
 import type { GrupoBono, BondPerformance } from '@/types';
 import { usePerformance } from '@/lib/usePerformance';
+import { formatPercent, formatNumber } from '@/lib/format';
 import KPICard from './KPICard';
 
 interface Props {
@@ -29,11 +30,11 @@ const GRUPO_META: Record<GrupoBono, { label: string; color: string; colorDark: s
 const GRUPO_ORDEN: GrupoBono[] = ['USD', 'CER', 'ARS_TASA', 'DOLLAR_LINKED', 'BOPREAL', 'ONS_USD'];
 
 function fmtPct1(v: number): string {
-  return `${(v * 100).toFixed(1)}%`;
+  return formatPercent(v * 100, { sign: false });
 }
 
 function fmtDuration(v: number): string {
-  return `${v.toFixed(2)} a.`;
+  return `${formatNumber(v, { decimals: 2 })} a.`;
 }
 
 // Radio del punto: en cartera se resalta con un radio mayor (encoding secundario
@@ -442,7 +443,7 @@ export default function RentaFijaSection({ tenencias }: Props) {
               <XAxis
                 type="number" dataKey="modifiedDuration" name="Duration"
                 domain={[0, rangoDuration[1] * 1.08]} allowDataOverflow
-                tickFormatter={(v) => v.toFixed(2)}
+                tickFormatter={(v) => formatNumber(v, { decimals: 2 })}
                 unit=" a." tick={{ fill: 'var(--muted)', fontSize: 11 }}
                 tickLine={false} axisLine={false}
                 label={{ value: 'Duration (años)', position: 'insideBottom', offset: -8, fill: 'var(--muted)', fontSize: 11 }}
@@ -450,7 +451,7 @@ export default function RentaFijaSection({ tenencias }: Props) {
               <YAxis
                 type="number" dataKey="tir" name="TIR"
                 domain={dominioTir} allowDataOverflow
-                tickFormatter={(v) => `${(v * 100).toFixed(0)}%`}
+                tickFormatter={(v) => formatPercent(v * 100, { sign: false, decimals: 0 })}
                 tick={{ fill: 'var(--muted)', fontSize: 11 }}
                 tickLine={false} axisLine={false} width={44}
               />
@@ -615,11 +616,11 @@ export default function RentaFijaSection({ tenencias }: Props) {
                       </span>
                     )}
                   </td>
-                  <td style={{ padding: '7px 10px', textAlign: 'right', fontWeight: 700, color: 'var(--text)' }}>{fmtPct1(b.tir)}</td>
-                  <td style={{ padding: '7px 10px', textAlign: 'right', color: 'var(--text-sec)' }}>{fmtPct1(b.tna)}</td>
-                  <td style={{ padding: '7px 10px', textAlign: 'right', color: 'var(--text-sec)' }}>{fmtDuration(b.modifiedDuration)}</td>
-                  <td style={{ padding: '7px 10px', textAlign: 'right', color: 'var(--text-sec)' }}>{b.parity != null ? fmtPct1(b.parity) : '—'}</td>
-                  <td style={{ padding: '7px 10px', textAlign: 'right', color: 'var(--muted)', fontSize: 11, whiteSpace: 'nowrap' }}>
+                  <td style={{ padding: '7px 10px', textAlign: 'right', fontWeight: 700, color: 'var(--text)', fontVariantNumeric: 'tabular-nums' }}>{fmtPct1(b.tir)}</td>
+                  <td style={{ padding: '7px 10px', textAlign: 'right', color: 'var(--text-sec)', fontVariantNumeric: 'tabular-nums' }}>{fmtPct1(b.tna)}</td>
+                  <td style={{ padding: '7px 10px', textAlign: 'right', color: 'var(--text-sec)', fontVariantNumeric: 'tabular-nums' }}>{fmtDuration(b.modifiedDuration)}</td>
+                  <td style={{ padding: '7px 10px', textAlign: 'right', color: 'var(--text-sec)', fontVariantNumeric: 'tabular-nums' }}>{b.parity != null ? fmtPct1(b.parity) : '—'}</td>
+                  <td style={{ padding: '7px 10px', textAlign: 'right', color: 'var(--muted)', fontSize: 11, whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>
                     {sens5?.tirDown != null ? fmtPct1(sens5.tirDown) : '—'} / {sens5?.tirUp != null ? fmtPct1(sens5.tirUp) : '—'}
                   </td>
                 </tr>

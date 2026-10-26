@@ -21,6 +21,7 @@ import type { DashboardData, RangoHistorico, RatioResponse } from '@/types';
 import type { RatioGuardado } from '@/lib/ratiosGuardados';
 import { tickersDeCartera } from '@/lib/tickersElegibles';
 import { sma, ema, bollinger, retornos, correlacionMovil } from '@/lib/ratios';
+import { formatNumber, formatPercent } from '@/lib/format';
 
 // Referencias de mercado que no están en la cartera pero son el denominador
 // natural de casi cualquier análisis: medir una posición contra el mercado, el
@@ -88,7 +89,7 @@ function CustomTooltip({ active, payload, label }: { active?: boolean; payload?:
         p.value != null && (
           <p key={p.dataKey} style={{ margin: '2px 0', color: p.color, display: 'flex', justifyContent: 'space-between', gap: 12 }}>
             <span>{p.name}</span>
-            <strong>{p.value.toFixed(4)}</strong>
+            <strong style={{ fontVariantNumeric: 'tabular-nums' }}>{formatNumber(p.value, { decimals: 4 })}</strong>
           </p>
         )
       ))}
@@ -112,7 +113,7 @@ function Metrica({ label, valor, color, hint }: { label: string; valor: string; 
         {label}
         {hint && <InfoHint texto={hint} />}
       </p>
-      <p style={{ fontSize: 17, fontWeight: 700, color: color ?? 'var(--text)', margin: '3px 0 0' }}>
+      <p style={{ fontSize: 17, fontWeight: 700, color: color ?? 'var(--text)', margin: '3px 0 0', fontVariantNumeric: 'tabular-nums' }}>
         {valor}
       </p>
     </div>
@@ -460,34 +461,34 @@ export default function RatiosTab({ data }: Props) {
         }}>
           <Metrica
             label="Ratio actual"
-            valor={est.actual.toFixed(4)}
+            valor={formatNumber(est.actual, { decimals: 4 })}
             hint={`Precio de ${activoA} dividido precio de ${activoB}, al último dato disponible`}
           />
           <Metrica
             label={`Var. ${rango}`}
-            valor={`${est.variacion >= 0 ? '+' : ''}${(est.variacion * 100).toFixed(1)}%`}
+            valor={formatPercent(est.variacion * 100)}
             color={colorVar}
             hint={`Cuánto rindió ${activoA} por encima (o por debajo) de ${activoB} en el período`}
           />
           <Metrica
             label="Percentil"
-            valor={est.percentil == null ? 's/d' : `${est.percentil.toFixed(0)}%`}
+            valor={est.percentil == null ? 's/d' : formatPercent(est.percentil, { sign: false, decimals: 0 })}
             hint="Dónde está el ratio hoy dentro del rango mín-máx del período. 100% = máximo del período"
           />
           <Metrica
             label="Z-Score"
-            valor={est.zScore == null ? 's/d' : est.zScore.toFixed(2)}
+            valor={est.zScore == null ? 's/d' : formatNumber(est.zScore, { decimals: 2 })}
             color={est.zScore != null && Math.abs(est.zScore) > 2 ? 'var(--down)' : undefined}
             hint="Desvíos estándar respecto del promedio del período. |z| > 2 es un extremo estadístico"
           />
           <Metrica
             label="Correlación"
-            valor={est.correlacion == null ? 's/d' : est.correlacion.toFixed(2)}
+            valor={est.correlacion == null ? 's/d' : formatNumber(est.correlacion, { decimals: 2 })}
             hint="Correlación de los retornos diarios de ambos activos en el período"
           />
           <Metrica
             label="Beta"
-            valor={est.beta == null ? 's/d' : est.beta.toFixed(2)}
+            valor={est.beta == null ? 's/d' : formatNumber(est.beta, { decimals: 2 })}
             hint={`Cuánto se mueve ${activoA} por cada 1% que se mueve ${activoB}`}
           />
         </div>
@@ -503,8 +504,8 @@ export default function RatiosTab({ data }: Props) {
         <p style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-sec)', margin: '0 0 6px 10px' }}>
           {par} · evolución del ratio
           {est && (
-            <span style={{ color: 'var(--muted)', fontWeight: 400 }}>
-              {' '}· mín {est.minimo.toFixed(3)} · prom {est.promedio.toFixed(3)} · máx {est.maximo.toFixed(3)}
+            <span style={{ color: 'var(--muted)', fontWeight: 400, fontVariantNumeric: 'tabular-nums' }}>
+              {' '}· mín {formatNumber(est.minimo, { decimals: 3 })} · prom {formatNumber(est.promedio, { decimals: 3 })} · máx {formatNumber(est.maximo, { decimals: 3 })}
             </span>
           )}
         </p>

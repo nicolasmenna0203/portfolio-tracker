@@ -15,7 +15,7 @@ import {
   Legend,
 } from 'recharts';
 import type { ResumenRow, TenenciaActual } from '@/types';
-import { fmtUSD, fmtARS, type Moneda } from '@/lib/parser';
+import { formatMoney, type Moneda } from '@/lib/format';
 
 interface Props {
   data: ResumenRow[];
@@ -60,7 +60,7 @@ function buildData(
 function TooltipContent({ active, payload, label, hideValues, moneda }: any) {
   if (!active || !payload?.length) return null;
 
-  const fmt = moneda === 'ARS' ? fmtARS : fmtUSD;
+  const currency: Moneda = moneda === 'ARS' ? 'ARS' : 'USD';
   const ORDER = ['total_cartera', 'acumulado', 'ganancia', 'activos'];
   const sorted = [...payload].sort(
     (a, b) => ORDER.indexOf(a.dataKey) - ORDER.indexOf(b.dataKey)
@@ -86,14 +86,14 @@ function TooltipContent({ active, payload, label, hideValues, moneda }: any) {
         } else if (p.dataKey === 'ganancia') {
           const isPos = p.value >= 0;
           color = isPos ? 'var(--up)' : 'var(--down)';
-          display = hideValues ? '···' : `${isPos ? '+' : ''}${fmt(p.value)}`;
+          display = formatMoney(p.value, { currency, sign: true, hidden: hideValues });
         } else {
-          display = hideValues ? '···' : fmt(p.value);
+          display = formatMoney(p.value, { currency, hidden: hideValues });
         }
         return (
           <p key={p.dataKey} style={{ color, marginBottom: 3, display: 'flex', justifyContent: 'space-between', gap: 12 }}>
             <span style={{ color: 'var(--muted)' }}>{p.name}</span>
-            <span style={{ fontWeight: 600 }}>{display}</span>
+            <span style={{ fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>{display}</span>
           </p>
         );
       })}
@@ -158,7 +158,7 @@ export default function EvolucionChart({ data, tenenciasPorMes, hideValues, mone
           />
           <YAxis
             yAxisId="usd"
-            tickFormatter={(v) => hideValues ? '···' : `${moneda === 'ARS' ? 'AR$' : '$'}${(v / 1000).toFixed(0)}k`}
+            tickFormatter={(v) => formatMoney(v, { currency: moneda === 'ARS' ? 'ARS' : 'USD', mode: 'compact', hidden: hideValues })}
             tick={{ fill: 'var(--muted)', fontSize: isMobile ? 9 : 11 }}
             tickLine={false}
             axisLine={false}

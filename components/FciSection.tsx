@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import type { FciPerformance } from '@/types';
 import { useFci } from '@/lib/useFci';
 import { PALETA_TIPO } from '@/lib/constants';
+import { formatMoney, formatPercent } from '@/lib/format';
 import KPICard from './KPICard';
 
 interface Props {
@@ -14,8 +15,7 @@ const COLOR_FCI = PALETA_TIPO.FCI;
 
 /** "s/d" cuando CAFCI no publicó la columna: 0,0% afirmaría que el fondo no rindió nada. */
 function fmtPct1(v: number | null): string {
-  if (v == null) return 's/d';
-  return `${(v * 100).toFixed(1)}%`;
+  return formatPercent(v == null ? null : v * 100, { sign: false });
 }
 
 function colorPct(v: number | null): string {
@@ -24,11 +24,7 @@ function colorPct(v: number | null): string {
 }
 
 function fmtVcp(v: number, moneda: string): string {
-  return `${moneda === 'USD' ? 'US$' : '$'}${v.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-}
-
-function fmtUsd(v: number): string {
-  return `US$${v.toLocaleString('es-AR', { maximumFractionDigits: 0 })}`;
+  return formatMoney(v, { currency: moneda === 'USD' ? 'USD' : 'ARS', mode: 'price' });
 }
 
 type SortKey = 'ticker' | 'variacionDiaria' | 'rendimientoMes' | 'rendimientoAnio' | 'rendimiento12Meses';
@@ -108,7 +104,7 @@ export default function FciSection({ tenencias }: Props) {
       <div className="kpi-grid">
         <KPICard
           label="En Cartera (FCI)"
-          value={fmtUsd(totalEnCartera)}
+          value={formatMoney(totalEnCartera, { currency: 'USD' })}
           sub={`${fondos.filter((f) => f.tenenciaUsd).length} de ${fondos.length} fondos con posición`}
           accentColor={COLOR_FCI}
         />
@@ -155,12 +151,12 @@ export default function FciSection({ tenencias }: Props) {
                   )}
                   <div style={{ fontSize: 10, color: 'var(--muted)' }}>{f.nombreFondo}</div>
                 </td>
-                <td style={{ padding: '7px 10px', textAlign: 'right', color: 'var(--text-sec)' }}>{fmtVcp(f.vcp, f.moneda)}</td>
-                <td style={{ padding: '7px 10px', textAlign: 'right', color: colorPct(f.variacionDiaria) }}>{fmtPct1(f.variacionDiaria)}</td>
-                <td style={{ padding: '7px 10px', textAlign: 'right', color: f.rendimientoMes == null ? 'var(--muted)' : 'var(--text-sec)' }}>{fmtPct1(f.rendimientoMes)}</td>
-                <td style={{ padding: '7px 10px', textAlign: 'right', color: f.rendimientoAnio == null ? 'var(--muted)' : 'var(--text-sec)' }}>{fmtPct1(f.rendimientoAnio)}</td>
+                <td style={{ padding: '7px 10px', textAlign: 'right', color: 'var(--text-sec)', fontVariantNumeric: 'tabular-nums' }}>{fmtVcp(f.vcp, f.moneda)}</td>
+                <td style={{ padding: '7px 10px', textAlign: 'right', color: colorPct(f.variacionDiaria), fontVariantNumeric: 'tabular-nums' }}>{fmtPct1(f.variacionDiaria)}</td>
+                <td style={{ padding: '7px 10px', textAlign: 'right', color: f.rendimientoMes == null ? 'var(--muted)' : 'var(--text-sec)', fontVariantNumeric: 'tabular-nums' }}>{fmtPct1(f.rendimientoMes)}</td>
+                <td style={{ padding: '7px 10px', textAlign: 'right', color: f.rendimientoAnio == null ? 'var(--muted)' : 'var(--text-sec)', fontVariantNumeric: 'tabular-nums' }}>{fmtPct1(f.rendimientoAnio)}</td>
                 <td
-                  style={{ padding: '7px 10px', textAlign: 'right', fontWeight: 700, color: f.rendimiento12Meses == null ? 'var(--muted)' : 'var(--text)' }}
+                  style={{ padding: '7px 10px', textAlign: 'right', fontWeight: 700, color: f.rendimiento12Meses == null ? 'var(--muted)' : 'var(--text)', fontVariantNumeric: 'tabular-nums' }}
                   title={f.rendimiento12MesesEstimado
                     ? 'Estimado: CAFCI no publica esta columna para el fondo (viene rezagado). Se calculó con el VCP de hoy y el de hace 12 meses de una fuente secundaria (espejo de la planilla), no es la cifra que publica CAFCI para los demás fondos.'
                     : undefined}

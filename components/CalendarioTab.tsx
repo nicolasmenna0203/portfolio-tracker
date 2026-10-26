@@ -5,6 +5,7 @@ import type { DashboardData, EventoTipo, EventoCalendario, YieldTicker } from '@
 import { useCalendario } from '@/lib/useCalendario';
 import { tickersDeCartera } from '@/lib/tickersElegibles';
 import { RETENCION_USA, IMPUESTO_CHEQUE, FACTOR_NETO_DIVIDENDO } from '@/lib/retenciones';
+import { formatMoney, formatPercent } from '@/lib/format';
 
 interface Props {
   data: DashboardData;
@@ -38,11 +39,9 @@ function fmtFechaEvento(fecha: string): string {
   return d.toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' });
 }
 
-/** Formatea el cobro estimado, ej. "≈ US$ 4,23" o "≈ $ 1.240". */
+/** Formatea el cobro estimado, ej. "≈ USD 4,23" o "≈ ARS 1.240". */
 function fmtMonto(monto: number, moneda?: string): string {
-  const simbolo = moneda === 'ARS' ? '$' : 'US$';
-  const dec = monto >= 100 ? 0 : 2;
-  return `≈ ${simbolo} ${monto.toLocaleString('es-AR', { minimumFractionDigits: dec, maximumFractionDigits: dec })}`;
+  return `≈ ${formatMoney(monto, { currency: moneda === 'ARS' ? 'ARS' : 'USD' })}`;
 }
 
 /** Los dividendos se muestran netos de retención; los flujos de bonos ARG, completos. */
@@ -54,8 +53,8 @@ function esDividendo(tipo: EventoTipo): boolean {
 function tooltipMonto(tipo: EventoTipo): string {
   if (esDividendo(tipo)) {
     return `Neto estimado a acreditar, según tu tenencia y el precio de mercado actual.\n`
-      + `Ya descontado: ${(RETENCION_USA * 100).toFixed(0)}% de retención de EE.UU. + ${(IMPUESTO_CHEQUE * 100).toFixed(1)}% de débitos y créditos `
-      + `(llega el ${(FACTOR_NETO_DIVIDENDO * 100).toFixed(1)}% del bruto).\n`
+      + `Ya descontado: ${formatPercent(RETENCION_USA * 100, { sign: false, decimals: 0 })} de retención de EE.UU. + ${formatPercent(IMPUESTO_CHEQUE * 100, { sign: false })} de débitos y créditos `
+      + `(llega el ${formatPercent(FACTOR_NETO_DIVIDENDO * 100, { sign: false })} del bruto).\n`
       + `No incluye la comisión del depositario (Comafi, ~1-2%).`;
   }
   return 'Cobro estimado según tu tenencia y el precio de mercado actual.\nSin retención de origen: los bonos ARG se acreditan completos.';
@@ -197,7 +196,7 @@ function DiaCelda({
               : '';
             const y = yieldPorTicker.get(e.ticker);
             const yieldTxt = y && esDividendo(e.tipo)
-              ? `\nYield 12m: ${(y.yieldAnual * 100).toFixed(2)}% · ${fmtMonto(y.cobroAnual ?? 0, 'USD')}/año`
+              ? `\nYield 12m: ${formatPercent(y.yieldAnual * 100, { sign: false, decimals: 2 })} · ${fmtMonto(y.cobroAnual ?? 0, 'USD')}/año`
               : '';
             const tip = `${e.ticker}: ${meta.label}${e.detalle ? ` (${e.detalle})` : ''}${montoTxt}${yieldTxt}`;
             const dot = Math.max(6, Math.round(logoSize * 0.3));
@@ -232,15 +231,15 @@ function DiaCelda({
             const y = yieldPorTicker.get(e.ticker);
             return (
               <div key={i} style={{ display: 'flex', alignItems: 'baseline', gap: 4, lineHeight: 1.25 }}>
-                <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text)', whiteSpace: 'nowrap' }}>
+                <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text)', whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>
                   {fmtMonto(e.montoEstimado!, e.monedaMonto)}
                 </span>
                 {y && (
                   <span
-                    title={`Yield 12m de ${e.ticker}: ${(y.yieldAnual * 100).toFixed(2)}% · ${fmtMonto(y.cobroAnual ?? 0, 'USD')}/año`}
+                    title={`Yield 12m de ${e.ticker}: ${formatPercent(y.yieldAnual * 100, { sign: false, decimals: 2 })} · ${fmtMonto(y.cobroAnual ?? 0, 'USD')}/año`}
                     style={{ fontSize: 9, fontWeight: 700, color: TIPO_EVENTO_META.dividendo.color, whiteSpace: 'nowrap' }}
                   >
-                    {(y.yieldAnual * 100).toFixed(1)}%
+                    {formatPercent(y.yieldAnual * 100, { sign: false })}
                   </span>
                 )}
               </div>
@@ -454,7 +453,7 @@ export default function CalendarioTab({ data }: Props) {
               </p>
               {Object.keys(totalMesPorMoneda).length > 0 && (
                 <p
-                  title={`Neto estimado a acreditar este mes según tu tenencia y precios actuales.\n\nDividendos: ya descontada la retención del ${(RETENCION_USA * 100).toFixed(0)}% de EE.UU. (sin tratado de doble imposición con Argentina) y el ${(IMPUESTO_CHEQUE * 100).toFixed(1)}% de débitos y créditos → llega el ${(FACTOR_NETO_DIVIDENDO * 100).toFixed(1)}% del bruto.\nNo incluye la comisión del depositario (Comafi, ~1-2%), así que el neto real puede ser algo menor.\n\nRenta y amortización de bonos ARG: sin retención, al 100%.`}
+                  title={`Neto estimado a acreditar este mes según tu tenencia y precios actuales.\n\nDividendos: ya descontada la retención del ${formatPercent(RETENCION_USA * 100, { sign: false, decimals: 0 })} de EE.UU. (sin tratado de doble imposición con Argentina) y el ${formatPercent(IMPUESTO_CHEQUE * 100, { sign: false })} de débitos y créditos → llega el ${formatPercent(FACTOR_NETO_DIVIDENDO * 100, { sign: false })} del bruto.\nNo incluye la comisión del depositario (Comafi, ~1-2%), así que el neto real puede ser algo menor.\n\nRenta y amortización de bonos ARG: sin retención, al 100%.`}
                   style={{ margin: 0, fontSize: 12, fontWeight: 700, color: 'var(--text)' }}
                 >
                   A cobrar (neto):{' '}
@@ -462,14 +461,14 @@ export default function CalendarioTab({ data }: Props) {
                     .map(([moneda, total]) => fmtMonto(total, moneda))
                     .join('  ·  ')}
                   <span style={{ fontWeight: 400, color: 'var(--muted)', marginLeft: 6 }}>
-                    · dividendos con {(RETENCION_USA * 100).toFixed(0)}% de retención descontado
+                    · dividendos con {formatPercent(RETENCION_USA * 100, { sign: false, decimals: 0 })} de retención descontado
                   </span>
                   {cobroAnualTotal > 0 && (
                     <span
                       title={'Proyección anual de dividendos: tenencia actual × yield de los últimos 12 meses, ya neta de retenciones.\nAsume que se repiten igual el año próximo — no son pagos confirmados.'}
                       style={{ fontWeight: 400, color: 'var(--muted)', marginLeft: 6 }}
                     >
-                      · {fmtMonto(cobroAnualTotal, 'USD')}/año ({(yieldCartera * 100).toFixed(2)}% de la cartera)
+                      · {fmtMonto(cobroAnualTotal, 'USD')}/año ({formatPercent(yieldCartera * 100, { sign: false, decimals: 2 })} de la cartera)
                     </span>
                   )}
                 </p>
@@ -503,14 +502,14 @@ export default function CalendarioTab({ data }: Props) {
                             padding: '1px 6px', borderRadius: 10, whiteSpace: 'nowrap',
                           }}
                         >
-                          {(yieldPorTicker.get(e.ticker)!.yieldAnual * 100).toFixed(2)}%
+                          {formatPercent(yieldPorTicker.get(e.ticker)!.yieldAnual * 100, { sign: false, decimals: 2 })}
                         </span>
                       )}
                       {e.montoEstimado != null && e.montoEstimado > 0 && (
                         <span
                           className="cal-evento-monto"
                           title={tooltipMonto(e.tipo)}
-                          style={{ marginLeft: 'auto', fontWeight: 700, color: meta.color, whiteSpace: 'nowrap' }}
+                          style={{ marginLeft: 'auto', fontWeight: 700, color: meta.color, whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}
                         >
                           {fmtMonto(e.montoEstimado, e.monedaMonto)}
                         </span>

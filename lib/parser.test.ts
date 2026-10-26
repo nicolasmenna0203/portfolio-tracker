@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseArgNum, parseFechaDia, parseFechaMes, toMesKey, valorSegunMoneda, decodeHtmlEntities } from './parser';
+import { parseArgNum, parseFechaDia, parseFechaMes, toMesKey, decodeHtmlEntities } from './parser';
 
 describe('parseArgNum', () => {
   it('pasa un number directamente', () => {
@@ -78,13 +78,6 @@ describe('toMesKey', () => {
   it('formatea "YYYY-MM" con mes con padding', () => {
     expect(toMesKey(Date.UTC(2024, 0, 15))).toBe('2024-01');
     expect(toMesKey(Date.UTC(2024, 10, 1))).toBe('2024-11');
-  });
-});
-
-describe('valorSegunMoneda', () => {
-  it('elige USD o ARS según el parámetro', () => {
-    expect(valorSegunMoneda(100, 150000, 'USD')).toBe(100);
-    expect(valorSegunMoneda(100, 150000, 'ARS')).toBe(150000);
   });
 });
 

@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef } from 'react';
-import { fmtUSD } from '@/lib/parser';
+import { formatMoney } from '@/lib/format';
 
 interface Props {
   meses: string[];

@@ -560,8 +560,11 @@ input, select, textarea { font-size: 16px; }
   /* Las etiquetas de inicio/fin chocan con el thumb en pantalla angosta y son
      redundantes: el mes elegido ya se muestra a la izquierda del track. */
   .month-endlabel { display: none; }
-  /* El gráfico de benchmarks necesita alto propio dentro del scroll */
-  .bench-chart-card { flex: none !important; min-height: 360px; }
+  /* El gráfico de benchmarks llena el alto restante de la pestaña (flex:1,
+     ya seteado inline); el piso de 280px es el mínimo legible si la pestaña
+     queda muy baja. `flex:none` acá dejaba una banda vacía debajo de la
+     tarjeta en paneles donde el alto disponible superaba el min-height. */
+  .bench-chart-card { min-height: 280px; }
 
   /* Toggle USD/% de los gráficos */
   .modo-toggle-btn {
