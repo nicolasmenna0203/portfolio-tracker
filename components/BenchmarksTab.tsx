@@ -17,18 +17,17 @@ interface Props {
 type SeriesId = 'cartera' | BenchmarkId;
 
 // Colores asignados por lo que cada serie representa, no arbitrarios:
-// dorado de marca para la cartera propia, verde salvia para el mercado USD
-// (S&P 500), terracota para inflación (costo/alerta a superar), lavanda para
-// el MEP, naranja para Bitcoin, azul grisáceo para oro — antes "Oro" y "Mi
-// Cartera" eran dos amarillos casi idénticos; oro pasa a un tono frío y a
-// trazo punteado para que no compita visualmente con el dorado de la cartera.
+// azul profundo para la cartera propia (contraste frío contra el resto de
+// series, que son cálidas: destaca como la serie de referencia), verde salvia
+// para el mercado USD (S&P 500), terracota para inflación (costo/alerta a
+// superar), lavanda para el MEP, naranja para Bitcoin, ámbar para oro.
 const SERIES_META: Record<SeriesId, { label: string; shortLabel: string; tooltip?: string; color: string; dashed?: boolean }> = {
-  cartera:   { label: 'Mi Cartera',              shortLabel: 'Mi Cartera',  color: '#cfab6e' },
+  cartera:   { label: 'Mi Cartera',              shortLabel: 'Mi Cartera',  color: '#4a6fa5' },
   sp500:     { label: 'S&P 500',                 shortLabel: 'S&P 500',    color: '#5fb896' },
   inflacion: { label: 'Inflación (IPC INDEC)',   shortLabel: 'Inflación',  tooltip: 'IPC INDEC', color: '#c15c4a' },
   mep:       { label: 'Dólar MEP',               shortLabel: 'Dólar MEP', color: '#8d7fc7' },
   btc:       { label: 'Bitcoin',                 shortLabel: 'Bitcoin',    color: '#d9824e' },
-  oro:       { label: 'Oro',                     shortLabel: 'Oro',        color: '#7a93a8', dashed: true },
+  oro:       { label: 'Oro',                     shortLabel: 'Oro',        color: '#e8cf8a' },
 };
 
 const SERIES_ORDER: SeriesId[] = ['cartera', 'sp500', 'inflacion', 'mep', 'btc', 'oro'];
