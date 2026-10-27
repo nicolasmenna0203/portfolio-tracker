@@ -99,7 +99,7 @@ export default function FciSection({ tenencias }: Props) {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
 
       <div className="kpi-grid">
         <KPICard

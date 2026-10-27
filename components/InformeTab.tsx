@@ -40,7 +40,11 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
     <h3 style={{
       fontSize: 10, fontWeight: 700, letterSpacing: '0.14em',
       textTransform: 'uppercase', color: 'var(--primary)',
-      margin: 0, padding: '16px 0 8px',
+      /* Sin padding-top: el aire sobre cada título lo da el `gap` de 12px del
+         root, igual que en el resto de las pestañas. Con los 16px de antes el
+         primer título quedaba a 50px del tope y la pestaña arrancaba más
+         abajo que todas las demás. */
+      margin: 0, padding: '0 0 8px',
       borderBottom: '1px solid var(--border)',
     }}>{children}</h3>
   );
@@ -261,7 +265,7 @@ export default function InformeTab({
   ];
 
   return (
-    <div className="informe-root scroll-y" style={{ display: 'flex', flexDirection: 'column', gap: 0, flex: 1, minHeight: 0, paddingBottom: 24 }}>
+    <div className="informe-root scroll-y" style={{ display: 'flex', flexDirection: 'column', gap: 12, flex: 1, minHeight: 0, paddingBottom: 24 }}>
 
       {/* ── Variación por dimensión ──────────────────────────────────────────── */}
       {DIMS.map(({ key, label }) => {

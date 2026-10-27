@@ -369,7 +369,7 @@ export default function RentaFijaSection({ tenencias }: Props) {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
 
       {/* ── KPIs por grupo — nunca mezclados, cada tasa vive en su propia moneda/índice ── */}
       <div className="kpi-grid">

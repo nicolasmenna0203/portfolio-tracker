@@ -181,7 +181,7 @@ export default function RentaVariableSection({ tickersUsa, tenencias, tickersFci
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
 
       {/* ── KPIs de renta variable ────────────────────────────────────────── */}
       <div className="kpi-grid">

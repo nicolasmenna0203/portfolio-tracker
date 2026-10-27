@@ -304,7 +304,7 @@ export default function CarryTradeSection({ tenencias }: Props) {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
 
       {/* ── Barra de control: FX spot + modo + carry custom ──────────────── */}
       <div style={{

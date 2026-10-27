@@ -35,7 +35,7 @@ export default function PerformanceTab({ data }: Props) {
   const [subTab, setSubTab] = useState<SubTab>('fija');
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
 
       {/* ── Selector Renta Fija / Renta Variable ─────────────────────────── */}
       {/* `pill-row`: en mobile pasa de 2 filas apiladas a una sola deslizable

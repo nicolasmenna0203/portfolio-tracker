@@ -109,7 +109,7 @@ function TabScroll({
       onScroll={(e) => {
         if (posiciones.current) posiciones.current[tab] = e.currentTarget.scrollTop;
       }}
-      style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, ...style }}
+      style={{ display: 'flex', flexDirection: 'column', gap: 12, flex: 1, minHeight: 0, ...style }}
     >
       {children}
     </section>
@@ -516,7 +516,7 @@ const [uploadOpen, setUploadOpen] = useState(false);
 
       {/* ── Tab: Resumen ────────────────────────────────────────────────────── */}
       {tab === 'resumen' && (
-        <TabScroll tab={tab} posiciones={scrollPorTab} style={{ gap: 12 }}>
+        <TabScroll tab={tab} posiciones={scrollPorTab}>
           {/* Selector de período para Ganancia / TWR / TIR (KPIs 2 a 4) */}
           <div className="pill-row" style={{ display: 'flex', gap: 6, flexWrap: 'wrap', flexShrink: 0 }}>
             {PERIODOS.map((p) => (
@@ -618,7 +618,7 @@ const [uploadOpen, setUploadOpen] = useState(false);
 
       {/* ── Tab: Tenencias ──────────────────────────────────────────────────── */}
       {tab === 'tenencias' && (
-        <TabScroll tab={tab} posiciones={scrollPorTab} style={{ gap: 8 }}>
+        <TabScroll tab={tab} posiciones={scrollPorTab}>
 
           {/* Barra de controles: selector de mes centrado + dimensión + filtros activos */}
           <div className="tenencias-controles" style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', flexShrink: 0 }}>

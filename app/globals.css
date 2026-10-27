@@ -276,6 +276,19 @@ input, select, textarea { font-size: 16px; }
   overscroll-behavior-y: contain;
 }
 
+/* Ritmo vertical de las pestañas — el `gap` real lo pone <TabScroll> inline
+   (12px, el de Resumen), porque su `style` inline le gana a esta hoja. Antes
+   cada pestaña resolvía su espaciado por su cuenta: el `gap` iba a mano en la
+   llamada (12px Resumen, 8px Tenencias, ninguno en las otras 8) y encima cada
+   componente de tab traía el suyo (16px Proyecciones, 14px Performance/
+   Ingresos/Gastos, 12px el resto, 0 Informe). Al cambiar de pestaña se movía
+   todo el espaciado interno aunque el contenedor no se corriera un píxel: la
+   primera tarjeta arrancaba entre 0px y 101px del tope según la pestaña.
+
+   `min-width:0` en los hijos: son items de un flex column, así que sin esto
+   toman su max-content y una tabla ancha desborda la pestaña. */
+.tab-scroll > * { min-width: 0; }
+
 /* El espacio para el bot flotante NO va como padding-bottom del scroller: los
    tabs cuyo contenido es un hijo con `flex:1; min-height:0` consumen el padding
    como espacio del flex y el último elemento vuelve a quedar debajo del FAB

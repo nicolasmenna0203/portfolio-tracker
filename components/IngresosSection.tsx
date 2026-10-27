@@ -157,7 +157,7 @@ export default function IngresosSection({ hideValues, moneda = 'ARS' }: Props) {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       <div className="kpi-grid">
         <KPICard
           label={`Total acumulado (${moneda})`}
