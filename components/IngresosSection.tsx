@@ -7,6 +7,7 @@ import {
   CartesianGrid, ResponsiveContainer,
 } from 'recharts';
 import type { IngresosResponse, IngresoRow } from '@/types';
+import { useIsMobile } from '@/lib/useIsMobile';
 import { formatMoney, type Moneda } from '@/lib/format';
 import KPICard from './KPICard';
 
@@ -57,6 +58,7 @@ export default function IngresosSection({ hideValues, moneda = 'ARS' }: Props) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [verTodos, setVerTodos] = useState(false);
+  const isMobile = useIsMobile();
   const pathname = usePathname();
   const apiBase = pathname?.startsWith('/demo') ? '/api/demo' : '/api';
 
@@ -198,7 +200,7 @@ export default function IngresosSection({ hideValues, moneda = 'ARS' }: Props) {
             <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" vertical={false} />
             <XAxis
               dataKey="mes"
-              tick={{ fontSize: 11, fill: 'var(--muted)' }}
+              tick={{ fontSize: isMobile ? 9 : 11, fill: 'var(--muted)' }}
               axisLine={{ stroke: 'var(--border)' }}
               tickLine={false}
               interval={0}
@@ -208,11 +210,11 @@ export default function IngresosSection({ hideValues, moneda = 'ARS' }: Props) {
               }}
             />
             <YAxis
-              tick={{ fontSize: 11, fill: 'var(--muted)' }}
+              tick={{ fontSize: isMobile ? 9 : 11, fill: 'var(--muted)' }}
               axisLine={false}
               tickLine={false}
-              tickFormatter={(v) => formatMoney(v, { currency: moneda === 'ARS' ? 'ARS' : 'USD', mode: 'compact', hidden: hideValues })}
-              width={hideValues ? 40 : 56}
+              tickFormatter={(v) => formatMoney(v, { currency: moneda === 'ARS' ? 'ARS' : 'USD', mode: 'compact', compactShort: isMobile, hidden: hideValues })}
+              width={isMobile ? 40 : (hideValues ? 40 : 56)}
             />
             <Tooltip content={hideValues ? () => null : <CustomTooltip moneda={moneda} />} />
             {resp.empleadores.length > 1 && <Legend wrapperStyle={{ fontSize: 12, textTransform: 'uppercase' }} />}
@@ -234,6 +236,7 @@ export default function IngresosSection({ hideValues, moneda = 'ARS' }: Props) {
           {visibles.map((r, i) => (
             <div
               key={i}
+              className="ingreso-fila"
               style={{
                 display: 'flex', alignItems: 'center', gap: 12,
                 padding: '8px 4px', borderBottom: '1px solid var(--border-subtle)',
@@ -244,8 +247,10 @@ export default function IngresosSection({ hideValues, moneda = 'ARS' }: Props) {
                 width: 8, height: 8, borderRadius: '50%', flexShrink: 0,
                 background: empleadorColor.get(r.empleador) ?? 'var(--primary)',
               }} />
-              <span style={{ color: 'var(--muted)', width: 90, flexShrink: 0 }}>{r.fechaStr}</span>
-              <span style={{ color: 'var(--text)', fontWeight: 600, flex: 1, textTransform: 'uppercase' }}>{r.empleador}</span>
+              <span className="ingreso-fecha" style={{ color: 'var(--muted)', width: 90, flexShrink: 0 }}>{r.fechaStr}</span>
+              {/* `minWidth:0` deja que el nombre se recorte con ellipsis en vez
+                  de empujar el monto fuera de la tarjeta (ver globals.css). */}
+              <span className="ingreso-empleador" style={{ color: 'var(--text)', fontWeight: 600, flex: 1, minWidth: 0, textTransform: 'uppercase' }}>{r.empleador}</span>
               <span style={{ color: 'var(--up)', fontWeight: 600, flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>
                 {r.montoArs > 0
                   ? formatMoney(r.montoArs, { currency: 'ARS', hidden: hideValues })

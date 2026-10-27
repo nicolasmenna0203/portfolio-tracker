@@ -391,7 +391,7 @@ export default function RentaFijaSection({ tenencias }: Props) {
 
       {/* ── Selector de grupo — siempre uno activo, nunca todos juntos:       */}
       {/*    sus TIR no son comparables entre sí (monedas/índices distintos). */}
-      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', flexShrink: 0 }}>
+      <div className="pill-row" style={{ display: 'flex', gap: 6, flexWrap: 'wrap', flexShrink: 0 }}>
         {GRUPO_ORDEN.map((g) => {
           const meta = GRUPO_META[g];
           const activo = filtroGrupo === g;
@@ -565,11 +565,11 @@ export default function RentaFijaSection({ tenencias }: Props) {
       </div>
 
       {/* ── Tabla de métricas por bono ────────────────────────────────────── */}
-      <div style={{
+      <div className="tabla-wrap" style={{
         background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 12,
         overflowX: 'auto',
       }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+        <table className="tabla-datos" style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
           <thead style={{ position: 'sticky', top: 0, background: 'var(--card)', zIndex: 1 }}>
             <tr style={{ borderBottom: '1px solid var(--border)' }}>
               <th onClick={() => toggleSort('ticker')} style={{ cursor: 'pointer', textAlign: 'left', padding: '8px 10px', fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: sortKey === 'ticker' ? 'var(--primary)' : 'var(--muted)' }}>

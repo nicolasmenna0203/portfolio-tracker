@@ -14,6 +14,7 @@ import {
 } from 'recharts';
 import type { TenenciaActual } from '@/types';
 import { PALETA_TIPO, RIESGO_COLOR, RIESGO_LABEL, RENTA_LABEL, GEO_LABEL, MONEDA_LABEL, MONEDA_COLOR, RENTA_COLOR, GEO_COLOR, colorPorCategoria } from '@/lib/constants';
+import { useIsMobile } from '@/lib/useIsMobile';
 import { formatMoney, formatPercent, type Moneda } from '@/lib/format';
 
 interface Props {
@@ -125,6 +126,7 @@ export default function EvolucionTipoChart({ tenenciasPorMes, mesesDisponibles, 
   const [dimLocal, setDimLocal] = useState<Dim>('TIPO');
   const dim = dimProp ?? dimLocal;
   const [mode, setMode] = useState<Mode>('nominal');
+  const isMobile = useIsMobile();
 
   const groupsSet = new Set<string>();
   for (const rows of Object.values(tenenciasPorMes)) {
@@ -138,7 +140,7 @@ export default function EvolucionTipoChart({ tenenciasPorMes, mesesDisponibles, 
 
   const yFormatter = mode === 'pct'
     ? (v: number) => formatPercent(v * 100, { sign: false, decimals: 0 })
-    : (v: number) => formatMoney(v, { currency: moneda === 'ARS' ? 'ARS' : 'USD', mode: 'compact', hidden: hideValues });
+    : (v: number) => formatMoney(v, { currency: moneda === 'ARS' ? 'ARS' : 'USD', mode: 'compact', compactShort: isMobile, hidden: hideValues });
 
   return (
     <div style={{
@@ -243,10 +245,10 @@ export default function EvolucionTipoChart({ tenenciasPorMes, mesesDisponibles, 
           />
           <YAxis
             tickFormatter={yFormatter}
-            tick={{ fill: 'var(--muted)', fontSize: 11 }}
+            tick={{ fill: 'var(--muted)', fontSize: isMobile ? 9 : 11 }}
             tickLine={false}
             axisLine={false}
-            width={52}
+            width={isMobile ? 40 : 52}
             domain={mode === 'pct' ? [0, 1] : undefined}
           />
           <Tooltip content={(props) => <TooltipContent {...props} mode={mode} hideValues={hideValues} moneda={moneda} />} />

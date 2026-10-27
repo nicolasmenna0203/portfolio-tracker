@@ -1,11 +1,12 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { DashboardData, EventoTipo, EventoCalendario, YieldTicker } from '@/types';
 import { useCalendario } from '@/lib/useCalendario';
 import { tickersDeCartera } from '@/lib/tickersElegibles';
 import { RETENCION_USA, IMPUESTO_CHEQUE, FACTOR_NETO_DIVIDENDO } from '@/lib/retenciones';
 import { formatMoney, formatPercent } from '@/lib/format';
+import { useIsMobile } from '@/lib/useIsMobile';
 
 interface Props {
   data: DashboardData;
@@ -58,20 +59,6 @@ function tooltipMonto(tipo: EventoTipo): string {
       + `No incluye la comisión del depositario (Comafi, ~1-2%).`;
   }
   return 'Cobro estimado según tu tenencia y el precio de mercado actual.\nSin retención de origen: los bonos ARG se acreditan completos.';
-}
-
-/** true cuando el viewport es de celular. Los logos del calendario reciben su
- *  tamaño por prop (no por CSS), así que hace falta saberlo en JS. */
-function useEsMobile(): boolean {
-  const [esMobile, setEsMobile] = useState(false);
-  useEffect(() => {
-    const mq = window.matchMedia('(max-width: 768px)');
-    const sync = () => setEsMobile(mq.matches);
-    sync();
-    mq.addEventListener('change', sync);
-    return () => mq.removeEventListener('change', sync);
-  }, []);
-  return esMobile;
 }
 
 function Pill({ label, active, color, onClick }: {
@@ -259,7 +246,7 @@ function DiaCelda({
 export default function CalendarioTab({ data }: Props) {
   const { tenenciasPorMes } = data;
 
-  const esMobile = useEsMobile();
+  const esMobile = useIsMobile();
   const logoSize = esMobile ? 18 : 30;
   const maxLogos = esMobile ? 3 : 12;
 

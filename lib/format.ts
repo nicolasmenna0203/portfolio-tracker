@@ -19,10 +19,10 @@ const NBSP = ' ';
 const MASK = '••••';
 
 /** "1234" → "1,2 mil" / "1234000" → "1,2 M" para ejes compactos. */
-function compactNumber(n: number): string {
+function compactNumber(n: number, display: 'long' | 'short' = 'long'): string {
   return new Intl.NumberFormat('es-AR', {
     notation: 'compact',
-    compactDisplay: 'long',
+    compactDisplay: display,
     maximumFractionDigits: 1,
   }).format(n);
 }
@@ -31,6 +31,10 @@ interface FormatMoneyOptions {
   currency: Moneda;
   /** 'full': sin decimales (cartera/posición/KPI). 'compact': ejes de gráficos ("USD 26 mil"). 'price': 2 decimales (precios/VCP/cotizaciones). */
   mode?: 'full' | 'compact' | 'price';
+  /** Solo con mode 'compact': "26 K" en vez de "26 mil", y sin el código de
+   *  moneda. El eje Y en mobile tiene ~45px de ancho y "USD 22,5 mil" se corta;
+   *  la moneda ya está en el título del gráfico, así que no se pierde nada. */
+  compactShort?: boolean;
   /** Antepone "+"/"-" explícito antes del código de moneda (variaciones). */
   sign?: boolean;
   /** Oculta el valor manteniendo el código de moneda visible (botón "Ocultar valores"). */
@@ -42,10 +46,11 @@ interface FormatMoneyOptions {
  * - mode 'full' (default): sin decimales, salvo que |valor| < 100 → 2 decimales
  *   (para no perder "USD 0,08" como "USD 0").
  * - mode 'price': siempre 2 decimales (precios, VCP, cotizaciones).
- * - mode 'compact': notación compacta para ejes de gráficos ("USD 26 mil").
+ * - mode 'compact': notación compacta para ejes de gráficos ("USD 26 mil"), o
+ *   "26 K" sin código de moneda con `compactShort` (ejes angostos en mobile).
  */
 export function formatMoney(value: number | null | undefined, options: FormatMoneyOptions): string {
-  const { currency, mode = 'full', sign = false, hidden = false } = options;
+  const { currency, mode = 'full', sign = false, hidden = false, compactShort = false } = options;
   const prefix = CURRENCY_PREFIX[currency];
 
   if (hidden) return `${prefix}${NBSP}${MASK}`;
@@ -56,7 +61,8 @@ export function formatMoney(value: number | null | undefined, options: FormatMon
 
   let numStr: string;
   if (mode === 'compact') {
-    numStr = compactNumber(abs);
+    numStr = compactNumber(abs, compactShort ? 'short' : 'long');
+    if (compactShort) return `${signo}${numStr}`;
   } else if (mode === 'price') {
     numStr = new Intl.NumberFormat('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(abs);
   } else {

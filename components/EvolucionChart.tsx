@@ -1,6 +1,5 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import {
   ResponsiveContainer,
   ComposedChart,
@@ -15,6 +14,7 @@ import {
   Legend,
 } from 'recharts';
 import type { ResumenRow, TenenciaActual } from '@/types';
+import { useIsMobile } from '@/lib/useIsMobile';
 import { formatMoney, type Moneda } from '@/lib/format';
 
 interface Props {
@@ -103,16 +103,7 @@ function TooltipContent({ active, payload, label, hideValues, moneda }: any) {
 
 export default function EvolucionChart({ data, tenenciasPorMes, hideValues, moneda = 'USD' }: Props) {
   const chartData = buildData(data, tenenciasPorMes, moneda);
-  const [isMobile, setIsMobile] = useState(false);
-
-
-  useEffect(() => {
-    const mq = window.matchMedia('(max-width: 768px)');
-    setIsMobile(mq.matches);
-    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
-    mq.addEventListener('change', handler);
-    return () => mq.removeEventListener('change', handler);
-  }, []);
+  const isMobile = useIsMobile();
 
   return (
     <div style={{
@@ -158,11 +149,11 @@ export default function EvolucionChart({ data, tenenciasPorMes, hideValues, mone
           />
           <YAxis
             yAxisId="usd"
-            tickFormatter={(v) => formatMoney(v, { currency: moneda === 'ARS' ? 'ARS' : 'USD', mode: 'compact', hidden: hideValues })}
+            tickFormatter={(v) => formatMoney(v, { currency: moneda === 'ARS' ? 'ARS' : 'USD', mode: 'compact', compactShort: isMobile, hidden: hideValues })}
             tick={{ fill: 'var(--muted)', fontSize: isMobile ? 9 : 11 }}
             tickLine={false}
             axisLine={false}
-            width={isMobile ? 38 : 52}
+            width={isMobile ? 44 : 52}
           />
           <YAxis
             yAxisId="gan"

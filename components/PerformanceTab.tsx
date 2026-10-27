@@ -38,7 +38,9 @@ export default function PerformanceTab({ data }: Props) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
 
       {/* ── Selector Renta Fija / Renta Variable ─────────────────────────── */}
-      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', flexShrink: 0 }}>
+      {/* `pill-row`: en mobile pasa de 2 filas apiladas a una sola deslizable
+          (ver globals.css) — el mismo gesto que la barra de pestañas. */}
+      <div className="pill-row" style={{ display: 'flex', gap: 6, flexWrap: 'wrap', flexShrink: 0 }}>
         {SUB_TABS.map((t) => {
           const activo = subTab === t.id;
           return (

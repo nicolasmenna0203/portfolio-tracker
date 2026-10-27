@@ -518,7 +518,7 @@ const [uploadOpen, setUploadOpen] = useState(false);
       {tab === 'resumen' && (
         <TabScroll tab={tab} posiciones={scrollPorTab} style={{ gap: 12 }}>
           {/* Selector de período para Ganancia / TWR / TIR (KPIs 2 a 4) */}
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', flexShrink: 0 }}>
+          <div className="pill-row" style={{ display: 'flex', gap: 6, flexWrap: 'wrap', flexShrink: 0 }}>
             {PERIODOS.map((p) => (
               <button
                 key={p.id}
@@ -762,8 +762,12 @@ const [uploadOpen, setUploadOpen] = useState(false);
         </TabScroll>
       )}
 
-      {/* ── Bot flotante ────────────────────────────────────────────────────── */}
-      <ChatBot data={data} />
+      {/* ── Bot flotante ──────────────────────────────────────────────────────
+          Oculto mientras el drawer de carga está abierto: el FAB vive en
+          z-index 200 y el panel en 101, así que si no flotaba por encima del
+          contenido del drawer (y en mobile, donde el drawer es un bottom sheet
+          a pantalla casi completa, tapaba los botones del final del form). */}
+      {!uploadOpen && <ChatBot data={data} />}
 
     </main>
   );

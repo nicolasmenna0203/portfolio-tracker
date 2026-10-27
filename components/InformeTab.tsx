@@ -183,16 +183,32 @@ function DimChips({ rows, totalAnterior: _, moneda }: { rows: DimRow[]; totalAnt
               )}
             </div>
 
-            {/* etiqueta Δ debajo. `overflowX:'clip'`: la etiqueta se centra en
-                `left:X%` con translateX(-50%), así que con la barra casi llena
-                sobresalía por derecha y hacía crecer el scrollWidth del tab
-                (barra horizontal en toda la pestaña). `clip` recorta sin crear
-                un contexto de scroll. */}
+            {/* etiqueta Δ debajo, centrada sobre el segmento de variación.
+                `overflowX:'clip'`: con la barra casi llena la etiqueta sobresalía
+                por derecha y hacía crecer el scrollWidth del tab (barra
+                horizontal en toda la pestaña); `clip` recorta sin crear un
+                contexto de scroll.
+
+                El centrado tampoco puede ser `translateX(-50%)` a secas: en un
+                grupo chico el segmento arranca cerca de 0% y la mitad izquierda
+                de la etiqueta caía fuera del contenedor, donde `clip` la
+                cortaba ("+USD 47,00" se leía "7,00"). En vez de posicionar por
+                `left`, se usan los tres insets a la vez: `left`/`right` marcan
+                el centro deseado y `margin:auto` centra la etiqueta en ese
+                punto, pero sin dejar que ningún borde salga del contenedor
+                —así el navegador la empuja hacia adentro sola en los extremos—.
+                `width:max-content` evita que se comprima al hacerlo, y el
+                `50vw` de los insets es solo un valor grande: alcanza para que
+                el centrado por `margin:auto` mande salvo contra los bordes. */}
             <div style={{ position: 'relative', height: 16, marginTop: 3, overflowX: 'clip' }}>
               <span style={{
                 position: 'absolute',
-                left: `${labelAt}%`, top: 0,
-                transform: 'translateX(-50%)',
+                top: 0,
+                left: `max(0%, ${labelAt}% - 50vw)`,
+                right: `max(0%, ${100 - labelAt}% - 50vw)`,
+                marginInline: 'auto',
+                width: 'max-content', maxWidth: '100%',
+                textAlign: 'center',
                 fontSize: 10, fontWeight: 700, color: varColor,
                 whiteSpace: 'nowrap', lineHeight: '16px', fontVariantNumeric: 'tabular-nums',
               }}>

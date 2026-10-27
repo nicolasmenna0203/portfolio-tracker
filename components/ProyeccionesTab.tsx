@@ -7,6 +7,7 @@ import {
   CartesianGrid, ResponsiveContainer, ReferenceLine,
 } from 'recharts';
 import type { DashboardData, TenenciaActual } from '@/types';
+import { useIsMobile } from '@/lib/useIsMobile';
 import { formatMoney, formatPercent, formatNumber } from '@/lib/format';
 import {
   RIESGO_LABEL, RENTA_LABEL, GEO_LABEL, MONEDA_LABEL,
@@ -491,6 +492,7 @@ function ObjetivosComposicion({ tenencias }: { tenencias: TenenciaActual[] }) {
 
 export default function ProyeccionesTab({ data, hideValues }: Props) {
   const { kpis, resumenSeries, tenenciasPorMes } = data;
+  const isMobile = useIsMobile();
   const totalActual = kpis.totalCartera;
 
   // Tenencias del último mes disponible
@@ -624,8 +626,10 @@ export default function ProyeccionesTab({ data, hideValues }: Props) {
           />
         </div>
 
-        {/* KPIs de proyección — grilla 2×2 */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, flex: 1 }}>
+        {/* KPIs de proyección — grilla 2×2 (1 columna en mobile: ver
+            `.proy-kpis` en globals.css, donde a dos columnas los montos de 6
+            cifras no entran y se cortan). */}
+        <div className="proy-kpis" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, flex: 1 }}>
 
           {/* Capital proyectado */}
           <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 12, padding: '14px 18px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
@@ -727,8 +731,8 @@ export default function ProyeccionesTab({ data, hideValues }: Props) {
               tick={{ fontSize: 10, fill: 'var(--muted)' }}
               tickLine={false}
               axisLine={false}
-              tickFormatter={v => formatMoney(v, { currency: 'USD', mode: 'compact', hidden: hideValues })}
-              width={52}
+              tickFormatter={v => formatMoney(v, { currency: 'USD', mode: 'compact', compactShort: isMobile, hidden: hideValues })}
+              width={isMobile ? 40 : 52}
             />
             <Tooltip content={<CustomTooltip />} />
 

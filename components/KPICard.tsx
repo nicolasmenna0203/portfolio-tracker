@@ -64,18 +64,24 @@ export default function KPICard({ label, value, sub, subColor, accentColor = 'va
                 onClick={() => setTooltipAbierto((v) => !v)}
                 onBlur={() => setTooltipAbierto(false)}
                 aria-label={`Qué es ${label}`}
+                className="kpi-info"
                 style={{
                   width: 14, height: 14, borderRadius: '50%', border: '1px solid var(--border)',
                   background: 'transparent', color: 'var(--muted)', fontSize: 9, lineHeight: 1,
                   cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  padding: 0,
+                  padding: 0, position: 'relative',
                 }}
               >
                 ⓘ
               </button>
+              {/* `maxWidth` en vw: a 220px fijos el popover de una card de la
+                  columna derecha se salía de la pantalla en mobile y la parte
+                  final del texto quedaba inalcanzable (el body no scrollea en
+                  horizontal). Con el tope por viewport se angosta solo. */}
               {tooltipAbierto && (
                 <div style={{
-                  position: 'absolute', top: 18, left: 0, zIndex: 10, width: 220,
+                  position: 'absolute', top: 18, left: 0, zIndex: 10,
+                  width: 220, maxWidth: 'min(220px, calc(100vw - 48px))',
                   background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 8,
                   padding: '8px 10px', fontSize: 11, lineHeight: 1.45, color: 'var(--text-sec)',
                   boxShadow: '0 8px 32px rgba(0,0,0,0.5)', fontWeight: 400, textTransform: 'none',

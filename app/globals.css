@@ -79,6 +79,16 @@ body {
 body > main {
   flex: 1;
   min-height: 0;
+  /* `width:100%` no es redundante: como item de un flex column, el tamaño en el
+     eje cruzado sale del max-content si no se fija. La fila de pestañas tiene
+     10 botones con `flex-shrink:0` (960px de ancho intrínseco) y, aunque
+     scrollea con `overflow-x:auto`, ese ancho sigue contando para el
+     max-content de sus ancestros: `main` medía 962px dentro de un viewport de
+     390px y todo el layout mobile se renderizaba al ancho de escritorio
+     recortado. `min-width:0` solo no alcanza —el stretch no aplica porque el
+     item ya desborda—; hay que fijar el ancho. */
+  width: 100%;
+  min-width: 0;
 }
 
 body {
@@ -359,8 +369,8 @@ input, select, textarea { font-size: 16px; }
   .mobile-tabs .nav-tabs-wrap { flex: 1 1 100%; }
   .mobile-tabs nav { padding-bottom: 1px; }
   .mobile-tabs nav button {
-    padding: 9px 14px !important;
-    font-size: 13px !important;
+    padding: 9px 11px !important;
+    font-size: 12.5px !important;
   }
   /* Los filtros activos pasan debajo de los tabs, en su propia fila */
   .mobile-filtros {
@@ -385,11 +395,23 @@ input, select, textarea { font-size: 16px; }
   /* La cartera total es el dato principal: ocupa el ancho completo */
   .kpi-grid > *:first-child, .kpi-grid-resumen > *:first-child { grid-column: 1 / -1; }
 
+  /* Con la primera card a ancho completo quedan n-1 en dos columnas: si n-1 es
+     impar la última cae sola en media fila y deja un hueco. Estirarla al ancho
+     completo cierra la grilla. (`:nth-last-child(1)` + `:nth-child(even)`
+     identifica justo ese caso: última card en posición par = sobra lugar.) */
+  .kpi-grid > *:last-child:nth-child(even),
+  .kpi-grid-resumen > *:last-child:nth-child(even) { grid-column: 1 / -1; }
+
   .kpi-card-mobile {
-    padding: 12px 14px 11px !important;
+    padding: 10px 12px 9px !important;
     border-radius: 10px !important;
     gap: 2px !important;
   }
+
+  /* El label de 2 líneas ("TIR cartera · LECAP / Dual / Tamar / Badlar") es el
+     que define el alto de toda la fila de la grilla. Ajustar el interlineado
+     recorta ~6px por card sin perder legibilidad. */
+  .kpi-card-mobile .kpi-label { line-height: 1.3 !important; }
 
   .kpi-card-mobile .kpi-label {
     font-size: 9px !important;
@@ -434,6 +456,25 @@ input, select, textarea { font-size: 16px; }
     min-height: 38px;
   }
 
+  /* Filas de pills que son navegación (sub-pestañas de Performance, grupos de
+     tasa, períodos del Resumen): con `flex-wrap` ocupaban 2 o 3 renglones y
+     empujaban el contenido real fuera de la primera pantalla. En una sola fila
+     deslizable el gesto es el mismo que el de la barra de pestañas de arriba.
+     `scrollbar-width:none` + el ::-webkit-scrollbar ocultan la barra, que en
+     una fila de 38px de alto se come parte del área táctil. */
+  .pill-row {
+    flex-wrap: nowrap !important;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: 2px;
+  }
+  .pill-row::-webkit-scrollbar { display: none; }
+  /* Sin esto los pills se comprimen hasta partir el texto en vez de desbordar
+     y no queda nada que scrollear. */
+  .pill-row > * { flex-shrink: 0; }
+
   /* ── Calendario ── */
   .cal-grid { gap: 3px !important; }
   .cal-dia {
@@ -462,6 +503,24 @@ input, select, textarea { font-size: 16px; }
   .proy-controles {
     flex: 1 1 100% !important;
     min-width: 0 !important;
+  }
+
+  /* Los 4 KPIs de proyección en 2 columnas dejan ~160px por card: un monto de
+     6 cifras a 22px ("USD 84.241") se sale de la tarjeta y se corta la primera
+     letra. En una columna entran enteros y la pestaña igual scrollea. */
+  .proy-kpis { grid-template-columns: 1fr !important; }
+
+  /* ── Ingresos: fila de acreditación ──
+     Fecha fija de 90px + nombre + monto con `flex-shrink:0` y 12px de gap no
+     entran en 360px: el monto se salía de la tarjeta. Se achica el gap, la
+     fecha pasa a su ancho natural y el nombre del empleador cede con ellipsis
+     (es el dato más redundante de la fila: ya está el color del punto). */
+  .ingreso-fila { gap: 8px !important; font-size: 12px !important; }
+  .ingreso-fecha { width: auto !important; }
+  .ingreso-empleador {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   /* Filtros de ticker: una sola fila deslizable en vez de un bloque enorme */
@@ -544,6 +603,23 @@ input, select, textarea { font-size: 16px; }
 
 @media (prefers-reduced-motion: reduce) {
   * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
+
+/* ── KPI: el ⓘ mide 14px, muy chico para el dedo ──────────────
+   Mismo truco que el thumb del MonthSlider: un pseudo-elemento transparente
+   centrado le da 40px de zona sensible sin tocar el círculo visible (que a
+   más tamaño competiría con el label). Solo en mobile: en desktop el mouse
+   acierta 14px sin problema y el área extra taparía el texto del label. */
+@media (max-width: 768px) {
+  .kpi-info::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 40px;
+    height: 40px;
+    transform: translate(-50%, -50%);
+  }
 }
 
 /* ── MonthSlider: agrandar el área táctil sin agrandar el círculo ──
@@ -670,6 +746,63 @@ input[type="range"]::-moz-range-track {
 .dual-range::-webkit-slider-thumb { pointer-events: auto; }
 .dual-range::-moz-range-thumb     { pointer-events: auto; }
 .dual-range::-moz-range-track     { background: transparent; }
+
+/* ── Tablas de datos ────────────────────────────────────────────
+   `width:100%` dentro de un `overflow-x:auto` nunca desborda: el ancho
+   disponible se reparte entre todas las columnas, así que en mobile una tabla
+   de 10 columnas comprime cada una a ~36px y los números se parten en dos
+   líneas. Con `min-width` en la tabla las columnas conservan su ancho natural
+   y el contenedor pasa a scrollear de verdad.
+
+   `width:auto` además deja que cada columna mida lo que necesita en vez de
+   estirarse: la tabla ocupa el ancho real de su contenido, que puede ser menor
+   al mínimo en las tablas de pocas columnas. */
+@media (max-width: 768px) {
+  .tabla-datos {
+    width: auto !important;
+    min-width: 100%;
+  }
+
+  /* El ticker es la clave de la fila: fijado a la izquierda, sigue visible
+     mientras se scrollea horizontalmente por las métricas. El borde derecho
+     marca el corte.
+
+     El fondo necesita dos capas. Las filas resaltadas pintan su color en el
+     `<tr>` con un inline `background` translúcido (`...11`, `primary-dim`), y
+     ese tinte no tapa lo que scrollea por debajo. Entonces la celda lleva el
+     color de la card como `background-image` —una capa opaca propia, que el
+     inline del `<tr>` no puede pisar porque vive en otro elemento— y el tinte
+     de la fila se sigue viendo encima por herencia del `<tr>`. Con
+     `background-color` en la celda, en cambio, el tinte de la fila quedaría
+     oculto y todas las filas se verían iguales en esa columna. */
+  .tabla-datos thead th:first-child,
+  .tabla-datos tbody td:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 2;
+    background-image: linear-gradient(var(--card), var(--card));
+    border-right: 1px solid var(--border-subtle);
+  }
+
+  /* El thead sticky vertical no sirve acá (el scroller vertical es
+     `.tab-scroll`, no el contenedor de la tabla) y en el cruce con la primera
+     columna se superponía mal. La cabecera de la columna fija necesita ganarle
+     al resto del thead. */
+  .tabla-datos thead th:first-child { z-index: 3; }
+
+  /* Celdas un poco más compactas: con el scroll horizontal el padding de 10px
+     por lado sumaba ~200px de ancho muerto en 10 columnas. */
+  .tabla-datos th { padding: 8px 8px !important; }
+  .tabla-datos td { padding: 8px 8px !important; }
+
+  /* Los números no deben partirse en dos líneas: con el ancho natural de la
+     columna ya no hace falta y una fila de alto doble rompe el barrido. */
+  .tabla-datos td, .tabla-datos th { white-space: nowrap; }
+
+  /* El borde redondeado del contenedor recorta la columna fija al scrollear;
+     el contenedor ya es el que lleva el radio. */
+  .tabla-wrap { -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain; }
+}
 
 /* ── Recharts overrides ─────────────────────────────────────── */
 .recharts-tooltip-wrapper .recharts-default-tooltip {

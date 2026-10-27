@@ -372,11 +372,11 @@ export default function CarryTradeSection({ tenencias }: Props) {
       </div>
 
       {/* ── Tabla: precio, retorno directo y heatmap de carry por escenario ─ */}
-      <div style={{
+      <div className="tabla-wrap" style={{
         background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 12,
         overflowX: 'auto',
       }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+        <table className="tabla-datos" style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
           <thead style={{ position: 'sticky', top: 0, background: 'var(--card)', zIndex: 1 }}>
             <tr style={{ borderBottom: '1px solid var(--border)' }}>
               {cabecera('ticker', 'Ticker', 'left')}

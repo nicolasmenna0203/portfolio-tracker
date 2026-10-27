@@ -24,6 +24,19 @@ describe('formatMoney', () => {
     expect(formatMoney(26000, { currency: 'USD', mode: 'compact' })).toMatch(/^USD 26/);
   });
 
+  it('compactShort: abrevia y saca el codigo de moneda (ejes de mobile)', () => {
+    // El eje Y en mobile tiene ~45px de ancho: "USD 22,5 mil" no entra.
+    const largo = formatMoney(22500, { currency: 'USD', mode: 'compact' });
+    const corto = formatMoney(22500, { currency: 'USD', mode: 'compact', compactShort: true });
+    expect(largo).toMatch(/mil/);
+    expect(corto).not.toMatch(/USD/);
+    expect(corto.length).toBeLessThan(largo.length);
+
+    // El signo se mantiene; el enmascarado sigue ganando sobre el formato.
+    expect(formatMoney(-3000, { currency: 'USD', mode: 'compact', compactShort: true, sign: true })).toMatch(/^-/);
+    expect(formatMoney(22500, { currency: 'USD', mode: 'compact', compactShort: true, hidden: true })).toMatch(/^USD /);
+  });
+
   it('sign: antepone +/- antes del código de moneda', () => {
     expect(formatMoney(975, { currency: 'USD', sign: true })).toBe('+USD 975');
     expect(formatMoney(-1131, { currency: 'USD', sign: true })).toBe('-USD 1.131');

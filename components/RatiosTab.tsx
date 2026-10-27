@@ -146,7 +146,8 @@ function InfoHint({ texto }: { texto: string }) {
           position: 'absolute', bottom: 'calc(100% + 6px)', left: '50%', transform: 'translateX(-50%)',
           background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 8,
           padding: '8px 10px', fontSize: 11, fontWeight: 400, letterSpacing: 'normal', textTransform: 'none',
-          color: 'var(--text-sec)', width: 200, boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+          color: 'var(--text-sec)', width: 200, maxWidth: 'min(200px, calc(100vw - 48px))',
+          boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
           zIndex: 10, pointerEvents: 'none',
         }}>
           {texto}
