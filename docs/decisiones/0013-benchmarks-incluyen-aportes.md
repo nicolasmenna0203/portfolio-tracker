@@ -1,10 +1,16 @@
 ---
 numero: 0013
 titulo: La serie de la cartera en benchmarks incluye aportes, y hay que decirlo
-estado: Aceptada
+estado: Reemplazada por 0022
 fecha: 2026-08-06
 codigo: lib/benchmarks.ts, lib/agentTools.ts
 ---
+
+> **Reemplazada por [0022](0022-twr-modified-dietz-encadenado.md).** La serie de
+> la cartera en Benchmarks y en `comparar_benchmarks` dejó de incluir aportes:
+> ahora es TWR (Modified Dietz encadenado) en los dos lugares. Este documento
+> queda como historia de por qué la decisión original fue mostrar el total
+> crudo con advertencia, en vez de restar los aportes.
 
 # 0013 — La serie de la cartera en benchmarks incluye aportes, y hay que decirlo
 

@@ -5,6 +5,7 @@ import type { DashboardData, TenenciaActual } from '@/types';
 import { toMesKey } from '@/lib/parser';
 import { formatMoney, formatPercent, formatFx, type Moneda } from '@/lib/format';
 import { useFx } from '@/lib/useFx';
+import { calcularMetricasPeriodo, PERIODOS, type PeriodoId } from '@/lib/periodo';
 import { RIESGO_LABEL, RENTA_LABEL, GEO_LABEL, MONEDA_LABEL } from '@/lib/constants';
 import KPICard from './KPICard';
 import EvolucionChart from './EvolucionChart';
@@ -120,7 +121,7 @@ function TabScroll({
 interface Props { data: DashboardData }
 
 export default function Dashboard({ data }: Props) {
-  const { kpis, resumenSeries, tenenciasPorMes, mesesDisponibles, totalPorMes } = data;
+  const { kpis, resumenSeries, tenenciasPorMes, mesesDisponibles, totalPorMes, movimientos } = data;
 
   const [tab, setTab]               = useState<Tab>('resumen');
 const [uploadOpen, setUploadOpen] = useState(false);
@@ -196,19 +197,36 @@ const [uploadOpen, setUploadOpen] = useState(false);
     return keys.length > 0 ? mepPorMes.get(keys[keys.length - 1])! : null;
   }, [mepPorMes]);
 
-  // KPIs derivados de movimientos, en ARS. aportes_ars ya viene calculado por
-  // movimiento con el MEP del día exacto de cada uno (no un MEP de cierre de mes
-  // aplicado al total) — ver lib/sheets.ts. El total de cartera usa
-  // kpis.totalCarteraArs, ya calculado en origen con el MEP real de cierre.
+  // Delta de "Total Cartera" vs el mes anterior, en ARS (KPI #1). El total en
+  // ARS ya viene calculado en origen con el MEP real de cierre de cada mes.
   const kpisArs = useMemo(() => {
     if (moneda === 'USD') return null;
-    const acumuladoArs = resumenSeries.reduce((sum, r) => sum + r.aportes_ars, 0);
-    const rendimientoNetoArs = kpis.totalCarteraArs - acumuladoArs;
-    const rendimientoPctArs = acumuladoArs > 0 ? (rendimientoNetoArs / acumuladoArs) * 100 : 0;
     const penultimo = resumenSeries[resumenSeries.length - 2];
     const deltaCarteraArs = penultimo != null ? kpis.totalCarteraArs - penultimo.total_cartera_ars : 0;
-    return { rendimientoNetoArs, rendimientoPctArs, deltaCarteraArs };
+    return { deltaCarteraArs };
   }, [moneda, resumenSeries, kpis.totalCarteraArs]);
+
+  // Selector de período para Ganancia / TWR / TIR (KPIs 2 a 4). "Máximo" es el
+  // período por default: coincide con lo que mostraban antes "Rendimiento Neto"
+  // y "TIR Anual" sin selector. Ver lib/periodo.ts y
+  // docs/decisiones/0022-twr-modified-dietz-encadenado.md
+  const PERIODO_KEY = 'resumen_periodo_v1';
+  const [periodo, setPeriodoState] = useState<PeriodoId>(() => {
+    try {
+      const s = localStorage.getItem(PERIODO_KEY);
+      if (s === '1m' || s === 'ytd' || s === '12m' || s === 'max') return s;
+    } catch {}
+    return 'max';
+  });
+  function setPeriodo(p: PeriodoId) {
+    setPeriodoState(p);
+    try { localStorage.setItem(PERIODO_KEY, p); } catch {}
+  }
+
+  const metricasPeriodo = useMemo(
+    () => calcularMetricasPeriodo(resumenSeries, movimientos, periodo),
+    [resumenSeries, movimientos, periodo],
+  );
 
   // Filtros cross-chart
   const [filtroTipo,   setFiltroTipo]   = useState<string | null>(null);
@@ -248,8 +266,35 @@ const [uploadOpen, setUploadOpen] = useState(false);
   }, [tenenciasMesRaw, filtroTipo, filtroRiesgo, filtroMoneda, filtroRenta, filtroGeo]);
 
   const deltaColor = kpis.deltaCartera >= 0 ? 'var(--up)' : 'var(--down)';
-  const rendColor  = kpis.rendimientoNeto >= 0 ? 'var(--up)' : 'var(--down)';
-  const tirColor   = kpis.tirAnual == null ? 'var(--muted)' : kpis.tirAnual >= 0 ? 'var(--up)' : 'var(--down)';
+
+  const gananciaPeriodoUsd = metricasPeriodo?.gananciaUsd ?? 0;
+  const gananciaPeriodoArs = metricasPeriodo?.gananciaArs ?? 0;
+  const rendColor = (moneda === 'USD' ? gananciaPeriodoUsd : gananciaPeriodoArs) >= 0 ? 'var(--up)' : 'var(--down)';
+
+  const twrPct = metricasPeriodo
+    ? (moneda === 'USD' ? metricasPeriodo.twrAcumuladoPct : metricasPeriodo.twrAcumuladoArsPct)
+    : null;
+  const twrColor = twrPct == null ? 'var(--muted)' : twrPct >= 0 ? 'var(--up)' : 'var(--down)';
+
+  const tirPeriodoPct = metricasPeriodo
+    ? (moneda === 'USD' ? metricasPeriodo.tirAnualPct : metricasPeriodo.tirAnualArsPct)
+    : null;
+  const tirColor = tirPeriodoPct == null ? 'var(--muted)' : tirPeriodoPct >= 0 ? 'var(--up)' : 'var(--down)';
+
+  // Efecto del timing de aportes: TWR − TIR, ambos anualizados.
+  //
+  // La TIR siempre es anual por construcción, así que hay que compararla
+  // contra el TWR ANUALIZADO, no contra el acumulado que muestra el KPI. En
+  // tramos cortos los dos difieren mucho (un TWR acumulado de 0,2% en un mes
+  // anualiza a ~2,7%), y mezclarlos daba un signo al revés del que se deduce
+  // leyendo los dos KPIs en pantalla.
+  //
+  // TWR > TIR: el mercado rindió más que tu plata — los aportes entraron, en
+  // promedio, antes de los tramos flojos.
+  const twrAnualPct = metricasPeriodo
+    ? (moneda === 'USD' ? metricasPeriodo.twrAnualizadoPct : metricasPeriodo.twrAnualizadoArsPct)
+    : null;
+  const efectoTimingPct = twrAnualPct != null && tirPeriodoPct != null ? twrAnualPct - tirPeriodoPct : null;
 
   return (
     <main style={{
@@ -460,9 +505,32 @@ const [uploadOpen, setUploadOpen] = useState(false);
       {/* ── Tab: Resumen ────────────────────────────────────────────────────── */}
       {tab === 'resumen' && (
         <TabScroll tab={tab} posiciones={scrollPorTab} style={{ gap: 12 }}>
-          <div className="kpi-grid">
+          {/* Selector de período para Ganancia / TWR / TIR (KPIs 2 a 4) */}
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', flexShrink: 0 }}>
+            {PERIODOS.map((p) => (
+              <button
+                key={p.id}
+                onClick={() => setPeriodo(p.id)}
+                className="pill-touch"
+                aria-pressed={periodo === p.id}
+                style={{
+                  padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600,
+                  cursor: 'pointer', border: '1px solid',
+                  borderColor: periodo === p.id ? 'var(--primary)' : 'var(--border)',
+                  background: periodo === p.id ? 'var(--primary-dim)' : 'transparent',
+                  color: periodo === p.id ? 'var(--primary)' : 'var(--muted)',
+                  transition: 'all 0.12s',
+                }}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="kpi-grid-resumen">
             <KPICard
               label="Total Cartera"
+              tooltip={`Valuación total de la cartera al ${kpis.fechaStr}.`}
               value={
                 moneda === 'USD'
                   ? formatMoney(kpis.totalCartera, { currency: 'USD', hidden: hideValues })
@@ -480,31 +548,54 @@ const [uploadOpen, setUploadOpen] = useState(false);
               accentColor="var(--primary)"
             />
             <KPICard
-              label="Rendimiento Neto"
+              label="Ganancia Acumulada"
+              tooltip="Valuación menos aportes netos del período elegido (excluye transferencias entre cuentas propias). No pondera cuándo entró cada peso — para eso están TWR y TIR."
               value={
                 moneda === 'USD'
-                  ? formatMoney(kpis.rendimientoNeto, { currency: 'USD', hidden: hideValues, sign: true })
-                  : kpisArs
-                    ? formatMoney(kpisArs.rendimientoNetoArs, { currency: 'ARS', hidden: hideValues, sign: true })
-                    : formatMoney(null, { currency: 'ARS' })
+                  ? formatMoney(gananciaPeriodoUsd, { currency: 'USD', hidden: hideValues, sign: true })
+                  : formatMoney(gananciaPeriodoArs, { currency: 'ARS', hidden: hideValues, sign: true })
               }
               sub={
                 hideValues ? '••••' :
-                moneda === 'USD'
-                  ? `${formatPercent(kpis.rendimientoPct)} sobre aportes`
-                  : kpisArs ? `${formatPercent(kpisArs.rendimientoPctArs)} sobre aportes` : 'sin dato de MEP'
+                moneda === 'ARS' ? 'nominal, nunca ajustada por inflación' : 'sobre el período elegido'
               }
               subColor={rendColor}
               accentColor={rendColor}
             />
             <KPICard
-              label={moneda === 'ARS' ? 'TIR Anual (USD)' : 'TIR Anual'}
-              value={kpis.tirAnual != null ? formatPercent(kpis.tirAnual, { sign: false }) : 'N/D'}
-              sub="sobre flujos históricos"
+              label="Retorno TWR"
+              tooltip="Time-Weighted Return: rendimiento puro de la inversión, sin el efecto de cuándo o cuánto aportaste. Se aproxima encadenando Modified Dietz mes a mes (no hay valuación diaria del Sheet)."
+              value={twrPct != null ? formatPercent(twrPct, { sign: false }) : 'N/D'}
+              sub={
+                hideValues ? '••••' :
+                `mide la inversión, sin el efecto de cuándo aportaste${moneda === 'ARS' ? ' (nominal)' : ''}`
+              }
+              subColor={twrColor}
+              accentColor={twrColor}
+            />
+            <KPICard
+              label="TIR Anual"
+              tooltip="XIRR sobre los flujos reales (aportes y retiros) con sus fechas exactas, más el valor actual como flujo terminal. Pondera cuándo entró cada peso."
+              value={tirPeriodoPct != null ? formatPercent(tirPeriodoPct, { sign: false }) : 'N/D'}
+              sub={
+                hideValues ? '••••' :
+                `mide tu plata, según cuándo aportaste${moneda === 'ARS' ? ' (nominal)' : ''}`
+              }
               subColor={tirColor}
               accentColor={tirColor}
             />
           </div>
+
+          {!hideValues && efectoTimingPct != null && (
+            <p style={{ margin: 0, fontSize: 11, color: 'var(--muted)' }}>
+              Efecto del timing de aportes: TWR {twrAnualPct != null ? formatPercent(twrAnualPct, { sign: false }) : '—'} − TIR {formatPercent(tirPeriodoPct ?? 0, { sign: false })} = {efectoTimingPct >= 0 ? '+' : '−'}{Math.abs(efectoTimingPct).toFixed(1).replace('.', ',')} pts (ambos anualizados)
+              {/* TWR > TIR: el mercado rindió más que tu plata, o sea que los
+                  aportes entraron, en promedio, antes de los tramos flojos. */}
+              {efectoTimingPct >= 0
+                ? ' — el mercado rindió más que tu plata: en promedio aportaste en mal momento.'
+                : ' — tu plata rindió más que el mercado: en promedio aportaste en buen momento.'}
+            </p>
+          )}
 
           <div className="resumen-chart-wrap" style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
             <EvolucionChart data={resumenSeries} tenenciasPorMes={tenenciasPorMes} hideValues={hideValues} moneda={moneda} />

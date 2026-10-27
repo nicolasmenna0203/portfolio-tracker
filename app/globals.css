@@ -160,6 +160,14 @@ input, select, textarea { font-size: 16px; }
   gap: 12px;
 }
 
+/* Resumen tiene 4 KPIs (Total, Ganancia, TWR, TIR) en vez de 3 — grid propio
+   para no afectar el resto de las pestañas que usan .kpi-grid con 3. */
+.kpi-grid-resumen {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
 /* ── Tenencias: controles ───────────────────────────────────────
    El thumb del MonthSlider en el extremo (left:100% con translateX(-50%)) y su
    zona táctil de 44px sobresalen del track: sin contener, `.tab-scroll` crecía
@@ -369,13 +377,13 @@ input, select, textarea { font-size: 16px; }
   }
 
   /* ── KPI grid: 1 columna ancha + 2 abajo, legible de un vistazo ── */
-  .kpi-grid {
+  .kpi-grid, .kpi-grid-resumen {
     grid-template-columns: 1fr 1fr;
     gap: 8px;
     flex-shrink: 0;
   }
   /* La cartera total es el dato principal: ocupa el ancho completo */
-  .kpi-grid > *:first-child { grid-column: 1 / -1; }
+  .kpi-grid > *:first-child, .kpi-grid-resumen > *:first-child { grid-column: 1 / -1; }
 
   .kpi-card-mobile {
     padding: 12px 14px 11px !important;
@@ -392,7 +400,7 @@ input, select, textarea { font-size: 16px; }
     font-size: 17px !important;
     margin-top: 3px !important;
   }
-  .kpi-grid > *:first-child .kpi-value { font-size: 26px !important; }
+  .kpi-grid > *:first-child .kpi-value, .kpi-grid-resumen > *:first-child .kpi-value { font-size: 26px !important; }
 
   .kpi-card-mobile .kpi-sub {
     font-size: 10px !important;
@@ -577,7 +585,7 @@ input, select, textarea { font-size: 16px; }
 /* ── Pantallas muy angostas (≤ 380px) ───────────────────────── */
 @media (max-width: 380px) {
   .kpi-card-mobile .kpi-value { font-size: 15px !important; }
-  .kpi-grid > *:first-child .kpi-value { font-size: 23px !important; }
+  .kpi-grid > *:first-child .kpi-value, .kpi-grid-resumen > *:first-child .kpi-value { font-size: 23px !important; }
   .cal-dia { min-height: 50px !important; }
 }
 

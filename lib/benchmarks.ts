@@ -1,7 +1,9 @@
 // Series de benchmarks (S&P 500, oro, MEP, inflación, BTC) rebasadas a índice 100.
 //
-// La serie de la cartera que se compara contra estas INCLUYE aportes: no es
-// rendimiento puro. Ver docs/decisiones/0013-benchmarks-incluyen-aportes.md
+// Este módulo solo trae los benchmarks externos. La serie de la cartera que
+// se compara contra estas vive en components/BenchmarksTab.tsx y en
+// lib/agentTools.ts (compararBenchmarks): es TWR (lib/twr.ts), no el total
+// crudo — ver docs/decisiones/0022-twr-modified-dietz-encadenado.md.
 // El MEP histórico sale de acá (fetchMepPorFecha), con fallback al día hábil
 // anterior: docs/decisiones/0007-mep-mensual-no-mep-unico.md
 

@@ -18,7 +18,8 @@
  *   - dividendos netos y qué excluye ese neto → docs/decisiones/0002-*.md
  *   - TIR no comparables entre grupos de tasa → docs/decisiones/0004-*.md
  *   - el MEP de cada mes, no un MEP único     → docs/decisiones/0007-*.md
- *   - la serie de la cartera incluye aportes  → docs/decisiones/0013-*.md
+ *   - TWR (benchmarks) vs TIR (resumen): dos  → docs/decisiones/0022-*.md
+ *     métricas distintas, no intercambiables
  */
 
 import { fetchDashboardData } from './sheets';
@@ -29,6 +30,7 @@ import { fetchPerformance } from './performance';
 import { fetchFciPerformance } from './fci';
 import { fetchPerformanceVariable } from './performanceVariable';
 import { fetchBenchmarks } from './benchmarks';
+import { toMesKey } from './parser';
 import { FACTOR_NETO_DIVIDENDO } from './retenciones';
 import { leerPerfil, registrarDecision } from './perfilInversor';
 import { leerObjetivos, esDimension, DIMENSIONES, type Dimension } from './objetivos';
@@ -712,12 +714,14 @@ async function compararBenchmarks() {
     fetchBenchmarks(mesesCartera),
   );
 
-  // La cartera se rebasea a 100 en el mismo mes que los benchmarks, si no la
-  // comparación no significa nada.
-  const baseTotal = data.totalPorMes[mesesCartera[0]] ?? 0;
-  const serieCartera = mesesCartera.map((m) => ({
-    mesKey: m,
-    valor: baseTotal > 0 ? round(((data.totalPorMes[m] ?? 0) / baseTotal) * 100) : 0,
+  // La serie de la cartera es el mismo índice TWR (Modified Dietz encadenado,
+  // ver lib/twr.ts) que muestra la pestaña Benchmarks de la UI y el KPI de
+  // Resumen — no el total crudo rebasado a 100. Antes esta tool y la UI
+  // mostraban dos números distintos bajo el mismo nombre "Mi Cartera"; ver
+  // docs/decisiones/0022-twr-modified-dietz-encadenado.md
+  const serieCartera = data.resumenSeries.map((r) => ({
+    mesKey: toMesKey(r.fechaTs),
+    valor: round(r.twrIndiceUsd),
   }));
 
   const ultimo = (pts: { valor: number }[]) =>
@@ -725,8 +729,8 @@ async function compararBenchmarks() {
 
   return {
     base: `Todas las series están en índice base 100 en ${mesesCartera[0]}. NO son precios: un valor de 130 significa +30% desde esa fecha.`,
-    advertencia_cartera:
-      'La serie de la cartera sigue su valuación total, que sube por aportes nuevos además de por rendimiento. Para medir rendimiento puro usá resumen_cartera (rendimiento_pct) o evolucion_mensual, no esta comparación.',
+    nota_cartera:
+      'La serie de la cartera es TWR (Time-Weighted Return, Modified Dietz encadenado mes a mes): ya descuenta el efecto de aportes/retiros, es rendimiento de mercado puro y por eso es comparable con los benchmarks. Para rendimiento money-weighted (que sí depende de cuándo aportaste) usá resumen_cartera (rendimiento_pct, tir_anual_pct).',
     mes_base: mesesCartera[0],
     cartera: { puntos: serieCartera, valor_final: ultimo(serieCartera) },
     benchmarks: series.map((s) => ({
@@ -927,7 +931,7 @@ export const AGENT_TOOLS: AgentTool[] = [
   {
     name: 'comparar_benchmarks',
     description:
-      'Compara la evolución de la cartera contra S&P 500, inflación argentina, dólar MEP, Bitcoin y oro, todo en índice base 100 desde el primer mes con datos. Usar para preguntas del tipo "¿le gano a la inflación?" o "¿me hubiera convenido comprar dólares?". Ojo: la serie de la cartera incluye aportes nuevos, no es rendimiento puro.',
+      'Compara la evolución de la cartera (en TWR, rendimiento puro sin efecto de aportes) contra S&P 500, inflación argentina, dólar MEP, Bitcoin y oro, todo en índice base 100 desde el primer mes con datos. Usar para preguntas del tipo "¿le gano a la inflación?" o "¿me hubiera convenido comprar dólares?".',
     inputSchema: { type: 'object', properties: {}, additionalProperties: false },
     run: () => compararBenchmarks(),
   },
@@ -1041,7 +1045,8 @@ Accedés a los datos reales de su cartera mediante las herramientas disponibles.
 - Las posiciones son mayormente CEDEARs, ETFs, bonos argentinos y FCI, operados desde Argentina.
 - Las valuaciones vienen en USD y en ARS. El ARS de cada mes está convertido al dólar MEP de ese mes, no a un MEP único.
 - Los aportes en ARS usan el MEP del día exacto de cada movimiento.
-- La TIR anual se calcula sobre los flujos históricos de aportes y retiros.
+- La TIR anual (XIRR) se calcula sobre los flujos históricos de aportes y retiros, con fechas exactas. Hay TIR en USD y en ARS (nominal).
+- El TWR (Time-Weighted Return) es el rendimiento puro de la cartera, sin el efecto de cuándo ni cuánto aportaste — es una aproximación por Modified Dietz mensual (no hay valuación diaria). TIR y TWR miden cosas distintas: la TIR pondera el momento de cada aporte, el TWR lo neutraliza. No son comparables entre sí como si fueran la misma métrica.
 
 ## Datos de mercado
 Las herramientas de mercado (\`calendario_cobros\`, \`renta_fija_bonos\`, \`renta_fija_fci\`, \`renta_variable_acciones\`, \`comparar_benchmarks\`) consultan fuentes externas y tienen sutilezas que importan:
@@ -1051,7 +1056,7 @@ Las herramientas de mercado (\`calendario_cobros\`, \`renta_fija_bonos\`, \`rent
 - **TIR de bonos**: solo comparables dentro del mismo grupo de tasa. Una TIR de un bono CER contra una de un hard-dollar no dice nada.
 - **Rendimientos de FCI en null**: la planilla de CAFCI publica algunos fondos con un día de rezago y sin columnas de comparación. Un rendimiento en null es "no informado", no 0%: decí que no hay dato a esa fecha en vez de reportar que el fondo no rindió nada. El 12m puede venir completado de una fuente secundaria (\`rendimiento_12m_estimado=true\`): si lo usás, aclará que es estimado, no la cifra que publica CAFCI para el resto de los fondos.
 - **Fondos dentro de renta variable**: en \`renta_variable_acciones\`, las posiciones con \`es_fci=true\` son FCI que la cartera clasifica como renta variable. Su "precio" es el VCP en \`moneda_vcp\` (puede ser ARS) y sus variaciones son rendimientos de CAFCI, no variaciones de precio de mercado: no las pongas en el mismo ranking que las acciones sin aclararlo, y no las conviertas a USD por tu cuenta.
-- **Benchmarks**: están en índice base 100, no son precios. Y la serie de la cartera sube también por aportes nuevos, no solo por rendimiento: para rendimiento puro usá \`resumen_cartera\` o \`evolucion_mensual\`.
+- **Benchmarks**: están en índice base 100, no son precios. La serie de la cartera ahí es TWR (ya descuenta aportes/retiros, es rendimiento de mercado puro). Si la pregunta es sobre rendimiento money-weighted (el que depende de cuándo aportaste), usá \`resumen_cartera\` (tir_anual_pct) en vez de esta comparación.
 
 Cuando una de estas sutilezas afecte la respuesta, decila. Cuando no, no la menciones.
 

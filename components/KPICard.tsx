@@ -1,12 +1,19 @@
+import { useState } from 'react';
+
 interface KPICardProps {
   label: string;
   value: string;
   sub?: string;
   subColor?: string;
   accentColor?: string;
+  /** Texto de ayuda mostrado en un popover al hacer click en el ⓘ junto al label. */
+  tooltip?: string;
+  /** Contenido extra bajo el valor (ej. un selector de período). No hereda el estilo de `sub`. */
+  extra?: React.ReactNode;
 }
 
-export default function KPICard({ label, value, sub, subColor, accentColor = 'var(--primary)' }: KPICardProps) {
+export default function KPICard({ label, value, sub, subColor, accentColor = 'var(--primary)', tooltip, extra }: KPICardProps) {
+  const [tooltipAbierto, setTooltipAbierto] = useState(false);
   return (
     <div
       className="kpi-card-mobile"
@@ -21,7 +28,9 @@ export default function KPICard({ label, value, sub, subColor, accentColor = 'va
         flex: 1,
         minWidth: 0,
         position: 'relative',
-        overflow: 'hidden',
+        // No overflow:hidden acá: el popover del tooltip (ⓘ) necesita poder
+        // salirse del borde de la card. La barra de acento de abajo ya tiene
+        // el mismo border-radius que la card, así que no se nota el cambio.
       }}
     >
       <div
@@ -35,19 +44,49 @@ export default function KPICard({ label, value, sub, subColor, accentColor = 'va
       />
 
       <div className="kpi-left">
-        <p
-          className="kpi-label"
-          style={{
-            fontSize: 10,
-            fontWeight: 600,
-            letterSpacing: '0.1em',
-            textTransform: 'uppercase',
-            color: 'var(--muted)',
-            margin: 0,
-          }}
-        >
-          {label}
-        </p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+          <p
+            className="kpi-label"
+            style={{
+              fontSize: 10,
+              fontWeight: 600,
+              letterSpacing: '0.1em',
+              textTransform: 'uppercase',
+              color: 'var(--muted)',
+              margin: 0,
+            }}
+          >
+            {label}
+          </p>
+          {tooltip && (
+            <span style={{ position: 'relative', flexShrink: 0 }}>
+              <button
+                onClick={() => setTooltipAbierto((v) => !v)}
+                onBlur={() => setTooltipAbierto(false)}
+                aria-label={`Qué es ${label}`}
+                style={{
+                  width: 14, height: 14, borderRadius: '50%', border: '1px solid var(--border)',
+                  background: 'transparent', color: 'var(--muted)', fontSize: 9, lineHeight: 1,
+                  cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  padding: 0,
+                }}
+              >
+                ⓘ
+              </button>
+              {tooltipAbierto && (
+                <div style={{
+                  position: 'absolute', top: 18, left: 0, zIndex: 10, width: 220,
+                  background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 8,
+                  padding: '8px 10px', fontSize: 11, lineHeight: 1.45, color: 'var(--text-sec)',
+                  boxShadow: '0 8px 32px rgba(0,0,0,0.5)', fontWeight: 400, textTransform: 'none',
+                  letterSpacing: 'normal',
+                }}>
+                  {tooltip}
+                </div>
+              )}
+            </span>
+          )}
+        </div>
 
         <p
           className="kpi-value"
@@ -80,6 +119,8 @@ export default function KPICard({ label, value, sub, subColor, accentColor = 'va
             {sub}
           </p>
         )}
+
+        {extra}
       </div>
     </div>
   );

@@ -7,6 +7,7 @@
 // reciban datos consistentes entre sí.
 
 import { xirr, type Cashflow } from '@/lib/finance';
+import { construirTWR, twrAcumuladoPct, twrAnualizadoPct } from '@/lib/twr';
 import { formatMesLabel, toMesKey } from '@/lib/parser';
 import { TODOS_ACTIVOS } from './universo';
 import type {
@@ -115,6 +116,7 @@ export function buildDemoDashboardData(): DashboardData {
       tipo: 'ingreso',
       monto_neto: aporteUsd,
       monto_neto_ars: aportesArsPorMes[mk],
+      clasificacion: 'externo',
     });
   });
 
@@ -137,7 +139,22 @@ export function buildDemoDashboardData(): DashboardData {
       total_cartera,
       total_cartera_ars,
       rendimiento: total_cartera - acumulado,
+      twrIndiceUsd: 100,
+      twrIndiceArs: 100,
     };
+  });
+
+  const twrUsd = construirTWR(
+    resumenSeries.map((r) => ({ fechaTs: r.fechaTs, total: r.total_cartera })),
+    movimientos.map((mv) => ({ fecha: mv.fecha, monto: mv.monto_neto })),
+  );
+  const twrArs = construirTWR(
+    resumenSeries.map((r) => ({ fechaTs: r.fechaTs, total: r.total_cartera_ars })),
+    movimientos.map((mv) => ({ fecha: mv.fecha, monto: mv.monto_neto_ars })),
+  );
+  resumenSeries.forEach((r, i) => {
+    r.twrIndiceUsd = twrUsd[i].indice;
+    r.twrIndiceArs = twrArs[i].indice;
   });
 
   const mesesDisponibles = mesesOrdenados.map((mk) => {
@@ -152,14 +169,26 @@ export function buildDemoDashboardData(): DashboardData {
   const tirFlows: Cashflow[] = [...cashflows, { date: hoy, amount: ultimo.total_cartera }];
   const tirRaw = xirr(tirFlows);
 
+  const cashflowsArs: Cashflow[] = movimientos.map((mv) => ({ date: mv.fecha, amount: -mv.monto_neto_ars }));
+  const tirFlowsArs: Cashflow[] = [...cashflowsArs, { date: hoy, amount: ultimo.total_cartera_ars }];
+  const tirRawArs = xirr(tirFlowsArs);
+
+  const diasTranscurridos = (hoy - resumenSeries[0].fechaTs) / 86_400_000;
+
   const kpis: KPIData = {
     totalCartera: ultimo.total_cartera,
     totalCarteraArs: ultimo.total_cartera_ars,
     aporteAcumulados: ultimo.acumulado,
+    aporteAcumuladosNetos: ultimo.acumulado,
     rendimientoNeto: ultimo.rendimiento,
     rendimientoPct: ultimo.acumulado > 0 ? (ultimo.rendimiento / ultimo.acumulado) * 100 : 0,
     deltaCartera: penultimo != null ? ultimo.total_cartera - penultimo.total_cartera : 0,
     tirAnual: tirRaw != null ? tirRaw * 100 : null,
+    tirAnualArs: tirRawArs != null ? tirRawArs * 100 : null,
+    twrAcumuladoUsd: twrAcumuladoPct(twrUsd),
+    twrAnualizadoUsd: twrAnualizadoPct(twrUsd, diasTranscurridos),
+    twrAcumuladoArs: twrAcumuladoPct(twrArs),
+    twrAnualizadoArs: twrAnualizadoPct(twrArs, diasTranscurridos),
     fechaStr: ultimo.fecha,
   };
 

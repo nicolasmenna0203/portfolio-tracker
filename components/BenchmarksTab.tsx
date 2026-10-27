@@ -33,6 +33,15 @@ const SERIES_META: Record<SeriesId, { label: string; shortLabel: string; tooltip
 const SERIES_ORDER: SeriesId[] = ['cartera', 'sp500', 'inflacion', 'mep', 'btc', 'oro'];
 
 const VISIBLE_KEY = 'benchmarks_visible_v1';
+const MONEDA_CHART_KEY = 'benchmarks_moneda_v1';
+
+function loadMonedaChart(): 'usd' | 'ars' {
+  try {
+    const s = localStorage.getItem(MONEDA_CHART_KEY);
+    if (s === 'usd' || s === 'ars') return s;
+  } catch {}
+  return 'ars';
+}
 
 function loadVisible(): Record<SeriesId, boolean> {
   const defaults = { cartera: true, sp500: true, inflacion: true, mep: true, btc: true, oro: true };
@@ -106,26 +115,39 @@ export default function BenchmarksTab({ data }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mesesCartera.join(','), apiBase]);
 
-  // Cartera como índice TWR (Time-Weighted Return) base 100: encadena el
-  // rendimiento puro de cada mes — (total_fin - aportes_del_mes) / total_inicio —
-  // para neutralizar el efecto de cuánto/cuándo aportaste y dejar solo el
-  // rendimiento de mercado, comparable con los benchmarks externos.
+  // Cartera como índice TWR (Time-Weighted Return) base 100: el mismo índice
+  // Modified Dietz encadenado que calcula lib/twr.ts y usa Resumen — no una
+  // cuenta propia. Antes esta pestaña tenía su propia aproximación (sin
+  // pesar los flujos por fecha exacta), que daba un número distinto al de
+  // Resumen bajo el mismo nombre "Mi Cartera". Ver
+  // docs/decisiones/0022-twr-modified-dietz-encadenado.md
   const carteraBase100 = useMemo(() => {
     const map = new Map<string, number>();
-    if (resumenSeries.length === 0) return map;
+    for (const r of resumenSeries) map.set(toMesKey(r.fechaTs), r.twrIndiceUsd);
+    return map;
+  }, [resumenSeries]);
 
-    let indice = 100;
-    map.set(toMesKey(resumenSeries[0].fechaTs), indice);
-    for (let i = 1; i < resumenSeries.length; i++) {
-      const anterior = resumenSeries[i - 1].total_cartera;
-      const actual = resumenSeries[i].total_cartera;
-      const aportesMes = resumenSeries[i].aportes;
-      if (anterior > 0) {
-        const rendimientoMes = (actual - aportesMes) / anterior;
-        indice = indice * rendimientoMes;
-      }
-      map.set(toMesKey(resumenSeries[i].fechaTs), indice);
-    }
+  // Vista de moneda del gráfico: 'ars' convierte todo a pesos nominales vía
+  // MEP (incluye inflación, que solo tiene sentido en pesos); 'usd' muestra
+  // cada serie en su moneda nativa y omite inflación (no es un valor en
+  // dólares). Las dos parten de la misma base 100 en el mismo mes — ver
+  // docs/decisiones/0007-mep-mensual-no-mep-unico.md sobre por qué ARS ≠ USD
+  // reescalado (el MEP se mueve distinto que cualquier activo).
+  const [monedaChart, setMonedaChartState] = useState<'usd' | 'ars'>(loadMonedaChart);
+  function setMonedaChart(updater: (m: 'usd' | 'ars') => 'usd' | 'ars') {
+    setMonedaChartState((prev) => {
+      const next = updater(prev);
+      try { localStorage.setItem(MONEDA_CHART_KEY, next); } catch {}
+      return next;
+    });
+  }
+
+  // Cartera en TWR ARS: el mismo índice Modified Dietz pero con flujos y
+  // valuaciones en pesos (ver lib/twr.ts) — no la versión en USD multiplicada
+  // por el MEP, que es solo una aproximación cuando no hay flujos de por medio.
+  const carteraBase100Ars = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const r of resumenSeries) map.set(toMesKey(r.fechaTs), r.twrIndiceArs);
     return map;
   }, [resumenSeries]);
 
@@ -138,35 +160,41 @@ export default function BenchmarksTab({ data }: Props) {
     return map;
   }, [resp]);
 
-  // Todo el gráfico se expresa en ARS: cada serie en USD (cartera TWR, S&P500,
-  // oro, BTC) se multiplica por la devaluación acumulada del MEP antes de
-  // re-indexar a 100, para que sea comparable en la misma moneda que la
-  // inflación (que ya está en ARS). Si el MEP no tiene dato ese mes, se omite
-  // el punto en vez de mostrar un valor engañoso. El propio MEP se muestra tal
-  // cual (índice de devaluación del peso), sin pasar por la conversión.
+  // En vista ARS, cada serie en USD (S&P500, oro, BTC) se multiplica por la
+  // devaluación acumulada del MEP antes de re-indexar a 100, para que sea
+  // comparable en la misma moneda que la inflación. La cartera usa su propio
+  // índice TWR en ARS, no una conversión del TWR en USD. En vista USD, cada
+  // serie queda en su moneda nativa y la inflación (que no tiene valor en
+  // dólares) no se muestra. Si el MEP no tiene dato ese mes, se omite el
+  // punto en vez de mostrar un valor engañoso.
   const chartData = useMemo(() => {
     const seriesExternas = resp?.series ?? [];
     return resumenSeries.map((r) => {
       const mesKey = toMesKey(r.fechaTs);
       const fx = factorMep.get(mesKey);
 
-      const carteraUsd = carteraBase100.get(mesKey);
-      const row: Record<string, number | string | undefined> = {
-        mesKey,
-        fecha: r.fecha,
-        cartera: carteraUsd != null && fx != null ? carteraUsd * fx : undefined,
-      };
-      for (const s of seriesExternas) {
-        if (s.id === 'inflacion' || s.id === 'mep') {
-          row[s.id] = s.puntos.find((p) => p.mesKey === mesKey)?.valor; // ya en ARS / índice propio
-          continue;
+      const row: Record<string, number | string | undefined> = { mesKey, fecha: r.fecha };
+
+      if (monedaChart === 'ars') {
+        row.cartera = carteraBase100Ars.get(mesKey);
+        for (const s of seriesExternas) {
+          if (s.id === 'inflacion' || s.id === 'mep') {
+            row[s.id] = s.puntos.find((p) => p.mesKey === mesKey)?.valor; // ya en ARS / índice propio
+            continue;
+          }
+          const valUsd = s.puntos.find((p) => p.mesKey === mesKey)?.valor;
+          row[s.id] = valUsd != null && fx != null ? valUsd * fx : undefined;
         }
-        const valUsd = s.puntos.find((p) => p.mesKey === mesKey)?.valor;
-        row[s.id] = valUsd != null && fx != null ? valUsd * fx : undefined;
+      } else {
+        row.cartera = carteraBase100.get(mesKey);
+        for (const s of seriesExternas) {
+          if (s.id === 'inflacion') continue; // sin valor en USD
+          row[s.id] = s.puntos.find((p) => p.mesKey === mesKey)?.valor;
+        }
       }
       return row;
     });
-  }, [resumenSeries, carteraBase100, factorMep, resp]);
+  }, [resumenSeries, carteraBase100, carteraBase100Ars, factorMep, resp, monedaChart]);
 
   const seriesConError = useMemo(() => {
     const map = new Map<BenchmarkId, string>();
@@ -177,8 +205,10 @@ export default function BenchmarksTab({ data }: Props) {
   }, [resp]);
 
   const seriesActivas = useMemo(
-    () => SERIES_ORDER.filter((id) => visible[id] && !seriesConError.get(id as BenchmarkId)),
-    [visible, seriesConError],
+    () => SERIES_ORDER.filter(
+      (id) => visible[id] && !seriesConError.get(id as BenchmarkId) && !(monedaChart === 'usd' && id === 'inflacion'),
+    ),
+    [visible, seriesConError, monedaChart],
   );
 
   // Último valor conocido de cada serie activa, para mostrarlo en el chip
@@ -229,9 +259,9 @@ export default function BenchmarksTab({ data }: Props) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12, flex: 1, minHeight: 0 }}>
 
-      {/* ── Toggles de series: nombre corto + valor final (reemplaza la leyenda al pie) ── */}
-      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', flexShrink: 0 }}>
-        {SERIES_ORDER.map((id) => {
+      {/* ── Toggles de series + moneda del gráfico ──────────────────────────── */}
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', flexShrink: 0, alignItems: 'center' }}>
+        {SERIES_ORDER.filter((id) => !(monedaChart === 'usd' && id === 'inflacion')).map((id) => {
           const meta = SERIES_META[id];
           const err = id !== 'cartera' ? seriesConError.get(id as BenchmarkId) : undefined;
           const isVisible = visible[id];
@@ -266,6 +296,22 @@ export default function BenchmarksTab({ data }: Props) {
             </button>
           );
         })}
+
+        <div style={{ width: 1, height: 20, background: 'var(--border)', flexShrink: 0, margin: '0 2px' }} />
+
+        <button
+          onClick={() => setMonedaChart((m) => (m === 'usd' ? 'ars' : 'usd'))}
+          className="pill-touch"
+          title="Cambiar la moneda del gráfico. La inflación solo se muestra en ARS."
+          style={{
+            padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600,
+            cursor: 'pointer', border: '1px solid var(--primary)',
+            background: 'var(--primary-dim)', color: 'var(--primary)',
+            whiteSpace: 'nowrap', flexShrink: 0,
+          }}
+        >
+          Ver en {monedaChart === 'usd' ? 'ARS' : 'USD'}
+        </button>
       </div>
 
       {/* ── Estado de carga / error global ────────────────────────────────── */}
@@ -298,7 +344,7 @@ export default function BenchmarksTab({ data }: Props) {
               Rendimiento Relativo (Índice Base 100)
             </p>
             <span style={{ fontSize: 10, color: 'var(--muted)', flex: 1, minWidth: 0 }}>
-              Base 100 = {resumenSeries[0]?.fecha ?? 'primer mes'} · en ARS · cartera en TWR
+              Base 100 = {resumenSeries[0]?.fecha ?? 'primer mes'} · en {monedaChart === 'ars' ? 'ARS nominal' : 'USD'} · cartera en TWR
             </span>
             <span style={{ position: 'relative', flexShrink: 0 }}>
               <button
@@ -315,14 +361,15 @@ export default function BenchmarksTab({ data }: Props) {
               </button>
               {infoAbierto && (
                 <div style={{
-                  position: 'absolute', top: 24, right: 0, zIndex: 10, width: 240,
+                  position: 'absolute', top: 24, right: 0, zIndex: 10, width: 260,
                   background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 8,
                   padding: '10px 12px', fontSize: 11, lineHeight: 1.5, color: 'var(--text-sec)',
                   boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
                 }}>
-                  Cartera/S&P 500/Oro/Bitcoin se convierten a ARS vía dólar MEP para ser comparables con la inflación.
-                  Dólar MEP muestra la devaluación del peso. Mi Cartera excluye el efecto de aportes/retiros (TWR,
-                  Time-Weighted Return): aísla el rendimiento de mercado de cuánto o cuándo aportaste.
+                  {monedaChart === 'ars'
+                    ? 'Vista en ARS nominal: Cartera/S&P 500/Oro/Bitcoin se convierten a pesos vía dólar MEP para ser comparables con la inflación (IPC INDEC), que solo existe en pesos. Dólar MEP muestra la devaluación del peso.'
+                    : 'Vista en USD: cada serie en su moneda nativa, sin convertir. La inflación argentina (IPC) no tiene valor en dólares y no se muestra en esta vista — cambiá a ARS para verla.'}
+                  {' '}Mi Cartera es TWR (Time-Weighted Return): aísla el rendimiento de mercado del efecto de cuánto o cuándo aportaste. Es una aproximación por Modified Dietz mensual (no hay valuación diaria), igual al TWR de Resumen.
                 </div>
               )}
             </span>

@@ -11,7 +11,7 @@ código.
 Los ADRs **no se editan** cuando cambia la decisión: se escribe uno nuevo y el
 viejo pasa a "Reemplazadas". Ver [PLANTILLA.md](PLANTILLA.md) para el flujo completo.
 
-**Próximo número: 0022**
+**Próximo número: 0023**
 
 ## Renta fija
 
@@ -39,7 +39,7 @@ viejo pasa a "Reemplazadas". Ver [PLANTILLA.md](PLANTILLA.md) para el flujo comp
 | [0011](0011-xirr-newton-raphson-multi-semilla.md) | XIRR con Newton-Raphson y varias semillas | `lib/finance.ts` |
 | [0012](0012-criterio-unico-de-tickers-elegibles.md) | Un solo criterio de tickers elegibles para todos los consumidores | `lib/tickersElegibles.ts` |
 | [0020](0020-fuente-de-precio-por-naturaleza-del-instrumento.md) | La fuente de precio se elige por naturaleza del instrumento, sin tocar la clasificación del usuario | `lib/tickersElegibles.ts`, `lib/performanceVariable.ts` |
-| [0013](0013-benchmarks-incluyen-aportes.md) | La serie de la cartera en benchmarks incluye aportes | `lib/benchmarks.ts` |
+| [0022](0022-twr-modified-dietz-encadenado.md) | TWR por Modified Dietz encadenado, unificado entre UI y MCP | `lib/twr.ts`, `lib/periodo.ts`, `lib/sheets.ts` |
 | [0018](0018-ratios-alineados-por-fecha-e-indicadores-en-el-cliente.md) | Alinear el ratio por fecha y calcular los indicadores en el cliente | `lib/ratios.ts`, `components/RatiosTab.tsx` |
 
 ## Asistente
@@ -66,4 +66,6 @@ viejo pasa a "Reemplazadas". Ver [PLANTILLA.md](PLANTILLA.md) para el flujo comp
 
 ## Reemplazadas
 
-_Ninguna todavía._
+| # | Decisión | Reemplazada por |
+|---|---|---|
+| [0013](0013-benchmarks-incluyen-aportes.md) | La serie de la cartera en benchmarks incluye aportes | [0022](0022-twr-modified-dietz-encadenado.md) |

@@ -2,6 +2,8 @@
 //
 // Decisión sobre la valuación en pesos (MEP por fecha, no un MEP único):
 // docs/decisiones/0007-mep-mensual-no-mep-unico.md
+// Decisión sobre el TWR encadenado (lib/twr.ts) que se pega a cada ResumenRow:
+// docs/decisiones/0022-twr-modified-dietz-encadenado.md
 
 import { google } from 'googleapis';
 import {
@@ -11,6 +13,7 @@ import {
   toMesKey,
 } from './parser';
 import { xirr, Cashflow } from './finance';
+import { construirTWR, twrAcumuladoPct, twrAnualizadoPct } from './twr';
 import type {
   DashboardData,
   ResumenRow,
@@ -20,6 +23,34 @@ import type {
   TenenciaActual,
   KPIData,
 } from '@/types';
+
+// ── Movimientos internos (transferencias entre cuentas propias) ───────────────
+// Un traspaso entre dos cuentas que el Sheet ya trackea por separado no es
+// ahorro nuevo ni retiro: la plata solo cambia de lugar. Sigue siendo un flujo
+// para el TWR (se neutraliza igual que cualquier otro), pero se excluye de
+// "aportes netos" para que la ganancia no lo cuente como capital aportado.
+//
+// La lista va en `MOVIMIENTOS_INTERNOS` (env var) y no en el código: son fechas
+// y montos de operaciones reales, y el repo es público. Formato: pares
+// `YYYY-MM-DD:monto` separados por coma. Ej: "2026-01-15:500,2026-03-02:1200".
+const MOVIMIENTOS_INTERNOS: { fecha: string; monto_usd: number }[] =
+  (process.env.MOVIMIENTOS_INTERNOS ?? '')
+    .split(',')
+    .map((par) => par.trim())
+    .filter(Boolean)
+    .map((par) => {
+      const [fecha, monto] = par.split(':');
+      return { fecha: (fecha ?? '').trim(), monto_usd: Number(monto) };
+    })
+    .filter((m) => /^\d{4}-\d{2}-\d{2}$/.test(m.fecha) && Number.isFinite(m.monto_usd));
+
+function esMovimientoInterno(fechaTs: number, monto_usd: number): boolean {
+  if (MOVIMIENTOS_INTERNOS.length === 0) return false;
+  const fechaStr = new Date(fechaTs).toISOString().slice(0, 10);
+  return MOVIMIENTOS_INTERNOS.some(
+    (m) => m.fecha === fechaStr && Math.abs(m.monto_usd - monto_usd) < 0.5,
+  );
+}
 
 // ── Auth ─────────────────────────────────────────────────────────────────────
 
@@ -97,7 +128,8 @@ export async function fetchDashboardData(): Promise<DashboardData> {
       if (!ts || monto == null) return null;
       const monto_neto = tipo === 'ingreso' ? monto : -Math.abs(monto);
       const monto_neto_ars = tipo === 'ingreso' ? montoArs : -Math.abs(montoArs);
-      return { fecha: ts, monto_usd: monto, monto_ars: montoArs, tipo, monto_neto, monto_neto_ars };
+      const clasificacion = esMovimientoInterno(ts, monto) ? 'interno' : 'externo';
+      return { fecha: ts, monto_usd: monto, monto_ars: montoArs, tipo, monto_neto, monto_neto_ars, clasificacion };
     })
     .filter(Boolean) as MovimientoRow[];
 
@@ -197,7 +229,26 @@ export async function fetchDashboardData(): Promise<DashboardData> {
       total_cartera,
       total_cartera_ars,
       rendimiento: total_cartera - acumuladoAcum,
+      twrIndiceUsd: 100, // se completa abajo, una vez armada toda la serie
+      twrIndiceArs: 100,
     };
+  });
+
+  // ── TWR encadenado (Modified Dietz mes a mes, fechas exactas) ──────────────
+  // Se calcula sobre toda la serie y se pega en cada ResumenRow. Usa el mismo
+  // criterio de "flujo = flujo" sea interno o externo: clasificación no afecta
+  // el rendimiento, solo la métrica de aportes netos. Ver lib/twr.ts.
+  const twrUsd = construirTWR(
+    resumenSeries.map((r) => ({ fechaTs: r.fechaTs, total: r.total_cartera })),
+    movimientos.map((mv) => ({ fecha: mv.fecha, monto: mv.monto_neto })),
+  );
+  const twrArs = construirTWR(
+    resumenSeries.map((r) => ({ fechaTs: r.fechaTs, total: r.total_cartera_ars })),
+    movimientos.map((mv) => ({ fecha: mv.fecha, monto: mv.monto_neto_ars })),
+  );
+  resumenSeries.forEach((r, i) => {
+    r.twrIndiceUsd = twrUsd[i].indice;
+    r.twrIndiceArs = twrArs[i].indice;
   });
 
   // Meses disponibles en Tenencias, ordenados
@@ -222,10 +273,36 @@ export async function fetchDashboardData(): Promise<DashboardData> {
   ];
   const tirRaw = xirr(tirFlows);
 
+  // TIR en ARS: mismos flujos, en monto_ars (MEP del día exacto de cada uno).
+  // Nominal, no ajustada por inflación — igual que el resto de los valores en
+  // pesos del dashboard (ver docs/decisiones/0007-mep-mensual-no-mep-unico.md).
+  const tirFlowsArs: Cashflow[] = [
+    ...movimientos.map((mv) => ({
+      date: mv.fecha,
+      amount: -mv.monto_neto_ars,
+    })),
+    { date: Date.now(), amount: ultimo.total_cartera_ars },
+  ];
+  const tirRawArs = xirr(tirFlowsArs);
+
+  // Aportes netos: excluye los movimientos 'interno' (transferencias entre
+  // cuentas propias, no ahorro nuevo). No afecta TIR ni TWR, que tratan todo
+  // flujo igual — solo esta métrica puntual.
+  const aportesNetos = movimientos
+    .filter((mv) => mv.clasificacion === 'externo')
+    .reduce((sum, mv) => sum + mv.monto_neto, 0);
+
+  const diasTranscurridos = (Date.now() - resumenSeries[0].fechaTs) / 86_400_000;
+  const twrAcumUsd = twrAcumuladoPct(twrUsd);
+  const twrAnualUsd = twrAnualizadoPct(twrUsd, diasTranscurridos);
+  const twrAcumArs = twrAcumuladoPct(twrArs);
+  const twrAnualArs = twrAnualizadoPct(twrArs, diasTranscurridos);
+
   const kpis: KPIData = {
     totalCartera: ultimo.total_cartera,
     totalCarteraArs: ultimo.total_cartera_ars,
     aporteAcumulados: ultimo.acumulado,
+    aporteAcumuladosNetos: aportesNetos,
     rendimientoNeto: ultimo.rendimiento,
     rendimientoPct:
       ultimo.acumulado > 0
@@ -233,6 +310,11 @@ export async function fetchDashboardData(): Promise<DashboardData> {
         : 0,
     deltaCartera: ultimo.total_cartera - penultimo.total_cartera,
     tirAnual: tirRaw != null ? tirRaw * 100 : null,
+    tirAnualArs: tirRawArs != null ? tirRawArs * 100 : null,
+    twrAcumuladoUsd: twrAcumUsd,
+    twrAnualizadoUsd: twrAnualUsd,
+    twrAcumuladoArs: twrAcumArs,
+    twrAnualizadoArs: twrAnualArs,
     fechaStr: ultimo.fecha,
   };
 

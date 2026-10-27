@@ -10,6 +10,12 @@ export interface ResumenRow {
   total_cartera: number;
   total_cartera_ars: number;
   rendimiento: number;
+  /**
+   * Índice TWR encadenado (Modified Dietz mes a mes, base 100 en el primer
+   * mes de la serie) — en USD y en ARS. Ver lib/twr.ts.
+   */
+  twrIndiceUsd: number;
+  twrIndiceArs: number;
 }
 
 export interface MovimientoRow {
@@ -21,6 +27,15 @@ export interface MovimientoRow {
   monto_neto: number;  // positivo = ingreso, negativo = salida
   /** monto_neto convertido a ARS con el MEP del día exacto (signo según ingreso/salida). */
   monto_neto_ars: number;
+  /**
+   * 'externo' (default): plata que entró o salió del patrimonio total.
+   * 'interno': transferencia entre cuentas propias (ej. pasar cripto de otro
+   * exchange a la cuenta que trackea este Sheet) — no es ahorro nuevo ni
+   * retiro real. No afecta el TWR (un flujo es un flujo para Modified Dietz
+   * en ambos casos); sólo se excluye de "aportes netos".
+   * Ver docs/decisiones/0022-twr-modified-dietz-encadenado.md
+   */
+  clasificacion: 'externo' | 'interno';
 }
 
 export interface ActivoRow {
@@ -53,10 +68,23 @@ export interface KPIData {
   totalCartera: number;
   totalCarteraArs: number;
   aporteAcumulados: number;
+  /** Aportes acumulados excluyendo movimientos clasificados como 'interno'. */
+  aporteAcumuladosNetos: number;
   rendimientoNeto: number;
   rendimientoPct: number;
   deltaCartera: number;
+  /** TIR anual (XIRR) sobre flujos en USD con fechas exactas. */
   tirAnual: number | null;
+  /** TIR anual (XIRR) sobre flujos en ARS (monto_ars de cada movimiento) con fechas exactas. Nominal, no ajustada por inflación. */
+  tirAnualArs: number | null;
+  /** TWR acumulado (%) desde el primer mes de la serie, en USD. */
+  twrAcumuladoUsd: number | null;
+  /** TWR anualizado (%), en USD. */
+  twrAnualizadoUsd: number | null;
+  /** TWR acumulado (%) desde el primer mes de la serie, en ARS nominal. */
+  twrAcumuladoArs: number | null;
+  /** TWR anualizado (%), en ARS nominal. */
+  twrAnualizadoArs: number | null;
   fechaStr: string;
 }
 

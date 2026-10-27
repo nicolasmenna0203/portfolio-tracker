@@ -31,6 +31,17 @@ describe('parseArgNum', () => {
     expect(parseArgNum('abc')).toBeNull();
   });
 
+  it('rechaza un número con unidad pegada en vez de adivinar el monto', () => {
+    // Caso real: celdas de la columna "Tenencia (ARS)" cargadas con el monto
+    // en dólares y la unidad al lado. parseFloat devolvía 1717.8 en silencio
+    // y esos dólares se leían como pesos, rompiendo la serie en ARS.
+    expect(parseArgNum('1.717,80 USD')).toBeNull();
+    expect(parseArgNum('340,07 USD')).toBeNull();
+    expect(parseArgNum('1234ARS')).toBeNull();
+    expect(parseArgNum('$ 1.234,56')).toBeNull();
+    expect(parseArgNum('12,5%')).toBeNull();
+  });
+
   it('ignora espacios y NBSP', () => {
     expect(parseArgNum('1.234,56 ')).toBe(1234.56);
     expect(parseArgNum(' 500 ')).toBe(500);

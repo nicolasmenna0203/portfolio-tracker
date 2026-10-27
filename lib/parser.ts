@@ -9,10 +9,17 @@ export function parseArgNum(val: unknown): number | null {
   let s = String(val).trim().replace(/\u00a0/g, '').replace(/\s/g, '');
   if (!s || s === '-') return null;
 
+  // Solo dígitos, separadores y signo: nada de unidades ni sufijos pegados.
+  // `parseFloat("1717.80USD")` devuelve 1717.8 sin avisar — celdas así,
+  // cargadas en la columna de ARS con el monto en dólares, se leyeron durante
+  // meses como pesos y rompieron la serie en ARS. Un valor ambiguo tiene que
+  // fallar fuerte, no adivinar.
+  if (!/^[+-]?[\d.,]+$/.test(s)) return null;
+
   if (s.includes(',')) {
     // "1.234,56" → "1234.56"
     s = s.replace(/\./g, '').replace(',', '.');
-  } else if (/^\d{1,3}(\.\d{3})+$/.test(s)) {
+  } else if (/^[+-]?\d{1,3}(\.\d{3})+$/.test(s)) {
     // "50.000" → "50000"
     s = s.replace(/\./g, '');
   }
