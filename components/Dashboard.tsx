@@ -271,6 +271,18 @@ const [uploadOpen, setUploadOpen] = useState(false);
   const gananciaPeriodoArs = metricasPeriodo?.gananciaArs ?? 0;
   const rendColor = (moneda === 'USD' ? gananciaPeriodoUsd : gananciaPeriodoArs) >= 0 ? 'var(--up)' : 'var(--down)';
 
+  // Subtexto de "Ganancia Acumulada": el % que representa sobre el capital que
+  // la generó. En "Máximo" ese capital son los aportes netos; en un tramo
+  // acotado también entra lo que ya estaba invertido al arrancar, así que la
+  // leyenda lo dice para que el denominador no quede ambiguo.
+  const gananciaPct = metricasPeriodo
+    ? (moneda === 'USD' ? metricasPeriodo.gananciaPctUsd : metricasPeriodo.gananciaPctArs)
+    : null;
+  const gananciaSub = gananciaPct == null
+    ? (moneda === 'ARS' ? 'nominal, sin ajustar por inflación' : 'sobre el período elegido')
+    : `${formatPercent(gananciaPct)} sobre ${periodo === 'max' ? 'aportes' : 'el capital invertido'}`
+      + (moneda === 'ARS' ? ' · nominal' : '');
+
   const twrPct = metricasPeriodo
     ? (moneda === 'USD' ? metricasPeriodo.twrAcumuladoPct : metricasPeriodo.twrAcumuladoArsPct)
     : null;
@@ -549,16 +561,17 @@ const [uploadOpen, setUploadOpen] = useState(false);
             />
             <KPICard
               label="Ganancia Acumulada"
-              tooltip="Valuación menos aportes netos del período elegido (excluye transferencias entre cuentas propias). No pondera cuándo entró cada peso — para eso están TWR y TIR."
+              tooltip={
+                periodo === 'max'
+                  ? 'Valuación menos aportes netos (excluye traspasos entre cuentas propias). El % es sobre lo aportado. No pondera cuándo entró cada peso — para eso están TWR y TIR.'
+                  : 'Lo ganado dentro del período: valuación final menos la del arranque y menos los aportes del tramo. El % es sobre el capital que lo generó (lo que ya estaba invertido más lo aportado en el período).'
+              }
               value={
                 moneda === 'USD'
                   ? formatMoney(gananciaPeriodoUsd, { currency: 'USD', hidden: hideValues, sign: true })
                   : formatMoney(gananciaPeriodoArs, { currency: 'ARS', hidden: hideValues, sign: true })
               }
-              sub={
-                hideValues ? '••••' :
-                moneda === 'ARS' ? 'nominal, nunca ajustada por inflación' : 'sobre el período elegido'
-              }
+              sub={hideValues ? '••••' : gananciaSub}
               subColor={rendColor}
               accentColor={rendColor}
             />

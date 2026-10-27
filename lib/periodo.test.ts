@@ -98,6 +98,29 @@ describe('calcularMetricasPeriodo', () => {
     expect(calcularMetricasPeriodo([], [], 'max')).toBeNull();
   });
 
+  it('en "max" el % de ganancia se calcula sobre los aportes netos', () => {
+    const m = calcularMetricasPeriodo(resumenSeries, movimientos, 'max');
+    // Aportes netos = 100, ganancia = 1500 − 100 = 1400 → 1400%
+    expect(m!.capitalBaseUsd).toBeCloseTo(100, 6);
+    expect(m!.gananciaPctUsd!).toBeCloseTo((1400 / 100) * 100, 6);
+  });
+
+  it('en un período acotado el % suma el capital ya invertido al denominador', () => {
+    // Si el denominador fueran solo los aportes del tramo, un período con
+    // pocos aportes daría un porcentaje disparatado sobre una cartera grande.
+    const m = calcularMetricasPeriodo(resumenSeries, movimientos, '1m');
+    // Base marzo-2024 = 1250, sin aportes dentro del tramo (el del 10/3 queda
+    // en el mes base) → capital = 1250, ganancia = 250 → 20%
+    expect(m!.capitalBaseUsd).toBeCloseTo(1250, 6);
+    expect(m!.gananciaPctUsd!).toBeCloseTo(20, 6);
+  });
+
+  it('el % es null si no hay capital sobre el cual calcularlo', () => {
+    const sinAportes = calcularMetricasPeriodo(resumenSeries, [], 'max');
+    expect(sinAportes!.capitalBaseUsd).toBe(0);
+    expect(sinAportes!.gananciaPctUsd).toBeNull();
+  });
+
   it('en período "max" la TIR usa los movimientos reales, sin un flujo implícito extra al arranque', () => {
     // Bug real: el tramo "max" arranca en el primer punto de TODA la serie,
     // donde no hay capital previo invisible — los movimientos reales ya

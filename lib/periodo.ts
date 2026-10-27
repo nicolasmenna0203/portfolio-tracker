@@ -54,7 +54,6 @@ function indiceInicio(resumenSeries: ResumenRow[], periodo: PeriodoId): number {
 }
 
 export interface MetricasPeriodo {
-  /** Mes de arranque del tramo (inclusive). */
   /**
    * Mes BASE del tramo: su valuación de cierre es el punto de partida de la
    * cadena, y el primer mes medido es el siguiente. Para YTD de 2026, acá
@@ -69,6 +68,18 @@ export interface MetricasPeriodo {
   /** Ganancia del tramo: valuación final − valuación inicial − aportes netos externos del tramo. */
   gananciaUsd: number;
   gananciaArs: number;
+  /**
+   * Ganancia como % del capital que la generó. El denominador NO es el mismo
+   * en todos los períodos: sobre la serie completa es el total aportado, pero
+   * en un tramo acotado hay que sumarle lo que ya estaba invertido al arrancar
+   * — si no, un YTD con pocos aportes daría un porcentaje disparatado.
+   * `null` si el capital base es 0 o negativo (no hay sobre qué calcular).
+   */
+  gananciaPctUsd: number | null;
+  gananciaPctArs: number | null;
+  /** Capital base usado como denominador de gananciaPct, para poder mostrarlo. */
+  capitalBaseUsd: number;
+  capitalBaseArs: number;
   tirAnualPct: number | null;
   tirAnualArsPct: number | null;
 }
@@ -116,6 +127,15 @@ export function calcularMetricasPeriodo(
 
   const gananciaUsd = fin.total_cartera - baseUsd - aportesNetosUsd;
   const gananciaArs = fin.total_cartera_ars - baseArs - aportesNetosArs;
+
+  // Capital que generó esa ganancia: lo que ya estaba invertido al arrancar el
+  // tramo (0 en la serie completa) más lo aportado durante el tramo. Sobre la
+  // serie completa queda en los aportes netos, igual que el viejo
+  // "% sobre aportes" de kpis.rendimientoPct.
+  const capitalBaseUsd = baseUsd + aportesNetosUsd;
+  const capitalBaseArs = baseArs + aportesNetosArs;
+  const gananciaPctUsd = capitalBaseUsd > 0 ? (gananciaUsd / capitalBaseUsd) * 100 : null;
+  const gananciaPctArs = capitalBaseArs > 0 ? (gananciaArs / capitalBaseArs) * 100 : null;
 
   // TWR del tramo: se re-basa a 100 en el mes de arranque, usando TODOS los
   // movimientos del tramo (interno + externo, un flujo es un flujo para TWR).
@@ -175,6 +195,10 @@ export function calcularMetricasPeriodo(
     twrAnualizadoArsPct: twrAnualArs,
     gananciaUsd,
     gananciaArs,
+    gananciaPctUsd,
+    gananciaPctArs,
+    capitalBaseUsd,
+    capitalBaseArs,
     tirAnualPct: tirRaw != null ? tirRaw * 100 : null,
     tirAnualArsPct: tirRawArs != null ? tirRawArs * 100 : null,
   };
