@@ -584,29 +584,6 @@ input, select, textarea { font-size: 16px; }
     padding: 16px 18px calc(24px + env(safe-area-inset-bottom)) !important;
   }
 
-  /* ── ChatBot: burbuja y panel adaptados ──
-     La burbuja flota sobre el contenido: se achica y se atenúa un poco para
-     no tapar datos, y vuelve a opacidad total al tocarla o al abrir el chat. */
-  .chat-fab {
-    bottom: calc(14px + env(safe-area-inset-bottom)) !important;
-    right: 14px !important;
-    width: 46px !important;
-    height: 46px !important;
-    font-size: 19px !important;
-    opacity: 0.82;
-  }
-  .chat-fab:active,
-  .chat-fab[aria-expanded="true"] { opacity: 1; }
-  .chat-panel {
-    left: 8px !important;
-    right: 8px !important;
-    width: auto !important;
-    bottom: calc(76px + env(safe-area-inset-bottom)) !important;
-    max-height: min(70dvh, 460px) !important;
-    animation: sheet-up 0.2s ease-out;
-  }
-  .chat-chips { max-height: 88px !important; }
-  .chat-send { width: 44px; height: 40px; }
 }
 
 @keyframes sheet-up {
