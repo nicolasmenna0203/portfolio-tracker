@@ -494,6 +494,10 @@ input, select, textarea { font-size: 16px; }
   .pill-row > * { flex-shrink: 0; }
 
   /* ── Calendario ── */
+  /* Las 3 cards de resumen (próximo cobro / mes / anual) van en columna: a
+     tres por fila el texto se corta y "Proyección anual" queda fuera de
+     pantalla (grid fijo de 1.3fr 1fr 1fr pensado para desktop). */
+  .cal-resumen-row { grid-template-columns: 1fr !important; }
   .cal-grid { gap: 3px !important; }
   .cal-dia {
     min-height: 58px !important;
@@ -512,10 +516,6 @@ input, select, textarea { font-size: 16px; }
      los logos se achican para que entren varios por día. */
   .cal-evento-fila { flex-wrap: wrap; gap: 6px !important; }
   .cal-evento-fila .cal-evento-monto { margin-left: auto; }
-
-  /* En la grilla mobile la celda no da el ancho para el monto + yield;
-     el dato queda completo en la lista de eventos de abajo. */
-  .cal-dia-montos { display: none !important; }
 
   /* Proyecciones: el panel de parámetros pasa a ancho completo */
   .proy-controles {

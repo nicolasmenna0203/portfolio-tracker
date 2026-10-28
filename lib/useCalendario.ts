@@ -55,21 +55,31 @@ export function useCalendario(
     if (!tickersKey && !tickersArgKey) { setLoadingEventos(false); return; }
     setLoadingEventos(true);
     setErrorEventos(null);
-    fetch(`${apiBase}/calendario-financiero`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        tickers: tickersKey ? tickersKey.split(',') : [],
-        tickersArg: tickersArgKey ? tickersArgKey.split(',') : [],
-        tenencias: JSON.parse(tenenciasKey),
-        year,
-      }),
-    })
-      .then((r) => r.json())
-      .then((json) => {
-        if (json.error) throw new Error(json.error);
-        setEventos(json.eventos ?? []);
-        setYields(json.yields ?? []);
+
+    const pedirAnio = (y: number) =>
+      fetch(`${apiBase}/calendario-financiero`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tickers: tickersKey ? tickersKey.split(',') : [],
+          tickersArg: tickersArgKey ? tickersArgKey.split(',') : [],
+          tenencias: JSON.parse(tenenciasKey),
+          year: y,
+        }),
+      }).then((r) => r.json());
+
+    // También se pide el año siguiente: "Próximo cobro" busca hacia adelante
+    // sin importar qué año esté mirando la grilla, y si hoy cae a fin de año
+    // el próximo evento real suele estar ahí (sin esto, un dividendo de enero
+    // quedaba invisible mientras se navegaba diciembre del año actual).
+    Promise.all([pedirAnio(year), pedirAnio(year + 1)])
+      .then(([actual, siguiente]) => {
+        if (actual.error) throw new Error(actual.error);
+        if (siguiente.error) throw new Error(siguiente.error);
+        setEventos([...(actual.eventos ?? []), ...(siguiente.eventos ?? [])]);
+        // Los yields son los mismos cálculo (tenencia × yield 12m) para ambos
+        // años: alcanza con uno.
+        setYields(actual.yields ?? []);
       })
       .catch((e) => setErrorEventos(e instanceof Error ? e.message : String(e)))
       .finally(() => setLoadingEventos(false));

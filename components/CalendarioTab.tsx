@@ -142,6 +142,10 @@ function tickerConLogo(tipo: EventoTipo): boolean {
   return tipo !== 'renta' && tipo !== 'amortizacion';
 }
 
+// El logo es el protagonista de la celda (ocupa ~65% de su ancho) y el número
+// de día pasa a una esquina chica superpuesta: lo primero que se lee en un
+// día con evento es "qué ticker paga", no la fecha. Con 2+ eventos el segundo
+// logo se solapa (no se achica la grilla); a partir del tercero se cuenta.
 function DiaCelda({
   dia, eventosDia, esHoy, logoSize, maxLogos, yieldPorTicker,
 }: {
@@ -153,29 +157,30 @@ function DiaCelda({
   yieldPorTicker: Map<string, YieldTicker>;
 }) {
   if (dia === null) {
-    return <div className="cal-dia-vacio" style={{ minHeight: 88, borderRadius: 8 }} />;
+    return <div className="cal-dia-vacio" style={{ minHeight: 56, borderRadius: 8 }} />;
   }
 
-  // Solo los dividendos con monto entran al detalle: son los que tienen yield asociado.
-  const conMonto = (eventosDia ?? []).filter(
-    (e) => esDividendo(e.tipo) && e.montoEstimado != null && e.montoEstimado > 0,
-  );
+  const hayEventos = eventosDia != null && eventosDia.length > 0;
+  const conEvento = hayEventos
+    ? `color-mix(in srgb, var(--primary) 35%, ${esHoy ? 'var(--primary)' : 'var(--border)'})`
+    : undefined;
 
   return (
     <div className="cal-dia" style={{
-      minHeight: 88, borderRadius: 8, padding: '6px 6px',
-      border: esHoy ? '1px solid var(--primary)' : '1px solid var(--border)',
-      background: esHoy ? 'color-mix(in srgb, var(--primary) 10%, var(--card))' : 'var(--card)',
-      display: 'flex', flexDirection: 'column', gap: 4,
+      minHeight: 56, borderRadius: 8, padding: 4,
+      border: `1px solid ${esHoy ? 'var(--primary)' : conEvento ?? 'var(--border-subtle)'}`,
+      background: esHoy ? 'var(--primary-dim)' : 'var(--card)',
+      position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center',
     }}>
       <span className="cal-dia-num" style={{
-        fontSize: 11, fontWeight: esHoy ? 800 : 600,
+        position: 'absolute', top: hayEventos ? 2 : 3, left: hayEventos ? 2 : 5,
+        fontSize: hayEventos ? 9 : 10, fontWeight: esHoy ? 800 : 600,
         color: esHoy ? 'var(--primary)' : 'var(--muted)',
       }}>
         {dia}
       </span>
-      {eventosDia && eventosDia.length > 0 && (
-        <div className="cal-dia-logos" style={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
+      {hayEventos && (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           {eventosDia.slice(0, maxLogos).map((e, i) => {
             const meta = TIPO_EVENTO_META[e.tipo];
             const montoTxt = e.montoEstimado != null && e.montoEstimado > 0
@@ -186,55 +191,27 @@ function DiaCelda({
               ? `\nYield 12m: ${formatPercent(y.yieldAnual * 100, { sign: false, decimals: 2 })} · ${fmtMonto(y.cobroAnual ?? 0, 'USD')}/año`
               : '';
             const tip = `${e.ticker}: ${meta.label}${e.detalle ? ` (${e.detalle})` : ''}${montoTxt}${yieldTxt}`;
-            const dot = Math.max(6, Math.round(logoSize * 0.3));
+            const dot = Math.max(8, Math.round(logoSize * 0.3));
             return (
-              <div key={i} title={tip} className="cal-dia-logo" style={{ position: 'relative' }}>
+              <div
+                key={i}
+                title={tip}
+                className="cal-dia-logo"
+                style={{ position: 'relative', marginLeft: i > 0 ? -Math.round(logoSize * 0.3) : 0, zIndex: maxLogos - i }}
+              >
                 <LogoTicker ticker={e.ticker} conLogo={tickerConLogo(e.tipo)} size={logoSize} />
                 <span className="cal-dia-dot" style={{
                   position: 'absolute', bottom: -1, right: -1, width: dot, height: dot,
-                  borderRadius: '50%', background: meta.color, border: '1.5px solid var(--card)',
+                  borderRadius: '50%', background: meta.color, border: '2px solid var(--card)',
                 }} />
               </div>
             );
           })}
-          {/* En mobile no entran todos los logos: el resto se cuenta acá y se
-              lee completo en la lista de eventos de abajo. */}
           {eventosDia.length > maxLogos && (
             <span style={{
-              fontSize: Math.max(8, Math.round(logoSize * 0.38)), fontWeight: 700,
-              color: 'var(--muted)', alignSelf: 'center', lineHeight: 1,
+              fontSize: 10, fontWeight: 700, color: 'var(--muted)', marginLeft: 3,
             }}>
               +{eventosDia.length - maxLogos}
-            </span>
-          )}
-        </div>
-      )}
-
-      {/* Monto y yield del día, bajo los logos. En pantalla chica se ocultan por
-          CSS: la celda no da el ancho y el dato queda en la lista de abajo. */}
-      {conMonto.length > 0 && (
-        <div className="cal-dia-montos" style={{ display: 'flex', flexDirection: 'column', gap: 1, marginTop: 'auto' }}>
-          {conMonto.slice(0, 2).map((e, i) => {
-            const y = yieldPorTicker.get(e.ticker);
-            return (
-              <div key={i} style={{ display: 'flex', alignItems: 'baseline', gap: 4, lineHeight: 1.25 }}>
-                <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text)', whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>
-                  {fmtMonto(e.montoEstimado!, e.monedaMonto)}
-                </span>
-                {y && (
-                  <span
-                    title={`Yield 12m de ${e.ticker}: ${formatPercent(y.yieldAnual * 100, { sign: false, decimals: 2 })} · ${fmtMonto(y.cobroAnual ?? 0, 'USD')}/año`}
-                    style={{ fontSize: 9, fontWeight: 700, color: TIPO_EVENTO_META.dividendo.color, whiteSpace: 'nowrap' }}
-                  >
-                    {formatPercent(y.yieldAnual * 100, { sign: false })}
-                  </span>
-                )}
-              </div>
-            );
-          })}
-          {conMonto.length > 2 && (
-            <span style={{ fontSize: 9, color: 'var(--muted)', lineHeight: 1.25 }}>
-              +{conMonto.length - 2} más
             </span>
           )}
         </div>
@@ -344,6 +321,16 @@ export default function CalendarioTab({ data }: Props) {
     return acc;
   }, [eventosDelMes]);
 
+  // Próximo cobro: cualquier evento con monto (dividendo, renta o amortización
+  // de bonos ARG) más cercano desde hoy — balances no cuentan, no son cobro.
+  // Busca sobre todos los eventos cargados (año actual + siguiente, ver
+  // useCalendario), sin importar qué mes esté mirando la grilla.
+  const proximoCobro = useMemo(() => {
+    return eventosFiltrados
+      .filter((e) => e.tipo !== 'earnings' && e.montoEstimado != null && e.montoEstimado > 0 && e.fecha >= hoyKey)
+      .sort((a, b) => a.fecha.localeCompare(b.fecha))[0] ?? null;
+  }, [eventosFiltrados, hoyKey]);
+
   return (
     <div className="cal-root scroll-y" style={{ display: 'flex', flexDirection: 'column', gap: 12, flex: 1, minHeight: 0 }}>
 
@@ -409,6 +396,87 @@ export default function CalendarioTab({ data }: Props) {
         </Card>
       ) : (
         <>
+          {/* ── Resumen: responde "¿cuánto cobro y cuándo es lo próximo?" sin
+              escanear la grilla. Los 3 bloques se muestran siempre que haya
+              algo que mostrar; si no hay próximo cobro ni cobro anual, no
+              tiene sentido ocupar el espacio con ceros. */}
+          {(proximoCobro || Object.keys(totalMesPorMoneda).length > 0 || cobroAnualTotal > 0) && (
+            <div className="cal-resumen-row" style={{ display: 'grid', gridTemplateColumns: '1.3fr 1fr 1fr', gap: 10, flexShrink: 0 }}>
+              <div style={{
+                background: proximoCobro ? 'color-mix(in srgb, var(--primary) 6%, var(--card))' : 'var(--card)',
+                border: `1px solid ${proximoCobro ? 'var(--primary)' : 'var(--border)'}`,
+                borderRadius: 12, padding: '10px 14px',
+                display: 'flex', flexDirection: 'column', gap: 4, justifyContent: 'center',
+              }}>
+                <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--muted)' }}>
+                  Próximo cobro
+                </span>
+                {proximoCobro ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <LogoTicker ticker={proximoCobro.ticker} conLogo={tickerConLogo(proximoCobro.tipo)} size={30} />
+                    <div style={{ minWidth: 0 }}>
+                      <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: 'var(--text)', whiteSpace: 'nowrap' }}>
+                        {proximoCobro.ticker} · {fmtFechaEvento(proximoCobro.fecha)}
+                      </p>
+                      <p style={{ margin: 0, fontSize: 11, color: 'var(--muted)' }}>
+                        {fmtMonto(proximoCobro.montoEstimado!, proximoCobro.monedaMonto)}
+                        {esDividendo(proximoCobro.tipo) ? ' neto' : ''}
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <p style={{ margin: 0, fontSize: 12, color: 'var(--muted)' }}>Sin cobros próximos a la vista</p>
+                )}
+              </div>
+
+              <div style={{
+                background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 12,
+                padding: '10px 14px', display: 'flex', flexDirection: 'column', gap: 2, justifyContent: 'center',
+              }}>
+                <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--muted)' }}>
+                  A cobrar este mes
+                </span>
+                {Object.keys(totalMesPorMoneda).length > 0 ? (
+                  <>
+                    <p
+                      title={`Neto estimado a acreditar este mes según tu tenencia y precios actuales.\n\nDividendos: ya descontada la retención del ${formatPercent(RETENCION_USA * 100, { sign: false, decimals: 0 })} de EE.UU. y el ${formatPercent(IMPUESTO_CHEQUE * 100, { sign: false })} de débitos y créditos → llega el ${formatPercent(FACTOR_NETO_DIVIDENDO * 100, { sign: false })} del bruto.\nNo incluye la comisión del depositario.\n\nRenta y amortización de bonos ARG: sin retención, al 100%.`}
+                      style={{ margin: 0, fontSize: 19, fontWeight: 700, color: 'var(--text)', fontVariantNumeric: 'tabular-nums' }}
+                    >
+                      {Object.entries(totalMesPorMoneda).map(([moneda, total]) => fmtMonto(total, moneda)).join(' · ')}
+                    </p>
+                    <span style={{ fontSize: 11, color: 'var(--muted)' }}>neto estimado</span>
+                  </>
+                ) : (
+                  <p style={{ margin: 0, fontSize: 13, color: 'var(--muted)' }}>Sin cobros este mes</p>
+                )}
+              </div>
+
+              <div style={{
+                background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 12,
+                padding: '10px 14px', display: 'flex', flexDirection: 'column', gap: 2, justifyContent: 'center',
+              }}>
+                <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--muted)' }}>
+                  Proyección anual
+                </span>
+                {cobroAnualTotal > 0 ? (
+                  <>
+                    <p
+                      title="Tenencia actual × yield de los últimos 12 meses, ya neto de retenciones. Asume que se repiten igual el año próximo — no son pagos confirmados."
+                      style={{ margin: 0, fontSize: 19, fontWeight: 700, color: 'var(--up)', fontVariantNumeric: 'tabular-nums' }}
+                    >
+                      +{fmtMonto(cobroAnualTotal, 'USD')}<span style={{ fontSize: 12, fontWeight: 500, color: 'var(--muted)' }}>/año</span>
+                    </p>
+                    <span style={{ fontSize: 11, color: 'var(--muted)' }}>
+                      {formatPercent(yieldCartera * 100, { sign: false, decimals: 2 })} de la cartera
+                    </span>
+                  </>
+                ) : (
+                  <p style={{ margin: 0, fontSize: 13, color: 'var(--muted)' }}>Sin proyección disponible</p>
+                )}
+              </div>
+            </div>
+          )}
+
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flexShrink: 0 }}>
             <div className="cal-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 6 }}>
               {DIAS_SEMANA.map((d) => (
@@ -434,33 +502,9 @@ export default function CalendarioTab({ data }: Props) {
           </div>
 
           <Card>
-            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
-              <p style={{ margin: 0, fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--primary)' }}>
-                Eventos de {MESES_LABEL[mesIdx]}
-              </p>
-              {Object.keys(totalMesPorMoneda).length > 0 && (
-                <p
-                  title={`Neto estimado a acreditar este mes según tu tenencia y precios actuales.\n\nDividendos: ya descontada la retención del ${formatPercent(RETENCION_USA * 100, { sign: false, decimals: 0 })} de EE.UU. (sin tratado de doble imposición con Argentina) y el ${formatPercent(IMPUESTO_CHEQUE * 100, { sign: false })} de débitos y créditos → llega el ${formatPercent(FACTOR_NETO_DIVIDENDO * 100, { sign: false })} del bruto.\nNo incluye la comisión del depositario (Comafi, ~1-2%), así que el neto real puede ser algo menor.\n\nRenta y amortización de bonos ARG: sin retención, al 100%.`}
-                  style={{ margin: 0, fontSize: 12, fontWeight: 700, color: 'var(--text)' }}
-                >
-                  A cobrar (neto):{' '}
-                  {Object.entries(totalMesPorMoneda)
-                    .map(([moneda, total]) => fmtMonto(total, moneda))
-                    .join('  ·  ')}
-                  <span style={{ fontWeight: 400, color: 'var(--muted)', marginLeft: 6 }}>
-                    · dividendos con {formatPercent(RETENCION_USA * 100, { sign: false, decimals: 0 })} de retención descontado
-                  </span>
-                  {cobroAnualTotal > 0 && (
-                    <span
-                      title={'Proyección anual de dividendos: tenencia actual × yield de los últimos 12 meses, ya neta de retenciones.\nAsume que se repiten igual el año próximo — no son pagos confirmados.'}
-                      style={{ fontWeight: 400, color: 'var(--muted)', marginLeft: 6 }}
-                    >
-                      · {fmtMonto(cobroAnualTotal, 'USD')}/año ({formatPercent(yieldCartera * 100, { sign: false, decimals: 2 })} de la cartera)
-                    </span>
-                  )}
-                </p>
-              )}
-            </div>
+            <p style={{ margin: 0, fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--primary)' }}>
+              Eventos de {MESES_LABEL[mesIdx]}
+            </p>
             {eventosDelMes.length === 0 ? (
               <p style={{ margin: 0, fontSize: 12, color: 'var(--muted)' }}>Sin eventos este mes para los tickers actuales.</p>
             ) : (
