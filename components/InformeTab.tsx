@@ -20,6 +20,8 @@ interface Props {
   totalPorMes: Record<string, number>;
   hideValues: boolean;
   moneda?: Moneda;
+  /** Mes base de la comparación (clave ordenable, ej. "2026-01"). Default: el último mes disponible. */
+  mesSel?: string;
 }
 
 // ── helpers ───────────────────────────────────────────────────────────────────
@@ -235,13 +237,14 @@ export default function InformeTab({
   totalPorMes,
   hideValues,
   moneda = 'USD',
+  mesSel,
 }: Props) {
   const puedeAnalizar = resumenSeries.length >= 2;
 
   const computed = useMemo(() => {
     if (!puedeAnalizar) return null;
-    return computeInforme(resumenSeries, tenenciasPorMes, mesesDisponibles, totalPorMes, moneda);
-  }, [resumenSeries, tenenciasPorMes, mesesDisponibles, totalPorMes, puedeAnalizar, moneda]);
+    return computeInforme(resumenSeries, tenenciasPorMes, mesesDisponibles, totalPorMes, moneda, mesSel);
+  }, [resumenSeries, tenenciasPorMes, mesesDisponibles, totalPorMes, puedeAnalizar, moneda, mesSel]);
 
   if (!puedeAnalizar || !computed) {
     return (
@@ -301,10 +304,16 @@ function computeInforme(
   mesesDisponibles: string[],
   totalPorMes: Record<string, number>,
   moneda: Moneda,
+  mesSel?: string,
 ) {
-  const sorted     = Object.keys(tenenciasPorMes).sort();
-  const keyActual  = sorted[sorted.length - 1];
-  const keyAnt     = sorted[sorted.length - 2];
+  const sorted = Object.keys(tenenciasPorMes).sort();
+  // `mesSel` es la clave ordenable del mes elegido en Tenencias (MonthSlider).
+  // Sin selección (uso histórico de InformeTab) se compara el último mes
+  // disponible contra el anterior.
+  const idxSel    = mesSel != null ? sorted.indexOf(mesSel) : sorted.length - 1;
+  const idxActual = idxSel >= 0 ? idxSel : sorted.length - 1;
+  const keyActual = sorted[idxActual];
+  const keyAnt    = sorted[idxActual - 1];
 
   const tenActual  = tenenciasPorMes[keyActual] ?? [];
   const tenAnt     = tenenciasPorMes[keyAnt]    ?? [];

@@ -5,9 +5,8 @@
  * cartera, junto con sus schemas JSON.
  *
  * Único consumidor hoy: `mcp/server.ts` (MCP server para Claude Desktop /
- * Claude Code). `components/ChatBot.tsx` NO usa esta capa — no hace tool
- * calling ni llama a ninguna API route; si alguna vez se le agrega, este es
- * el módulo del que tiene que colgar.
+ * Claude Code). El dashboard no tiene chat propio — si alguna vez se agrega
+ * uno con tool calling, este es el módulo del que tiene que colgar.
  *
  * Cada herramienta devuelve datos crudos (números, no strings formateados):
  * el modelo redacta la prosa, el código provee los hechos. Formatear acá
