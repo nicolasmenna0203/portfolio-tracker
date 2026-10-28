@@ -343,7 +343,12 @@ input, select, textarea { font-size: 16px; }
   }
 
   .mobile-header-title-block { min-width: 0; }
-  .mobile-header-title-block p { display: none; } /* ocultar subtítulo "Portfolio · Finanzas" */
+  .mobile-header-title-block p {
+    font-size: 8px !important;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
   .mobile-header-title-block h1 {
     font-size: 15px !important;
     white-space: nowrap;
