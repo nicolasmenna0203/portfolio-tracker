@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import {
   ComposedChart, Line, Area, XAxis, YAxis, Tooltip,
   CartesianGrid, ResponsiveContainer, ReferenceLine,
@@ -8,11 +8,40 @@ import {
 import type { DashboardData } from '@/types';
 import { useIsMobile } from '@/lib/useIsMobile';
 import { formatMoney, formatPercent, formatNumber } from '@/lib/format';
+import { tasaCartera, type ResumenFlujo } from '@/lib/finanzasPersonales';
 
 interface Props {
   data: DashboardData;
   hideValues: boolean;
+  /** Flujo mensual en USD (ingreso, gastos, aporte real); null mientras carga. */
+  flujo: ResumenFlujo | null;
 }
+
+/**
+ * De dónde sale la tasa de la proyección. 'manual' es el slider; las otras dos
+ * usan el TWR anualizado de la propia cartera (ver
+ * docs/decisiones/0023-tasa-de-cartera-para-proyecciones.md).
+ */
+type TasaModo = 'manual' | '12m' | 'max';
+
+interface Params {
+  aporte: number;
+  tasa: number;
+  horizonte: number;
+  objetivo: number;
+  /** Ausente en lo guardado antes de existir el modo: se lee como 'manual'. */
+  tasaModo?: TasaModo;
+}
+
+const TASA_MODOS: { id: TasaModo; label: string }[] = [
+  { id: 'manual', label: 'Manual' },
+  { id: '12m',    label: 'Cartera 12m' },
+  { id: 'max',    label: 'Cartera total' },
+];
+
+// Por encima de esto la tasa observada es casi seguro un tramo bueno del mercado
+// y no algo sostenible a años vista; se avisa, no se recorta.
+const TASA_ALTA_PCT = 25;
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -109,7 +138,7 @@ function labelMesFuturo(mesOffset: number, ultimaFecha: string): string {
 
 // ── Componente principal ──────────────────────────────────────────────────────
 
-export default function ProyeccionesTab({ data, hideValues }: Props) {
+export default function ProyeccionesTab({ data, hideValues, flujo }: Props) {
   const { kpis, resumenSeries } = data;
   const isMobile = useIsMobile();
   const totalActual = kpis.totalCartera;
@@ -121,11 +150,11 @@ export default function ProyeccionesTab({ data, hideValues }: Props) {
   function loadParams() {
     try {
       const s = localStorage.getItem(PARAMS_KEY);
-      if (s) return JSON.parse(s) as { aporte: number; tasa: number; horizonte: number; objetivo: number };
+      if (s) return JSON.parse(s) as Params;
     } catch {}
     return null;
   }
-  function saveParams(p: { aporte: number; tasa: number; horizonte: number; objetivo: number }) {
+  function saveParams(p: Params) {
     try { localStorage.setItem(PARAMS_KEY, JSON.stringify(p)); } catch {}
   }
 
@@ -134,11 +163,38 @@ export default function ProyeccionesTab({ data, hideValues }: Props) {
   const [tasa,      setTasa]      = useState(saved?.tasa      ?? 10);
   const [horizonte, setHorizonte] = useState(saved?.horizonte ?? 60);
   const [objetivo,  setObjetivo]  = useState(saved?.objetivo  ?? (Math.round(totalActual * 2 / 1000) * 1000 || 100000));
+  const [tasaModo,  setTasaModo]  = useState<TasaModo>(saved?.tasaModo ?? 'manual');
 
-  function updateAporte(v: number)    { setAporte(v);    saveParams({ aporte: v,    tasa, horizonte, objetivo }); }
-  function updateTasa(v: number)      { setTasa(v);      saveParams({ aporte, tasa: v,      horizonte, objetivo }); }
-  function updateHorizonte(v: number) { setHorizonte(v); saveParams({ aporte, tasa, horizonte: v, objetivo }); }
-  function updateObjetivo(v: number)  { setObjetivo(v);  saveParams({ aporte, tasa, horizonte, objetivo: v }); }
+  // Un solo punto de guardado: cada control cambia un campo y persiste el resto tal cual.
+  function actualizar(cambio: Partial<Params>) {
+    const next: Params = { aporte, tasa, horizonte, objetivo, tasaModo, ...cambio };
+    setAporte(next.aporte); setTasa(next.tasa); setHorizonte(next.horizonte);
+    setObjetivo(next.objetivo); setTasaModo(next.tasaModo ?? 'manual');
+    saveParams(next);
+  }
+  const updateAporte    = (v: number)    => actualizar({ aporte: v });
+  const updateTasa      = (v: number)    => actualizar({ tasa: v });
+  const updateHorizonte = (v: number)    => actualizar({ horizonte: v });
+  const updateObjetivo  = (v: number)    => actualizar({ objetivo: v });
+  const updateTasaModo  = (v: TasaModo)  => actualizar({ tasaModo: v });
+
+  // ── Tasa observada de la cartera (TWR anualizado en USD) en las dos ventanas
+  const tasa12m = useMemo(() => tasaCartera(resumenSeries, data.movimientos, '12m'), [resumenSeries, data.movimientos]);
+  const tasaMax = useMemo(() => tasaCartera(resumenSeries, data.movimientos, 'max'), [resumenSeries, data.movimientos]);
+  const tasaObservada = tasaModo === '12m' ? tasa12m : tasaModo === 'max' ? tasaMax : null;
+  // Si el modo guardado ya no tiene datos (serie recortada), se cae al slider.
+  const usaCartera = tasaObservada != null;
+  const tasaEfectiva = tasaObservada?.twrAnualPct ?? tasa;
+
+  // ── Aporte real (promedio de meses cerrados) como punto de partida
+  const aporteReal = flujo?.aporteProm != null && flujo.aporteProm > 0 ? flujo.aporteProm : null;
+  const aporteRealRedondeado = aporteReal != null ? Math.round(aporteReal / 50) * 50 : null;
+  // Tope del slider: debe abarcar el aporte real y el valor guardado, pero NO
+  // depender del valor que se está arrastrando (si no, el tope se movería bajo el
+  // dedo). Por eso usa el aporte con el que arrancó el componente, no el actual.
+  const aporteInicial = useRef(aporte).current;
+  const aporteMax = Math.max(5000, Math.ceil(aporteInicial / 500) * 500, Math.ceil((aporteReal ?? 0) * 2 / 500) * 500);
+
 
   // ── Datos históricos normalizados para el gráfico
   const historico = useMemo(() =>
@@ -151,8 +207,8 @@ export default function ProyeccionesTab({ data, hideValues }: Props) {
 
   // ── Proyección futura
   const proyeccion = useMemo(() =>
-    buildProyeccion(totalActual, aporte, tasa, horizonte),
-  [totalActual, aporte, tasa, horizonte]);
+    buildProyeccion(totalActual, aporte, tasaEfectiva, horizonte),
+  [totalActual, aporte, tasaEfectiva, horizonte]);
 
   // ── Datos combinados para el gráfico
   const chartData = useMemo(() => {
@@ -214,18 +270,99 @@ export default function ProyeccionesTab({ data, hideValues }: Props) {
           <p style={{ margin: 0, fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--primary)' }}>
             Parámetros
           </p>
-          <SliderRow
-            label="Aporte mensual"
-            value={aporte} min={0} max={5000} step={50}
-            fmt={v => formatMoney(v, { currency: 'USD' })}
-            onChange={updateAporte}
-          />
-          <SliderRow
-            label="Tasa anual estimada"
-            value={tasa} min={1} max={30} step={0.5}
-            fmt={v => formatPercent(v, { sign: false })}
-            onChange={updateTasa}
-          />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <SliderRow
+              label="Aporte mensual"
+              value={aporte} min={0} max={aporteMax} step={50}
+              fmt={v => formatMoney(v, { currency: 'USD' })}
+              onChange={updateAporte}
+            />
+            {/* El aporte real sale de Ingresos + movimientos (lib/finanzasPersonales.ts). */}
+            {aporteRealRedondeado != null && flujo && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <button
+                  onClick={() => updateAporte(aporteRealRedondeado)}
+                  disabled={aporte === aporteRealRedondeado}
+                  style={{
+                    alignSelf: 'flex-start', padding: '3px 10px', borderRadius: 14, fontSize: 11, fontWeight: 600,
+                    border: '1px solid var(--border)', background: 'transparent',
+                    color: aporte === aporteRealRedondeado ? 'var(--muted)' : 'var(--primary)',
+                    cursor: aporte === aporteRealRedondeado ? 'default' : 'pointer',
+                  }}
+                >
+                  {aporte === aporteRealRedondeado
+                    ? 'Es tu aporte real'
+                    : `Usar mi aporte real · ${formatMoney(aporteRealRedondeado, { currency: 'USD', hidden: hideValues })}`}
+                </button>
+                {flujo.ratioInversionPct != null && flujo.ingresoProm != null && !hideValues && (
+                  <span style={{ fontSize: 10, color: 'var(--muted)', lineHeight: 1.4 }}>
+                    Invertís {formatPercent(flujo.ratioInversionPct, { sign: false, decimals: 0 })} del ingreso de{' '}
+                    {formatMoney(flujo.ingresoProm, { currency: 'USD' })}/mes (prom. {flujo.mesesBase} meses cerrados).
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Tasa: manual o la observada de la propia cartera. */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <span style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+              Tasa anual estimada
+            </span>
+            <div role="group" aria-label="Origen de la tasa" style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+              {TASA_MODOS.map(m => {
+                const disponible = m.id === 'manual' || (m.id === '12m' ? tasa12m : tasaMax) != null;
+                const activo = m.id === 'manual' ? !usaCartera : tasaModo === m.id && usaCartera;
+                return (
+                  <button
+                    key={m.id}
+                    onClick={() => updateTasaModo(m.id)}
+                    disabled={!disponible}
+                    aria-pressed={activo}
+                    style={{
+                      padding: '3px 10px', borderRadius: 14, fontSize: 11, fontWeight: 600,
+                      border: '1px solid', cursor: disponible ? 'pointer' : 'default',
+                      borderColor: activo ? 'var(--primary)' : 'var(--border)',
+                      background: activo ? 'var(--primary-dim)' : 'transparent',
+                      color: activo ? 'var(--primary)' : 'var(--muted)',
+                      opacity: disponible ? 1 : 0.5,
+                    }}
+                  >
+                    {m.label}
+                  </button>
+                );
+              })}
+            </div>
+
+            {tasaObservada == null ? (
+              <SliderRow
+                label="Tasa manual"
+                value={tasa} min={1} max={30} step={0.5}
+                fmt={v => formatPercent(v, { sign: false })}
+                onChange={updateTasa}
+              />
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <span style={{ fontSize: 22, fontWeight: 700, color: 'var(--primary)', letterSpacing: '-0.02em', fontVariantNumeric: 'tabular-nums' }}>
+                  {formatPercent(tasaObservada.twrAnualPct, { sign: false, hidden: hideValues })}
+                </span>
+                <span style={{ fontSize: 10, color: 'var(--muted)', lineHeight: 1.4 }}>
+                  TWR anualizado en USD · {tasaObservada.meses} meses desde {tasaObservada.desdeFecha}.
+                  {tasaObservada.tirAnualPct != null && !hideValues && (
+                    <> TIR del mismo tramo, solo de referencia: {formatPercent(tasaObservada.tirAnualPct, { sign: false })}.</>
+                  )}
+                </span>
+                {(tasaObservada.meses < 12 || tasaObservada.twrAnualPct > TASA_ALTA_PCT) && (
+                  <span style={{ fontSize: 10, color: 'var(--down)', lineHeight: 1.4 }}>
+                    {tasaObservada.meses < 12
+                      ? 'Menos de 12 meses de historia: anualizar extrapola un tramo corto.'
+                      : 'Tasa alta: proyectarla a años asume que el tramo bueno se repite. Tomalo como techo.'}
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+
           <SliderRow
             label="Horizonte"
             value={horizonte} min={6} max={120} step={6}

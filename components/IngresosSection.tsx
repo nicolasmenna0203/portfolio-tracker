@@ -1,17 +1,24 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
-import { usePathname } from 'next/navigation';
+import { useState, useMemo } from 'react';
 import {
-  BarChart, Bar, XAxis, YAxis, Tooltip, Legend,
-  CartesianGrid, ResponsiveContainer,
+  BarChart, Bar, XAxis, YAxis, Tooltip, Legend, Cell,
+  ComposedChart, Line, CartesianGrid, ResponsiveContainer,
 } from 'recharts';
 import type { IngresosResponse, IngresoRow } from '@/types';
+import { ratioParaLinea, type MesFlujo } from '@/lib/finanzasPersonales';
 import { useIsMobile } from '@/lib/useIsMobile';
-import { formatMoney, type Moneda } from '@/lib/format';
+import { formatMoney, formatPercent, type Moneda } from '@/lib/format';
 import KPICard from './KPICard';
 
+// Los datos los carga FinanzasPersonalesTab (se comparten con Gastos y
+// Proyecciones); acá solo se muestran.
 interface Props {
+  resp: IngresosResponse | null;
+  loading: boolean;
+  error: string | null;
+  /** Ingreso vs aporte por mes, en la moneda del toggle (lib/finanzasPersonales.ts). */
+  serie: MesFlujo[];
   hideValues: boolean;
   moneda?: Moneda;
 }
@@ -53,27 +60,68 @@ function CustomTooltip({ active, payload, label, moneda }: { active?: boolean; p
   );
 }
 
-export default function IngresosSection({ hideValues, moneda = 'ARS' }: Props) {
-  const [resp, setResp] = useState<IngresosResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+/** Una barra del gráfico de inversión: el ingreso del mes partido en lo invertido y el resto. */
+interface BarraInversion extends MesFlujo {
+  ahorro: number;
+  resto: number;
+  /** El aporte supera el tope del eje (ver `techo`): la barra se ve cortada. */
+  cortada: boolean;
+  /** Ratio para la línea; `null` en meses atípicos (ver `ratioParaLinea`). */
+  ratioLinea: number | null;
+}
+
+function InversionTooltip({ active, payload, moneda }: { active?: boolean; payload?: { payload: BarraInversion }[]; moneda: Moneda }) {
+  if (!active || !payload?.length) return null;
+  const m = payload[0].payload;
+  return (
+    <div style={{
+      background: 'var(--card)', border: '1px solid var(--border)',
+      borderRadius: 8, padding: '10px 14px', fontSize: 12,
+      boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+    }}>
+      <p style={{ margin: '0 0 6px', color: 'var(--muted)', fontWeight: 600 }}>
+        {m.fecha}{m.cerrado ? '' : ' · en curso'}
+      </p>
+      <p style={{ margin: '2px 0', display: 'flex', justifyContent: 'space-between', gap: 12 }}>
+        <span style={{ color: 'var(--muted)' }}>Ingreso</span>
+        <strong style={{ fontVariantNumeric: 'tabular-nums' }}>{formatMoney(m.ingreso, { currency: moneda })}</strong>
+      </p>
+      {/* Retiro neto en rojo y con signo: formatMoney descarta el signo salvo
+          que se lo pidan, y un retiro sin "-" se leería como aporte. */}
+      <p style={{ margin: '2px 0', display: 'flex', justifyContent: 'space-between', gap: 12 }}>
+        <span style={{ color: m.aporte < 0 ? 'var(--down)' : 'var(--up)' }}>
+          {m.aporte < 0 ? 'Retiro neto' : 'Aporte a la cartera'}
+        </span>
+        <strong style={{ fontVariantNumeric: 'tabular-nums', color: m.aporte < 0 ? 'var(--down)' : undefined }}>
+          {formatMoney(m.aporte, { currency: moneda, sign: m.aporte < 0 })}
+        </strong>
+      </p>
+      <p style={{ margin: '2px 0', display: 'flex', justifyContent: 'space-between', gap: 12 }}>
+        <span style={{ color: 'var(--muted)' }}>Ratio de inversión</span>
+        <strong style={{ fontVariantNumeric: 'tabular-nums', color: m.aporte < 0 ? 'var(--down)' : undefined }}>
+          {formatPercent(m.ratioInversionPct, { sign: false, decimals: 0 })}
+        </strong>
+      </p>
+      {m.aporte < 0 && (
+        <p style={{ margin: '6px 0 0', color: 'var(--muted)', fontSize: 11 }}>
+          Retiro neto: no se dibuja en las barras ni en la línea.
+        </p>
+      )}
+      {m.aporte >= 0 && m.ratioInversionPct != null && m.ratioLinea == null && (
+        <p style={{ margin: '6px 0 0', color: 'var(--muted)', fontSize: 11 }}>
+          Aporte mayor al ingreso: no se dibuja en la línea.
+        </p>
+      )}
+      {m.cortada && (
+        <p style={{ margin: '2px 0 0', color: 'var(--muted)', fontSize: 11 }}>Barra cortada: el aporte supera la escala.</p>
+      )}
+    </div>
+  );
+}
+
+export default function IngresosSection({ resp, loading, error, serie, hideValues, moneda = 'ARS' }: Props) {
   const [verTodos, setVerTodos] = useState(false);
   const isMobile = useIsMobile();
-  const pathname = usePathname();
-  const apiBase = pathname?.startsWith('/demo') ? '/api/demo' : '/api';
-
-  useEffect(() => {
-    setLoading(true);
-    setError(null);
-    fetch(`${apiBase}/ingresos`)
-      .then((r) => r.json())
-      .then((json) => {
-        if (json.error) throw new Error(json.error);
-        setResp(json as IngresosResponse);
-      })
-      .catch((e) => setError(e instanceof Error ? e.message : String(e)))
-      .finally(() => setLoading(false));
-  }, [apiBase]);
 
   const empleadorColor = useMemo(() => {
     const map = new Map<string, string>();
@@ -107,6 +155,32 @@ export default function IngresosSection({ hideValues, moneda = 'ARS' }: Props) {
   // cada tick según su índice real y solo se vacía el texto de los que no tocan
   // — así la posición geométrica del tick siempre coincide con su barra.
   const xTickStep = chartData.length > 8 ? Math.ceil(chartData.length / 8) : 1;
+
+  // Gráfico de inversión: cada barra mide el ingreso del mes (lo invertido abajo,
+  // el resto arriba) en el eje izquierdo; el ratio aportes/ingreso es una línea
+  // en el eje derecho, fijo en 0–100%. Los dos ejes arrancan en 0, así que el
+  // cero es común. Lo que cae fuera de ese rango no se dibuja:
+  // - Retiro neto (aporte < 0): la parte verde queda en 0 y la barra muestra el
+  //   ingreso completo; el aporte negativo solo figura en el tooltip.
+  // - Ratio fuera de 0–100% (aporte mayor al ingreso, ver `ratioParaLinea`): sin
+  //   punto en la línea. La escala de monto se acota a 1,3× el mayor ingreso para
+  //   que un aporte extraordinario no aplaste a los demás; la barra queda cortada
+  //   y el tooltip lo avisa.
+  const { barras, techo } = useMemo(() => {
+    const maxIngreso = Math.max(0, ...serie.map((m) => m.ingreso));
+    const techo = maxIngreso > 0 ? maxIngreso * 1.3 : undefined;
+    const barras: BarraInversion[] = serie.map((m) => {
+      const invertido = Math.max(0, m.aporte);
+      return {
+        ...m,
+        ahorro: invertido,
+        resto: Math.max(0, m.ingreso - invertido),
+        cortada: techo != null && m.aporte > techo,
+        ratioLinea: ratioParaLinea(m),
+      };
+    });
+    return { barras, techo };
+  }, [serie]);
 
   // Las acreditaciones se muestran de a tandas en flujo normal: un contenedor
   // con alto fijo + overflow robaba el gesto de scroll a la pestaña (dos
@@ -223,6 +297,85 @@ export default function IngresosSection({ hideValues, moneda = 'ARS' }: Props) {
             ))}
           </BarChart>
         </ResponsiveContainer>
+      </div>
+
+      <div style={{
+        background: 'var(--card)', border: '1px solid var(--border)',
+        borderRadius: 12, padding: '16px 20px',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, margin: '0 0 12px' }}>
+          <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--muted)', margin: 0 }}>
+            Ratio de inversión sobre ingresos, por mes ({moneda})
+          </p>
+          <div style={{ display: 'flex', gap: 14, fontSize: 11, color: 'var(--muted)' }}>
+            <span><span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: 2, background: 'var(--up)', marginRight: 5 }} />Invertido (aporte)</span>
+            <span><span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: 2, background: 'var(--muted)', opacity: 0.35, marginRight: 5 }} />Resto del ingreso</span>
+            <span><span style={{ display: 'inline-block', width: 10, height: 2, background: 'var(--primary)', marginRight: 5, verticalAlign: 'middle' }} />Ratio de inversión (%)</span>
+          </div>
+        </div>
+        <ResponsiveContainer width="100%" height={220} minHeight={220}>
+          <ComposedChart data={barras} barCategoryGap="25%">
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" vertical={false} />
+            <XAxis
+              dataKey="fecha"
+              tick={{ fontSize: isMobile ? 9 : 11, fill: 'var(--muted)' }}
+              axisLine={{ stroke: 'var(--border)' }}
+              tickLine={false}
+              interval={0}
+              tickFormatter={(value, index) => {
+                const esUltimo = index === barras.length - 1;
+                return (index % xTickStep === 0 || esUltimo) ? value : '';
+              }}
+            />
+            <YAxis
+              yAxisId="monto"
+              domain={[0, techo ?? 'auto']}
+              allowDataOverflow
+              tick={{ fontSize: isMobile ? 9 : 11, fill: 'var(--muted)' }}
+              axisLine={false}
+              tickLine={false}
+              tickFormatter={(v) => formatMoney(v, { currency: moneda, mode: 'compact', compactShort: isMobile, hidden: hideValues })}
+              width={isMobile ? 40 : (hideValues ? 40 : 56)}
+            />
+            <YAxis
+              yAxisId="ratio"
+              orientation="right"
+              domain={[0, 100]}
+              ticks={[0, 25, 50, 75, 100]}
+              tick={{ fontSize: isMobile ? 9 : 11, fill: 'var(--muted)' }}
+              axisLine={false}
+              tickLine={false}
+              tickFormatter={(v) => `${v}%`}
+              width={isMobile ? 34 : 40}
+            />
+            <Tooltip cursor={{ fill: 'var(--border-subtle)', opacity: 0.4 }} content={hideValues ? () => null : <InversionTooltip moneda={moneda} />} />
+            {/* El mes en curso va más claro: su ingreso suele estar incompleto. */}
+            <Bar yAxisId="monto" dataKey="ahorro" stackId="mes" fill="var(--up)">
+              {barras.map((m) => <Cell key={m.mesKey} fillOpacity={m.cerrado ? 1 : 0.45} />)}
+            </Bar>
+            <Bar yAxisId="monto" dataKey="resto" stackId="mes" fill="var(--muted)" radius={[3, 3, 0, 0]}>
+              {barras.map((m) => <Cell key={m.mesKey} fillOpacity={m.cerrado ? 0.35 : 0.15} />)}
+            </Bar>
+            {/* Sin connectNulls: un mes atípico deja un corte visible en vez de
+                una línea que lo salta como si no hubiera pasado nada. */}
+            <Line
+              yAxisId="ratio"
+              type="monotone"
+              dataKey="ratioLinea"
+              stroke="var(--primary)"
+              strokeWidth={2}
+              dot={{ r: 3, fill: 'var(--primary)', strokeWidth: 0 }}
+              activeDot={{ r: 4 }}
+              isAnimationActive={false}
+            />
+          </ComposedChart>
+        </ResponsiveContainer>
+        <p style={{ margin: '8px 0 0', fontSize: 11, color: 'var(--muted)', lineHeight: 1.45 }}>
+          Cada barra es el ingreso del mes; lo verde es lo que entró a la cartera (menos
+          retiros) y la línea es ese aporte sobre el ingreso. Ambos ejes arrancan en 0: un
+          retiro neto no se dibuja y un aporte mayor al ingreso (venta de un bien, por
+          ejemplo) no tiene punto en la línea; en el tooltip figura el valor real.
+        </p>
       </div>
 
       <div style={{

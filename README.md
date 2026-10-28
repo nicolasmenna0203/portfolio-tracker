@@ -29,7 +29,7 @@ Diez tabs, todas dentro de una sola página:
 | **Calendario** | Cobros esperados: dividendos, renta y amortización de bonos, balances |
 | **Performance** | Renta fija (TIR, duration, paridad, sensibilidad), renta variable (fundamentals), FCI y simulador de carry trade |
 | **Ingresos** | Haberes cargados y su evolución |
-| **Gastos Fijos** | Suscripciones y seguros recurrentes, con total mensual/anual equivalente |
+| **Gastos** | Gastos mensuales (recurrentes y estimados) por categoría, con total mensual/anual y peso sobre el ingreso |
 
 Transversal: tema claro/oscuro, toggle USD/ARS, botón para ocultar valores, slider de mes.
 
@@ -125,7 +125,7 @@ La alerta semanal se dispara desde GitHub Actions (`.github/workflows/alerta-sem
 | `Tenencias` | Ticker, Tenencia (ARS), Tenencia (USD), Fecha | Snapshots mensuales de posiciones |
 | `Ingresos` | Fecha, Empleador, Monto (ARS), Monto (USD) | Haberes acreditados |
 | `Objetivos` | Un bloque de 2 columnas por dimensión | Composición objetivo. La crea y reescribe el dashboard: no editar a mano |
-| `GastosFijos` | Nombre, Monto, Moneda, Frecuencia, Categoria | Suscripciones/seguros recurrentes. Catálogo, no histórico — se edita desde la tab o a mano; el dashboard reescribe toda la hoja en cada guardado |
+| `GastosFijos` | Nombre, Monto, Moneda, Frecuencia, Categoria | Gastos mensuales (recurrentes y estimados). Catálogo, no histórico — se edita desde la tab o a mano; el dashboard reescribe toda la hoja en cada guardado |
 
 ### Cálculo de métricas
 

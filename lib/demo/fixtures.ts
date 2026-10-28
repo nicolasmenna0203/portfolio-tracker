@@ -39,7 +39,7 @@ import {
 
 const DIA_MS = 24 * 3600 * 1000;
 
-// ── Gastos fijos (catálogo, no serie temporal) ───────────────────────────────
+// ── Gastos (catálogo mensual, no serie temporal) ─────────────────────────────
 
 export function buildGastosFijos(): GastosFijosResponse {
   return {
@@ -50,6 +50,10 @@ export function buildGastosFijos(): GastosFijosResponse {
       { nombre: 'Seguro auto', monto: 45000, moneda: 'ARS', frecuencia: 'mensual', categoria: 'Seguros' },
       { nombre: 'Seguro hogar', monto: 180, moneda: 'USD', frecuencia: 'anual', categoria: 'Seguros' },
       { nombre: 'Gimnasio', monto: 15000, moneda: 'ARS', frecuencia: 'mensual', categoria: 'Otros' },
+      { nombre: 'Supermercado', monto: 380000, moneda: 'ARS', frecuencia: 'mensual', categoria: 'Comida' },
+      { nombre: 'Salidas y delivery', monto: 140000, moneda: 'ARS', frecuencia: 'mensual', categoria: 'Comida' },
+      { nombre: 'Transporte', monto: 70000, moneda: 'ARS', frecuencia: 'mensual', categoria: 'Transporte' },
+      { nombre: 'Luz, gas e internet', monto: 95000, moneda: 'ARS', frecuencia: 'mensual', categoria: 'Servicios' },
     ],
     generatedAt: Date.now(),
   };

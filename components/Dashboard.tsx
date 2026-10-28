@@ -129,7 +129,7 @@ export default function Dashboard({ data }: Props) {
     // En dos pasos a propósito: la pestaña activa pasa a font-weight 700, así
     // que su ancho —y el scrollWidth del nav— cambian recién después de que el
     // navegador repinta. Centrar en el mismo tick usa la medida vieja y la
-    // última pestaña queda 2px cortada (visto en Gastos Fijos).
+    // última pestaña queda 2px cortada (visto en Gastos).
     const raf = requestAnimationFrame(() => {
       tabRefs.current[tab]?.scrollIntoView({ inline: 'center', block: 'nearest' });
       actualizarSombras();
@@ -440,7 +440,7 @@ export default function Dashboard({ data }: Props) {
         </TabScroll>
       )}
 
-      {/* ── Tab: Finanzas Personales (Ingresos / Gastos Fijos / Proyecciones) ── */}
+      {/* ── Tab: Finanzas Personales (Ingresos / Gastos / Proyecciones) ── */}
       {tab === 'finanzas-personales' && (
         <TabScroll tab={tab} posiciones={scrollPorTab}>
           <FinanzasPersonalesTab data={data} hideValues={hideValues} moneda={moneda} mepActual={mepActual} />

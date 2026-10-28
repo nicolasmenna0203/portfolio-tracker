@@ -1,30 +1,34 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { usePathname } from 'next/navigation';
-import type { GastosFijosResponse, GastoFijo, FrecuenciaGasto } from '@/types';
-import { formatMoney, type Moneda } from '@/lib/format';
+import type { GastoFijo, FrecuenciaGasto } from '@/types';
+import { formatMoney, formatPercent, type Moneda } from '@/lib/format';
+import { totalGastos, type ResumenFlujo } from '@/lib/finanzasPersonales';
 import KPICard from './KPICard';
 
+// Catálogo de gastos mensuales: recurrentes (suscripciones, seguros, alquiler)
+// y también estimados (supermercado, transporte, salidas) cargados como un
+// monto por mes. Cuanto más completo, menos queda "sin asignar" en la franja de
+// flujo mensual. Persiste en la hoja `GastosFijos` (nombre histórico, se mantiene
+// para no huérfanar el Sheet existente; ver lib/gastosFijos.ts).
+//
+// La lista la carga FinanzasPersonalesTab (se comparte con Ingresos y
+// Proyecciones). Esta sección la edita: guarda en el servidor y le avisa al
+// padre con `onChange` para que las demás pestañas vean el cambio.
 interface Props {
+  gastos: GastoFijo[];
+  loading: boolean;
+  loadError: string | null;
+  onChange: (lista: GastoFijo[]) => void;
+  /** Flujo mensual en la moneda del toggle: aporta el ingreso promedio contra el que se miden los gastos. */
+  resumen: ResumenFlujo;
   hideValues: boolean;
   moneda?: Moneda;
   mepActual: number | null;
 }
 
 const CATEGORIA_COLORS = ['#cfab6e', '#5fb896', '#8d7fc7', '#d9824e', '#6fa8d6', '#c15c4a'];
-
-/** Equivalente mensual: los gastos anuales se prorratean /12 para que el total sea comparable. */
-function montoMensual(g: GastoFijo): number {
-  return g.frecuencia === 'anual' ? g.monto / 12 : g.monto;
-}
-
-/** Convierte el monto mensualizado de un gasto a la moneda pedida usando el MEP actual. */
-function montoEnMoneda(montoMensualOriginal: number, monedaOrigen: 'ARS' | 'USD', monedaDestino: Moneda, mep: number | null): number | null {
-  if (monedaOrigen === monedaDestino) return montoMensualOriginal;
-  if (mep == null) return null;
-  return monedaOrigen === 'ARS' ? montoMensualOriginal / mep : montoMensualOriginal * mep;
-}
 
 interface FormGasto {
   nombre: string;
@@ -36,64 +40,56 @@ interface FormGasto {
 
 const FORM_INICIAL: FormGasto = { nombre: '', monto: '', moneda: 'ARS', frecuencia: 'mensual', categoria: '' };
 
-export default function GastosFijosSection({ hideValues, moneda = 'ARS', mepActual }: Props) {
-  const [resp, setResp] = useState<GastosFijosResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+export default function GastosSection({
+  gastos, loading, loadError, onChange, resumen, hideValues, moneda = 'ARS', mepActual,
+}: Props) {
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState(FORM_INICIAL);
   const pathname = usePathname();
   const apiBase = pathname?.startsWith('/demo') ? '/api/demo' : '/api';
   const esDemo = pathname?.startsWith('/demo') ?? false;
-
-  function cargar() {
-    setLoading(true);
-    setError(null);
-    fetch(`${apiBase}/gastos-fijos`)
-      .then((r) => r.json())
-      .then((json) => {
-        if (json.error) throw new Error(json.error);
-        setResp(json as GastosFijosResponse);
-      })
-      .catch((e) => setError(e instanceof Error ? e.message : String(e)))
-      .finally(() => setLoading(false));
-  }
-
-  useEffect(cargar, [apiBase]);
+  const error = saveError ?? loadError;
 
   const categoriaColor = useMemo(() => {
     const map = new Map<string, string>();
-    const categorias = Array.from(new Set((resp?.gastos ?? []).map((g) => g.categoria)));
+    const categorias = Array.from(new Set(gastos.map((g) => g.categoria)));
     categorias.forEach((c, i) => map.set(c, CATEGORIA_COLORS[i % CATEGORIA_COLORS.length]));
     return map;
-  }, [resp]);
+  }, [gastos]);
 
+  // Cada categoría con su total mensual en la moneda del toggle.
   const porCategoria = useMemo(() => {
-    if (!resp) return [];
     const map = new Map<string, GastoFijo[]>();
-    for (const g of resp.gastos) {
+    for (const g of gastos) {
       if (!map.has(g.categoria)) map.set(g.categoria, []);
       map.get(g.categoria)!.push(g);
     }
-    return Array.from(map.entries()).sort(([a], [b]) => a.localeCompare(b));
-  }, [resp]);
+    return Array.from(map.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([categoria, items]) => ({
+        categoria,
+        items,
+        total: totalGastos(items, moneda, mepActual).total,
+      }));
+  }, [gastos, moneda, mepActual]);
 
-  const totalMensual = useMemo(() => {
-    if (!resp) return 0;
-    return resp.gastos.reduce((sum, g) => {
-      const v = montoEnMoneda(montoMensual(g), g.moneda, moneda, mepActual);
-      return sum + (v ?? 0);
-    }, 0);
-  }, [resp, moneda, mepActual]);
+  const { total: totalMensual, incompleto: hayInconvertibles } = useMemo(
+    () => totalGastos(gastos, moneda, mepActual),
+    [gastos, moneda, mepActual],
+  );
 
-  const hayInconvertibles = useMemo(() => {
-    if (!resp) return false;
-    return resp.gastos.some((g) => g.moneda !== moneda && mepActual == null);
-  }, [resp, moneda, mepActual]);
+  const ingresoProm = resumen.ingresoProm;
+  const pctIngreso = (monto: number) =>
+    ingresoProm != null && ingresoProm > 0 ? (monto / ingresoProm) * 100 : null;
+
+  // Categoría con más peso en el gasto total (para la tercera tarjeta).
+  const principal = porCategoria.reduce<typeof porCategoria[number] | null>(
+    (max, c) => (max == null || c.total > max.total ? c : max), null);
 
   async function guardar(nuevaLista: GastoFijo[]) {
     setSaving(true);
-    setError(null);
+    setSaveError(null);
     try {
       const r = await fetch(`${apiBase}/gastos-fijos`, {
         method: 'POST',
@@ -102,9 +98,9 @@ export default function GastosFijosSection({ hideValues, moneda = 'ARS', mepActu
       });
       const json = await r.json();
       if (json.error) throw new Error(json.error);
-      setResp({ gastos: nuevaLista, generatedAt: Date.now() });
+      onChange(nuevaLista);
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      setSaveError(e instanceof Error ? e.message : String(e));
     } finally {
       setSaving(false);
     }
@@ -121,19 +117,18 @@ export default function GastosFijosSection({ hideValues, moneda = 'ARS', mepActu
       frecuencia: form.frecuencia,
       categoria: form.categoria.trim() || 'Sin categoría',
     };
-    guardar([...(resp?.gastos ?? []), nuevo]);
+    guardar([...gastos, nuevo]);
     setForm(FORM_INICIAL);
   }
 
   function eliminarGasto(idx: number) {
-    if (!resp) return;
-    guardar(resp.gastos.filter((_, i) => i !== idx));
+    guardar(gastos.filter((_, i) => i !== idx));
   }
 
   if (loading) {
     return (
       <div style={{ padding: 40, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>
-        Cargando gastos fijos...
+        Cargando gastos...
       </div>
     );
   }
@@ -154,8 +149,13 @@ export default function GastosFijosSection({ hideValues, moneda = 'ARS', mepActu
         <KPICard
           label="Total mensual"
           value={formatMoney(totalMensual, { currency: moneda, hidden: hideValues })}
-          sub={hayInconvertibles ? 'sin MEP para convertir algún gasto' : `${resp?.gastos.length ?? 0} gasto${resp?.gastos.length !== 1 ? 's' : ''} fijo${resp?.gastos.length !== 1 ? 's' : ''}`}
+          sub={hayInconvertibles
+            ? 'sin MEP para convertir algún gasto'
+            : pctIngreso(totalMensual) != null
+              ? `${formatPercent(pctIngreso(totalMensual), { sign: false, decimals: 1, hidden: hideValues })} del ingreso mensual`
+              : `${gastos.length} gasto${gastos.length !== 1 ? 's' : ''} cargado${gastos.length !== 1 ? 's' : ''}`}
           accentColor="var(--primary)"
+          tooltip="Suma de lo cargado, a monto mensual: los anuales se prorratean /12 y los de otra moneda se convierten con el MEP actual. El porcentaje es sobre el ingreso promedio de los últimos meses cerrados."
         />
         <KPICard
           label="Total anual estimado"
@@ -163,7 +163,44 @@ export default function GastosFijosSection({ hideValues, moneda = 'ARS', mepActu
           sub="12 × el mensual equivalente"
           accentColor="var(--down)"
         />
+        <KPICard
+          label="Categoría principal"
+          value={principal && totalMensual > 0 ? principal.categoria : 's/d'}
+          sub={principal && totalMensual > 0
+            ? `${formatPercent((principal.total / totalMensual) * 100, { sign: false, decimals: 0, hidden: hideValues })} del gasto total`
+            : 'cargá un gasto para ver el reparto'}
+          accentColor="var(--up)"
+        />
       </div>
+
+      {/* Reparto por categoría y lo que todavía no está explicado: el residuo de la
+          franja de arriba, acá como llamado a cargar más gastos. */}
+      {totalMensual > 0 && !hideValues && (
+        <div style={{
+          background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 12,
+          padding: '12px 18px',
+        }}>
+          <div
+            role="img"
+            aria-label={porCategoria.map((c) => `${c.categoria} ${Math.round((c.total / totalMensual) * 100)}%`).join(', ')}
+            style={{ display: 'flex', height: 10, borderRadius: 5, overflow: 'hidden', background: 'var(--border)' }}
+          >
+            {porCategoria.map((c) => (
+              <div key={c.categoria} style={{ width: `${(c.total / totalMensual) * 100}%`, background: categoriaColor.get(c.categoria) }} />
+            ))}
+          </div>
+          {resumen.sinAsignar != null && resumen.sinAsignar > 0 && (
+            <p style={{ margin: '10px 0 0', fontSize: 11, color: 'var(--muted)', lineHeight: 1.5 }}>
+              Sin asignar: <strong style={{ color: 'var(--text-sec)', fontVariantNumeric: 'tabular-nums' }}>
+                {formatMoney(resumen.sinAsignar, { currency: moneda })}
+              </strong>
+              {resumen.sinAsignarPct != null && ` (${formatPercent(resumen.sinAsignarPct, { sign: false, decimals: 0 })} del ingreso)`}
+              {' '}por mes: ingreso que no está ni en los gastos cargados ni en aportes a la cartera.
+              Es gasto sin cargar o ahorro fuera de la cartera.
+            </p>
+          )}
+        </div>
+      )}
 
       <div style={{
         background: 'var(--card)', border: '1px solid var(--border)',
@@ -174,22 +211,27 @@ export default function GastosFijosSection({ hideValues, moneda = 'ARS', mepActu
         </p>
 
         {porCategoria.length === 0 && (
-          <p style={{ fontSize: 13, color: 'var(--muted)', margin: 0 }}>Todavía no hay gastos fijos cargados.</p>
+          <p style={{ fontSize: 13, color: 'var(--muted)', margin: 0 }}>Todavía no hay gastos cargados. Sumá los recurrentes (suscripciones, seguros, alquiler) y los que estimás por mes (supermercado, transporte, salidas).</p>
         )}
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-          {porCategoria.map(([categoria, gastos]) => (
+          {porCategoria.map(({ categoria, items, total }) => (
             <div key={categoria}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
                 <span style={{
                   width: 8, height: 8, borderRadius: '50%', flexShrink: 0,
                   background: categoriaColor.get(categoria) ?? 'var(--primary)',
                 }} />
-                <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)', textTransform: 'uppercase' }}>{categoria}</span>
+                <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)', textTransform: 'uppercase', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{categoria}</span>
+                {/* Subtotal mensual de la categoría y su peso sobre el ingreso. */}
+                <span style={{ marginLeft: 'auto', flexShrink: 0, fontSize: 11, color: 'var(--muted)', fontVariantNumeric: 'tabular-nums' }}>
+                  {formatMoney(total, { currency: moneda, hidden: hideValues })}
+                  {pctIngreso(total) != null && !hideValues && ` · ${formatPercent(pctIngreso(total), { sign: false, decimals: 1 })}`}
+                </span>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                {gastos.map((g) => {
-                  const idxGlobal = resp!.gastos.indexOf(g);
+                {items.map((g) => {
+                  const idxGlobal = gastos.indexOf(g);
                   return (
                     <div
                       key={`${g.nombre}-${idxGlobal}`}
@@ -241,7 +283,7 @@ export default function GastosFijosSection({ hideValues, moneda = 'ARS', mepActu
             <input
               value={form.nombre}
               onChange={(e) => setForm((f) => ({ ...f, nombre: e.target.value }))}
-              placeholder="Ej. Claude"
+              placeholder="Ej. Supermercado"
               style={{ padding: '7px 10px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontSize: 13 }}
             />
           </div>
@@ -282,7 +324,7 @@ export default function GastosFijosSection({ hideValues, moneda = 'ARS', mepActu
             <input
               value={form.categoria}
               onChange={(e) => setForm((f) => ({ ...f, categoria: e.target.value }))}
-              placeholder="Suscripciones"
+              placeholder="Comida"
               style={{ padding: '7px 10px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontSize: 13 }}
             />
           </div>

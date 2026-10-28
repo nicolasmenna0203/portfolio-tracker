@@ -1,8 +1,11 @@
-// ── Gastos fijos (suscripciones/seguros recurrentes) ────────────────────────
+// ── Gastos (catálogo mensual) ───────────────────────────────────────────────
 //
 // Catálogo, no serie histórica: a diferencia de Ingresos (una fila por
-// acreditación con fecha), acá cada fila es un gasto recurrente vigente
-// (ej. "Claude", "Apple", "Seguro auto") sin fecha de movimiento. El total
+// acreditación con fecha), acá cada fila es un gasto vigente (recurrente como
+// una suscripción o un seguro, o estimado por mes como el supermercado) sin
+// fecha de movimiento. La pestaña se llama "Gastos"; el nombre de este módulo,
+// de la hoja `GastosFijos` y de la ruta `/api/gastos-fijos` quedó del origen
+// (solo recurrentes) y se mantiene para no huérfanar el Sheet existente. El total
 // mensual se deriva convirtiendo los anuales a su equivalente /12.
 //
 // Vive en la hoja `GastosFijos` del Sheet, con el mismo esquema de
@@ -127,7 +130,6 @@ export function normalizarGastos(input: unknown): GastoFijo[] {
   return out;
 }
 
-/** Monto mensualizado: los gastos anuales se prorratean /12 para el total comparable. */
-export function montoMensual(g: GastoFijo): number {
-  return g.frecuencia === 'anual' ? g.monto / 12 : g.monto;
-}
+// El cálculo vive en finanzasPersonales.ts (módulo puro, importable desde el
+// cliente); este archivo trae googleapis y no puede ir al bundle del browser.
+export { montoMensual } from './finanzasPersonales';
