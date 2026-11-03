@@ -159,23 +159,20 @@ function DimChips({ rows, moneda, hideValues }: { rows: DimRow[]; moneda: Moneda
                 El centrado tampoco puede ser `translateX(-50%)` a secas: en un
                 grupo chico el segmento arranca cerca de 0% y la mitad izquierda
                 de la etiqueta caía fuera del contenedor, donde `clip` la
-                cortaba ("+USD 47,00" se leía "7,00"). En vez de posicionar por
-                `left`, se usan los tres insets a la vez: `left`/`right` marcan
-                el centro deseado y `margin:auto` centra la etiqueta en ese
-                punto, pero sin dejar que ningún borde salga del contenedor
-                —así el navegador la empuja hacia adentro sola en los extremos—.
-                `width:max-content` evita que se comprima al hacerlo, y el
-                `50vw` de los insets es solo un valor grande: alcanza para que
-                el centrado por `margin:auto` mande salvo contra los bordes. */}
-            <div style={{ position: 'relative', height: 16, marginTop: 3, overflowX: 'clip' }}>
+                cortaba ("+USD 47,00" se leía "7,00"). La posición es
+                `clamp(0, centro − ancho/2, contenedor − ancho)`: dentro de
+                `translateX` el `%` es el ancho de la propia etiqueta y `cqw` el
+                del contenedor (por eso `containerType`), así que el navegador
+                resuelve el clamp sin medir nada en JS. Un intento anterior con
+                `left`/`right`/`margin:auto` descentraba: al clamparse un solo
+                inset a 0 la caja dejaba de estar centrada en el segmento. */}
+            <div style={{ position: 'relative', height: 16, marginTop: 3, overflowX: 'clip', containerType: 'inline-size' }}>
               <span style={{
                 position: 'absolute',
                 top: 0,
-                left: `max(0%, ${labelAt}% - 50vw)`,
-                right: `max(0%, ${100 - labelAt}% - 50vw)`,
-                marginInline: 'auto',
-                width: 'max-content', maxWidth: '100%',
-                textAlign: 'center',
+                left: 0,
+                transform: `translateX(clamp(0px, ${labelAt}cqw - 50%, 100cqw - 100%))`,
+                width: 'max-content',
                 fontSize: 10, fontWeight: 700, color: varColor,
                 whiteSpace: 'nowrap', lineHeight: '16px', fontVariantNumeric: 'tabular-nums',
               }}>
