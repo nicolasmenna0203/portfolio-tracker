@@ -1,0 +1,565 @@
+'use client';
+
+import { useMemo, useState } from 'react';
+import type { DashboardData, EventoTipo, EventoCalendario, YieldTicker } from '@/types';
+import { useCalendario } from '@/lib/useCalendario';
+import { tickersDeCartera } from '@/lib/tickersElegibles';
+import { RETENCION_USA, IMPUESTO_CHEQUE, FACTOR_NETO_DIVIDENDO } from '@/lib/retenciones';
+import { formatMoney, formatPercent } from '@/lib/format';
+import { useIsMobile } from '@/lib/useIsMobile';
+
+interface Props {
+  data: DashboardData;
+  hideValues?: boolean;
+}
+
+const TIPO_EVENTO_META: Record<EventoTipo, { label: string; color: string }> = {
+  dividendo:      { label: 'Dividendo',        color: '#6a9bab' },
+  'dividendo-fut':{ label: 'Div. confirmado',  color: '#7fb0c2' },
+  earnings:       { label: 'Balance',          color: '#c15c4a' },
+  renta:          { label: 'Renta',            color: '#5fb896' },
+  amortizacion:   { label: 'Amortización',     color: '#cfab6e' },
+};
+
+// Tipos agrupados para los filtros (dividendo histórico + futuro se filtran juntos).
+const FILTROS_TIPO: { label: string; tipos: EventoTipo[] }[] = [
+  { label: 'Balances',      tipos: ['earnings'] },
+  { label: 'Dividendos',    tipos: ['dividendo', 'dividendo-fut'] },
+  { label: 'Renta',         tipos: ['renta'] },
+  { label: 'Amortización',  tipos: ['amortizacion'] },
+];
+
+const MESES_LABEL = [
+  'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
+];
+
+const DIAS_SEMANA = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+
+function fmtFechaEvento(fecha: string): string {
+  const d = new Date(fecha + 'T00:00:00Z');
+  return d.toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' });
+}
+
+/** Formatea el cobro estimado, ej. "≈ USD 4,23" o "≈ ARS 1.240". */
+function fmtMonto(monto: number, moneda: string | undefined, hidden: boolean): string {
+  return `≈ ${formatMoney(monto, { currency: moneda === 'ARS' ? 'ARS' : 'USD', hidden })}`;
+}
+
+/** Los dividendos se muestran netos de retención; los flujos de bonos ARG, completos. */
+function esDividendo(tipo: EventoTipo): boolean {
+  return tipo === 'dividendo' || tipo === 'dividendo-fut';
+}
+
+/** Explica de dónde sale el monto mostrado, según lleve retención o no. */
+function tooltipMonto(tipo: EventoTipo): string {
+  if (esDividendo(tipo)) {
+    return `Neto estimado a acreditar, según tu tenencia y el precio de mercado actual.\n`
+      + `Ya descontado: ${formatPercent(RETENCION_USA * 100, { sign: false, decimals: 0 })} de retención de EE.UU. + ${formatPercent(IMPUESTO_CHEQUE * 100, { sign: false })} de débitos y créditos `
+      + `(llega el ${formatPercent(FACTOR_NETO_DIVIDENDO * 100, { sign: false })} del bruto).\n`
+      + `No incluye la comisión del depositario (Comafi, ~1-2%).`;
+  }
+  return 'Cobro estimado según tu tenencia y el precio de mercado actual.\nSin retención de origen: los bonos ARG se acreditan completos.';
+}
+
+function Pill({ label, active, color, onClick }: {
+  label: string; active: boolean; color?: string; onClick: () => void;
+}) {
+  const c = color ?? 'var(--primary)';
+  return (
+    <button
+      onClick={onClick}
+      className="pill-touch"
+      aria-pressed={active}
+      style={{
+        padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600,
+        cursor: 'pointer', border: '1px solid',
+        borderColor: active ? c : 'var(--border)',
+        background: active ? `${c}22` : 'transparent',
+        color: active ? c : 'var(--muted)',
+        transition: 'all 0.12s', whiteSpace: 'nowrap', flexShrink: 0,
+      }}
+    >{label}</button>
+  );
+}
+
+function Card({ children }: { children: React.ReactNode }) {
+  return (
+    <div style={{
+      background: 'var(--card)', border: '1px solid var(--border)',
+      borderRadius: 12, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 10,
+    }}>
+      {children}
+    </div>
+  );
+}
+
+/** Genera las celdas (con padding de días de otros meses) para una grilla de semanas lunes-domingo. */
+function celdasDelMes(year: number, mesIdx: number): (number | null)[] {
+  const primerDia = new Date(Date.UTC(year, mesIdx, 1));
+  const diasEnMes = new Date(Date.UTC(year, mesIdx + 1, 0)).getUTCDate();
+  const offset = (primerDia.getUTCDay() + 6) % 7; // lunes=0..domingo=6
+
+  const celdas: (number | null)[] = Array(offset).fill(null);
+  for (let d = 1; d <= diasEnMes; d++) celdas.push(d);
+  while (celdas.length % 7 !== 0) celdas.push(null);
+  return celdas;
+}
+
+// Logos de acciones/ETF vía Financial Modeling Prep (URL pública directa por ticker,
+// sin API key). Los bonos ARG no tienen logo: caen al fallback de inicial.
+function logoUrlDe(ticker: string): string {
+  return `https://financialmodelingprep.com/image-stock/${encodeURIComponent(ticker)}.png`;
+}
+
+function LogoTicker({ ticker, conLogo, size }: { ticker: string; conLogo: boolean; size: number }) {
+  const [error, setError] = useState(false);
+  if (!conLogo || error) {
+    return (
+      <div style={{
+        width: size, height: size, borderRadius: '50%', background: 'var(--border)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontSize: size * 0.4, fontWeight: 700, color: 'var(--muted)', flexShrink: 0,
+      }}>
+        {ticker[0]}
+      </div>
+    );
+  }
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={logoUrlDe(ticker)}
+      alt={ticker}
+      width={size}
+      height={size}
+      onError={() => setError(true)}
+      style={{ borderRadius: '50%', flexShrink: 0, objectFit: 'contain', background: '#fff' }}
+    />
+  );
+}
+
+// Los bonos ARG (renta/amortización) no tienen logo de empresa; el resto sí.
+function tickerConLogo(tipo: EventoTipo): boolean {
+  return tipo !== 'renta' && tipo !== 'amortizacion';
+}
+
+// El logo es el protagonista de la celda (ocupa ~65% de su ancho) y el número
+// de día pasa a una esquina chica superpuesta: lo primero que se lee en un
+// día con evento es "qué ticker paga", no la fecha. Con 2+ eventos el segundo
+// logo se solapa (no se achica la grilla); a partir del tercero se cuenta.
+function DiaCelda({
+  dia, eventosDia, esHoy, logoSize, maxLogos, yieldPorTicker, hideValues,
+}: {
+  dia: number | null;
+  eventosDia?: EventoCalendario[];
+  esHoy: boolean;
+  logoSize: number;
+  maxLogos: number;
+  yieldPorTicker: Map<string, YieldTicker>;
+  hideValues: boolean;
+}) {
+  if (dia === null) {
+    return <div className="cal-dia-vacio" style={{ minHeight: 56, borderRadius: 8 }} />;
+  }
+
+  const hayEventos = eventosDia != null && eventosDia.length > 0;
+  const conEvento = hayEventos
+    ? `color-mix(in srgb, var(--primary) 35%, ${esHoy ? 'var(--primary)' : 'var(--border)'})`
+    : undefined;
+
+  return (
+    <div className="cal-dia" style={{
+      minHeight: 56, borderRadius: 8, padding: 4,
+      border: `1px solid ${esHoy ? 'var(--primary)' : conEvento ?? 'var(--border-subtle)'}`,
+      background: esHoy ? 'var(--primary-dim)' : 'var(--card)',
+      position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center',
+    }}>
+      <span className="cal-dia-num" style={{
+        position: 'absolute', top: hayEventos ? 2 : 3, left: hayEventos ? 2 : 5,
+        fontSize: hayEventos ? 9 : 10, fontWeight: esHoy ? 800 : 600,
+        color: esHoy ? 'var(--primary)' : 'var(--muted)',
+      }}>
+        {dia}
+      </span>
+      {hayEventos && (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          {eventosDia.slice(0, maxLogos).map((e, i) => {
+            const meta = TIPO_EVENTO_META[e.tipo];
+            const montoTxt = e.montoEstimado != null && e.montoEstimado > 0
+              ? ` ${fmtMonto(e.montoEstimado, e.monedaMonto, hideValues)}${esDividendo(e.tipo) ? ' neto' : ''}`
+              : '';
+            const y = yieldPorTicker.get(e.ticker);
+            const yieldTxt = y && esDividendo(e.tipo)
+              ? `\nYield 12m: ${formatPercent(y.yieldAnual * 100, { sign: false, decimals: 2 })} · ${fmtMonto(y.cobroAnual ?? 0, 'USD', hideValues)}/año`
+              : '';
+            const tip = `${e.ticker}: ${meta.label}${e.detalle ? ` (${e.detalle})` : ''}${montoTxt}${yieldTxt}`;
+            const dot = Math.max(8, Math.round(logoSize * 0.3));
+            return (
+              <div
+                key={i}
+                title={tip}
+                className="cal-dia-logo"
+                style={{ position: 'relative', marginLeft: i > 0 ? -Math.round(logoSize * 0.3) : 0, zIndex: maxLogos - i }}
+              >
+                <LogoTicker ticker={e.ticker} conLogo={tickerConLogo(e.tipo)} size={logoSize} />
+                <span className="cal-dia-dot" style={{
+                  position: 'absolute', bottom: -1, right: -1, width: dot, height: dot,
+                  borderRadius: '50%', background: meta.color, border: '2px solid var(--card)',
+                }} />
+              </div>
+            );
+          })}
+          {eventosDia.length > maxLogos && (
+            <span style={{
+              fontSize: 10, fontWeight: 700, color: 'var(--muted)', marginLeft: 3,
+            }}>
+              +{eventosDia.length - maxLogos}
+            </span>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function CalendarioTab({ data, hideValues = false }: Props) {
+  const { tenenciasPorMes } = data;
+
+  const esMobile = useIsMobile();
+  const logoSize = esMobile ? 18 : 30;
+  const maxLogos = esMobile ? 3 : 12;
+
+  const hoy = useMemo(() => new Date(), []);
+  const [year, setYear] = useState(hoy.getUTCFullYear());
+  const [mesIdx, setMesIdx] = useState(hoy.getUTCMonth());
+
+  const irMesAnterior = () => {
+    if (mesIdx === 0) { setMesIdx(11); setYear((y) => y - 1); }
+    else setMesIdx((m) => m - 1);
+  };
+  const irMesSiguiente = () => {
+    if (mesIdx === 11) { setMesIdx(0); setYear((y) => y + 1); }
+    else setMesIdx((m) => m + 1);
+  };
+  const irHoy = () => { setYear(hoy.getUTCFullYear()); setMesIdx(hoy.getUTCMonth()); };
+  const esMesActual = year === hoy.getUTCFullYear() && mesIdx === hoy.getUTCMonth();
+
+  // Tickers USA elegibles, bonos ARG mapeados y tenencia USD de cada posición
+  // del último mes. Misma regla que usa el job server-side de alertas
+  // semanales (`lib/tickersElegibles.ts`), centralizada para no desalinearse.
+  const { tickersUsa: tickersActivos, tickersArg, tenencias } = useMemo(() => {
+    const meses = Object.keys(tenenciasPorMes).sort();
+    const ultimoMes = meses[meses.length - 1];
+    return tickersDeCartera(tenenciasPorMes[ultimoMes] ?? []);
+  }, [tenenciasPorMes]);
+
+  const { eventos, yields, loadingEventos, errorEventos } = useCalendario(tickersActivos, year, tickersArg, tenencias);
+
+  // Proyección anual de dividendos: suma del cobro neto de cada posición que paga.
+  const cobroAnualTotal = useMemo(
+    () => yields.reduce((s, y) => s + (y.cobroAnual ?? 0), 0),
+    [yields],
+  );
+
+  // Yield efectivo de la cartera: cuánto rinde el total invertido, no solo lo que paga.
+  const yieldCartera = useMemo(() => {
+    const total = Object.values(tenencias).reduce((s, v) => s + v, 0);
+    return total > 0 ? cobroAnualTotal / total : 0;
+  }, [cobroAnualTotal, tenencias]);
+
+  const [filtroTicker, setFiltroTicker] = useState<string | null>(null);
+  const [filtroTipos, setFiltroTipos] = useState<EventoTipo[] | null>(null);
+
+  const tickersDisponibles = useMemo(() => {
+    const set = new Set<string>();
+    for (const e of eventos) set.add(e.ticker);
+    return [...set].sort();
+  }, [eventos]);
+
+  const eventosFiltrados = useMemo(
+    () => eventos.filter((e) =>
+      (!filtroTicker || e.ticker === filtroTicker) &&
+      (!filtroTipos || filtroTipos.includes(e.tipo)),
+    ),
+    [eventos, filtroTicker, filtroTipos],
+  );
+
+  const eventosPorDia = useMemo(() => {
+    const map = new Map<string, EventoCalendario[]>();
+    for (const e of eventosFiltrados) {
+      const arr = map.get(e.fecha) ?? [];
+      arr.push(e);
+      map.set(e.fecha, arr);
+    }
+    return map;
+  }, [eventosFiltrados]);
+
+  const hoyKey = useMemo(() => hoy.toISOString().slice(0, 10), [hoy]);
+
+  const celdas = useMemo(() => celdasDelMes(year, mesIdx), [year, mesIdx]);
+
+  const eventosDelMes = useMemo(
+    () => eventosFiltrados
+      .filter((e) => e.fecha.startsWith(`${year}-${String(mesIdx + 1).padStart(2, '0')}`))
+      .sort((a, b) => a.fecha.localeCompare(b.fecha)),
+    [eventosFiltrados, year, mesIdx],
+  );
+
+  // Yield por ticker, para anotarlo en la celda del día que paga.
+  const yieldPorTicker = useMemo(
+    () => new Map(yields.map((y) => [y.ticker, y])),
+    [yields],
+  );
+
+  // Total estimado a cobrar en el mes, agrupado por moneda (los balances no suman).
+  const totalMesPorMoneda = useMemo(() => {
+    const acc: Record<string, number> = {};
+    for (const e of eventosDelMes) {
+      if (e.montoEstimado != null && e.montoEstimado > 0) {
+        const m = e.monedaMonto || 'USD';
+        acc[m] = (acc[m] ?? 0) + e.montoEstimado;
+      }
+    }
+    return acc;
+  }, [eventosDelMes]);
+
+  // Próximo cobro: cualquier evento con monto (dividendo, renta o amortización
+  // de bonos ARG) más cercano desde hoy — balances no cuentan, no son cobro.
+  // Busca sobre todos los eventos cargados (año actual + siguiente, ver
+  // useCalendario), sin importar qué mes esté mirando la grilla.
+  const proximoCobro = useMemo(() => {
+    return eventosFiltrados
+      .filter((e) => e.tipo !== 'earnings' && e.montoEstimado != null && e.montoEstimado > 0 && e.fecha >= hoyKey)
+      .sort((a, b) => a.fecha.localeCompare(b.fecha))[0] ?? null;
+  }, [eventosFiltrados, hoyKey]);
+
+  return (
+    <div className="cal-root scroll-y" style={{ display: 'flex', flexDirection: 'column', gap: 12, flex: 1, minHeight: 0 }}>
+
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <button
+            onClick={irMesAnterior}
+            className="cal-nav-btn"
+            aria-label="Mes anterior"
+            style={{
+              border: '1px solid var(--border)', background: 'transparent', color: 'var(--text)',
+              borderRadius: 8, padding: '4px 10px', cursor: 'pointer', fontSize: 13,
+            }}
+          >‹</button>
+          <p className="cal-header-mes" style={{ margin: 0, fontSize: 16, fontWeight: 700, minWidth: 150, textAlign: 'center' }}>
+            {MESES_LABEL[mesIdx]} {year}
+          </p>
+          <button
+            onClick={irMesSiguiente}
+            className="cal-nav-btn"
+            aria-label="Mes siguiente"
+            style={{
+              border: '1px solid var(--border)', background: 'transparent', color: 'var(--text)',
+              borderRadius: 8, padding: '4px 10px', cursor: 'pointer', fontSize: 13,
+            }}
+          >›</button>
+          {!esMesActual && (
+            <Pill label="Hoy" active={false} onClick={irHoy} />
+          )}
+        </div>
+
+        <div className="filtro-tickers" style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+          <Pill label="Todos" active={filtroTipos === null} onClick={() => setFiltroTipos(null)} />
+          {FILTROS_TIPO.map((f) => {
+            const activo = filtroTipos !== null && f.tipos.every((t) => filtroTipos.includes(t)) && filtroTipos.length === f.tipos.length;
+            return (
+              <Pill
+                key={f.label}
+                label={f.label}
+                active={activo}
+                color={TIPO_EVENTO_META[f.tipos[0]].color}
+                onClick={() => setFiltroTipos((prev) =>
+                  prev !== null && prev.length === f.tipos.length && f.tipos.every((t) => prev.includes(t)) ? null : f.tipos,
+                )}
+              />
+            );
+          })}
+        </div>
+      </div>
+
+      {tickersDisponibles.length > 0 && (
+        <div className="filtro-tickers" style={{ display: 'flex', gap: 6, flexWrap: 'wrap', flexShrink: 0 }}>
+          <Pill label="Todos" active={filtroTicker === null} onClick={() => setFiltroTicker(null)} />
+          {tickersDisponibles.map((t) => (
+            <Pill key={t} label={t} active={filtroTicker === t} onClick={() => setFiltroTicker((prev) => prev === t ? null : t)} />
+          ))}
+        </div>
+      )}
+
+      {loadingEventos ? (
+        <Card>
+          <p style={{ margin: 0, fontSize: 12, color: 'var(--muted)' }}>Cargando eventos de {year}…</p>
+        </Card>
+      ) : (
+        <>
+          {/* ── Resumen: responde "¿cuánto cobro y cuándo es lo próximo?" sin
+              escanear la grilla. Los 3 bloques se muestran siempre que haya
+              algo que mostrar; si no hay próximo cobro ni cobro anual, no
+              tiene sentido ocupar el espacio con ceros. */}
+          {(proximoCobro || Object.keys(totalMesPorMoneda).length > 0 || cobroAnualTotal > 0) && (
+            <div className="cal-resumen-row" style={{ display: 'grid', gridTemplateColumns: '1.3fr 1fr 1fr', gap: 10, flexShrink: 0 }}>
+              <div style={{
+                background: proximoCobro ? 'color-mix(in srgb, var(--primary) 6%, var(--card))' : 'var(--card)',
+                border: `1px solid ${proximoCobro ? 'var(--primary)' : 'var(--border)'}`,
+                borderRadius: 12, padding: '10px 14px',
+                display: 'flex', flexDirection: 'column', gap: 4, justifyContent: 'center',
+              }}>
+                <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--muted)' }}>
+                  Próximo cobro
+                </span>
+                {proximoCobro ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <LogoTicker ticker={proximoCobro.ticker} conLogo={tickerConLogo(proximoCobro.tipo)} size={30} />
+                    <div style={{ minWidth: 0 }}>
+                      <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: 'var(--text)', whiteSpace: 'nowrap' }}>
+                        {proximoCobro.ticker} · {fmtFechaEvento(proximoCobro.fecha)}
+                      </p>
+                      <p style={{ margin: 0, fontSize: 11, color: 'var(--muted)' }}>
+                        {fmtMonto(proximoCobro.montoEstimado!, proximoCobro.monedaMonto, hideValues)}
+                        {esDividendo(proximoCobro.tipo) ? ' neto' : ''}
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <p style={{ margin: 0, fontSize: 12, color: 'var(--muted)' }}>Sin cobros próximos a la vista</p>
+                )}
+              </div>
+
+              <div style={{
+                background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 12,
+                padding: '10px 14px', display: 'flex', flexDirection: 'column', gap: 2, justifyContent: 'center',
+              }}>
+                <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--muted)' }}>
+                  A cobrar este mes
+                </span>
+                {Object.keys(totalMesPorMoneda).length > 0 ? (
+                  <>
+                    <p
+                      title={`Neto estimado a acreditar este mes según tu tenencia y precios actuales.\n\nDividendos: ya descontada la retención del ${formatPercent(RETENCION_USA * 100, { sign: false, decimals: 0 })} de EE.UU. y el ${formatPercent(IMPUESTO_CHEQUE * 100, { sign: false })} de débitos y créditos → llega el ${formatPercent(FACTOR_NETO_DIVIDENDO * 100, { sign: false })} del bruto.\nNo incluye la comisión del depositario.\n\nRenta y amortización de bonos ARG: sin retención, al 100%.`}
+                      style={{ margin: 0, fontSize: 19, fontWeight: 700, color: 'var(--text)', fontVariantNumeric: 'tabular-nums' }}
+                    >
+                      {Object.entries(totalMesPorMoneda).map(([moneda, total]) => fmtMonto(total, moneda, hideValues)).join(' · ')}
+                    </p>
+                    <span style={{ fontSize: 11, color: 'var(--muted)' }}>neto estimado</span>
+                  </>
+                ) : (
+                  <p style={{ margin: 0, fontSize: 13, color: 'var(--muted)' }}>Sin cobros este mes</p>
+                )}
+              </div>
+
+              <div style={{
+                background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 12,
+                padding: '10px 14px', display: 'flex', flexDirection: 'column', gap: 2, justifyContent: 'center',
+              }}>
+                <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--muted)' }}>
+                  Proyección anual
+                </span>
+                {cobroAnualTotal > 0 ? (
+                  <>
+                    <p
+                      title="Tenencia actual × yield de los últimos 12 meses, ya neto de retenciones. Asume que se repiten igual el año próximo — no son pagos confirmados."
+                      style={{ margin: 0, fontSize: 19, fontWeight: 700, color: 'var(--up)', fontVariantNumeric: 'tabular-nums' }}
+                    >
+                      +{fmtMonto(cobroAnualTotal, 'USD', hideValues)}<span style={{ fontSize: 12, fontWeight: 500, color: 'var(--muted)' }}>/año</span>
+                    </p>
+                    <span style={{ fontSize: 11, color: 'var(--muted)' }}>
+                      {formatPercent(yieldCartera * 100, { sign: false, decimals: 2 })} de la cartera
+                    </span>
+                  </>
+                ) : (
+                  <p style={{ margin: 0, fontSize: 13, color: 'var(--muted)' }}>Sin proyección disponible</p>
+                )}
+              </div>
+            </div>
+          )}
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flexShrink: 0 }}>
+            <div className="cal-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 6 }}>
+              {DIAS_SEMANA.map((d) => (
+                <div key={d} style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textAlign: 'center' }}>{d}</div>
+              ))}
+            </div>
+            <div className="cal-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 6 }}>
+              {celdas.map((dia, i) => {
+                const key = dia !== null ? `${year}-${String(mesIdx + 1).padStart(2, '0')}-${String(dia).padStart(2, '0')}` : '';
+                return (
+                  <DiaCelda
+                    key={i}
+                    dia={dia}
+                    eventosDia={dia !== null ? eventosPorDia.get(key) : undefined}
+                    esHoy={key === hoyKey}
+                    logoSize={logoSize}
+                    maxLogos={maxLogos}
+                    yieldPorTicker={yieldPorTicker}
+                    hideValues={hideValues}
+                  />
+                );
+              })}
+            </div>
+          </div>
+
+          <Card>
+            <p style={{ margin: 0, fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--primary)' }}>
+              Eventos de {MESES_LABEL[mesIdx]}
+            </p>
+            {eventosDelMes.length === 0 ? (
+              <p style={{ margin: 0, fontSize: 12, color: 'var(--muted)' }}>Sin eventos este mes para los tickers actuales.</p>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {eventosDelMes.map((e, i) => {
+                  const meta = TIPO_EVENTO_META[e.tipo];
+                  return (
+                    <div key={i} className="cal-evento-fila" style={{
+                      display: 'flex', alignItems: 'center', gap: 10, fontSize: 12,
+                      padding: '6px 0', borderBottom: '1px solid var(--border-subtle)',
+                    }}>
+                      <LogoTicker ticker={e.ticker} conLogo={tickerConLogo(e.tipo)} size={20} />
+                      <span style={{ color: 'var(--muted)', minWidth: 80, flexShrink: 0 }}>{fmtFechaEvento(e.fecha)}</span>
+                      <span style={{ fontWeight: 700, color: 'var(--text)', minWidth: 56 }}>{e.ticker}</span>
+                      <span style={{
+                        fontSize: 10, fontWeight: 700, color: meta.color, background: `${meta.color}22`,
+                        padding: '2px 8px', borderRadius: 10, whiteSpace: 'nowrap',
+                      }}>{meta.label}</span>
+                      {e.detalle && <span style={{ color: 'var(--muted)' }}>{e.detalle}</span>}
+                      {esDividendo(e.tipo) && yieldPorTicker.has(e.ticker) && (
+                        <span
+                          title={`Yield de los últimos 12 meses · ${fmtMonto(yieldPorTicker.get(e.ticker)!.cobroAnual ?? 0, 'USD', hideValues)}/año`}
+                          style={{
+                            fontSize: 10, fontWeight: 700, color: TIPO_EVENTO_META.dividendo.color,
+                            border: `1px solid ${TIPO_EVENTO_META.dividendo.color}55`,
+                            padding: '1px 6px', borderRadius: 10, whiteSpace: 'nowrap',
+                          }}
+                        >
+                          {formatPercent(yieldPorTicker.get(e.ticker)!.yieldAnual * 100, { sign: false, decimals: 2 })}
+                        </span>
+                      )}
+                      {e.montoEstimado != null && e.montoEstimado > 0 && (
+                        <span
+                          className="cal-evento-monto"
+                          title={tooltipMonto(e.tipo)}
+                          style={{ marginLeft: 'auto', fontWeight: 700, color: meta.color, whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}
+                        >
+                          {fmtMonto(e.montoEstimado, e.monedaMonto, hideValues)}
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </Card>
+        </>
+      )}
+
+      {errorEventos && (
+        <p style={{ margin: 0, fontSize: 11, color: '#ef553b' }}>Algunos eventos no pudieron cargarse: {errorEventos}</p>
+      )}
+    </div>
+  );
+}

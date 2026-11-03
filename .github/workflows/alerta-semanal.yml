@@ -1,0 +1,30 @@
+name: Alerta semanal de cobros
+
+# Por qué GitHub Actions y no Vercel Cron:
+# docs/decisiones/0015-cron-semanal-en-github-actions.md
+
+on:
+  schedule:
+    # Domingo 21:00 ART = lunes 00:00 UTC (Argentina no tiene horario de verano).
+    - cron: '0 0 * * 1'
+  workflow_dispatch: {} # permite disparar manualmente desde la pestaña Actions
+
+jobs:
+  disparar-alerta:
+    # Solo en el repo que tiene DASHBOARD_URL configurada: el espejo público
+    # (docs/decisiones/0030-repo-privado-y-espejo-publico.md) no tiene secrets
+    # y fallaría todas las semanas.
+    if: ${{ vars.DASHBOARD_URL != '' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Llamar a /api/alertas/semanal
+        run: |
+          status=$(curl -s -o /tmp/respuesta.json -w "%{http_code}" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "${{ vars.DASHBOARD_URL }}/api/alertas/semanal")
+          echo "HTTP $status"
+          cat /tmp/respuesta.json
+          if [ "$status" -ne 200 ]; then
+            echo "La alerta semanal falló (HTTP $status)"
+            exit 1
+          fi
