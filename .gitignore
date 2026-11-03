@@ -1,0 +1,61 @@
+# Credenciales (NUNCA subir al repo)
+.env
+.env.local
+credentials.json
+service_account.json
+
+# Node
+node_modules/
+.next/
+.swc/
+out/
+
+# Python / legacy
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+env/
+.Python
+
+# Excel / datos locales
+*.xlsx
+*.csv
+data/exports/
+
+# PDFs locales (reportes de cuenta)
+*.pdf
+
+# TypeScript build info
+tsconfig.tsbuildinfo
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+
+# Jupyter
+*.ipynb
+.ipynb_checkpoints/
+
+# Claude Code
+# CLAUDE.md SÍ se versiona: es el contexto del repo para el agente.
+# Solo queda fuera la config local de la herramienta.
+.claude/
+
+# Instrucciones del Proyecto de Claude Desktop: contienen perfil personal
+# (horizonte, aportes, tolerancia al riesgo). El repo es público → local.
+PROYECTO-CLAUDE.md
+
+# Términos que el script de publicación del espejo público bloquea (broker,
+# banco, nombres): nombrarlos en el repo sería publicarlos.
+.publicar-prohibidos
+
+# Perfil de inversor: objetivos, criterios de decisión y log de decisiones.
+# Personal por definición → local.
+PERFIL-INVERSOR.md

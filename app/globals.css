@@ -1,0 +1,1241 @@
+@import "tailwindcss";
+
+/* ── Dark theme (default) — Prestige ───────────────────────────
+   Paleta cálida oscura con acento dorado. Los tokens semánticos
+   (--up/--down) se mantienen independientes del acento de marca. */
+:root {
+  --bg:            #211d17;
+  --surface:       #241f19;
+  --card:          #2c2620;
+  --card-alt:      #362f26;
+  --border:        #4a4133;
+  --border-subtle: #3a332a;
+
+  --primary:       #cfab6e;
+  --primary-dim:   rgba(207, 171, 110, 0.14);
+  --accent:        #cfab6e;
+
+  --text:          #ece5d8;
+  --text-sec:      #a89b87;
+  --muted:         #8a7d6a;
+
+  --up:            #5fb896;
+  --down:          #d9705a;
+
+  --chip-bg:       #362f26;
+  --chip-hover:    #423a2e;
+  --chip-active-text: #211d17;
+
+  --track:         #423a2e;
+
+  --bar-brillo:    rgba(255, 255, 255, 0.06);
+  --bar-sombra:    rgba(0, 0, 0, 0.32);
+  --bar-hundido:   rgba(0, 0, 0, 0.22);
+
+  --font-body:     var(--font-sans), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-display:  var(--font-serif), Georgia, serif;
+}
+
+/* ── Light theme — Prestige ─────────────────────────────────── */
+[data-theme="light"] {
+  --bg:            #f7f4ec;
+  --surface:       #f7f4ec;
+  --card:          #ffffff;
+  --card-alt:      #eee7d7;
+  --border:        #ddd3ba;
+  --border-subtle: #e6dfcd;
+
+  --primary:       #9a7038;
+  --primary-dim:   rgba(154, 112, 56, 0.1);
+  --accent:        #9a7038;
+
+  --text:          #322c22;
+  --text-sec:      #675e4d;
+  --muted:         #8a7d6a;
+
+  --up:            #3f8f6f;
+  --down:          #b8503b;
+
+  --chip-bg:       #eee7d7;
+  --chip-hover:    #e4dac2;
+  --chip-active-text: #fdfbf5;
+
+  --track:         #e4dac2;
+
+  --bar-brillo:    rgba(255, 255, 255, 0.9);
+  --bar-sombra:    rgba(80, 60, 30, 0.14);
+  --bar-hundido:   rgba(80, 60, 30, 0.08);
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  height: 100%;
+  overflow: hidden;
+}
+
+/* `main` lleva `height:100dvh` propio, pero si la página pone algo antes (el
+   banner de /demo, por ejemplo) ese alto fijo lo empuja fuera de pantalla: el
+   fondo del scroller cae debajo del viewport. Con el body como columna flex y `main` tomando el resto, el
+   scroller termina siempre donde termina la pantalla. */
+body {
+  display: flex;
+  flex-direction: column;
+  max-height: 100dvh;
+}
+body > main {
+  flex: 1;
+  min-height: 0;
+  /* `width:100%` no es redundante: como item de un flex column, el tamaño en el
+     eje cruzado sale del max-content si no se fija. La fila de pestañas tiene
+     10 botones con `flex-shrink:0` (960px de ancho intrínseco) y, aunque
+     scrollea con `overflow-x:auto`, ese ancho sigue contando para el
+     max-content de sus ancestros: `main` medía 962px dentro de un viewport de
+     390px y todo el layout mobile se renderizaba al ancho de escritorio
+     recortado. `min-width:0` solo no alcanza —el stretch no aplica porque el
+     item ya desborda—; hay que fijar el ancho. */
+  width: 100%;
+  min-width: 0;
+}
+
+body {
+  background-color: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  letter-spacing: -0.01em;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+/* Evita el resaltado gris al tocar y el reajuste de fuente al rotar en iOS */
+* { -webkit-tap-highlight-color: transparent; }
+html { -webkit-text-size-adjust: 100%; }
+
+/* Los inputs por debajo de 16px hacen que iOS haga zoom automático al enfocarlos */
+input, select, textarea { font-size: 16px; }
+
+/* ── Scrollbar ─────────────────────────────────────────────── */
+::-webkit-scrollbar          { width: 5px; height: 5px; }
+::-webkit-scrollbar-track    { background: var(--bg); }
+::-webkit-scrollbar-thumb    { background: var(--border); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--border-subtle); }
+
+/* ── Section divider ───────────────────────────────────────── */
+/* ── Theme toggle button ───────────────────────────────────── */
+/* ── KPI grid ───────────────────────────────────────────────── */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+/* Resumen tiene 4 KPIs (Total, Ganancia, TWR, TIR) en vez de 3 — grid propio
+   para no afectar el resto de las pestañas que usan .kpi-grid con 3. */
+.kpi-grid-resumen {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+/* ── Tenencias: controles ───────────────────────────────────────
+   El thumb del MonthSlider en el extremo (left:100% con translateX(-50%)) y su
+   zona táctil de 44px sobresalen del track: sin contener, `.tab-scroll` crecía
+   a 620px de scrollWidth contra 598 de clientWidth (barra horizontal y perilla
+   cortada en el borde derecho). El padding lateral le deja lugar al radio del
+   thumb y `clip` corta lo que aún sobre sin crear un contexto de scroll
+   (`hidden` sí lo crearía). */
+.tenencias-controles {
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: clip;
+}
+.tenencias-slider {
+  min-width: 0;
+  padding-inline: 10px;
+}
+.dim-selector {
+  min-width: 0;
+  max-width: 100%;
+}
+
+/* ── Tenencias grid ─────────────────────────────────────────── */
+.tenencias-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  /* `minmax(0, …)`: con la fila en `auto` su alto salía del contenido, y los
+     gráficos conservan el alto que ya midieron: al aparecer la fila del filtro la
+     grilla se achicaba pero las tarjetas no, y la leyenda quedaba bajo el borde.
+     El `min-height` es el piso para gráficos legibles: por debajo scrollea. */
+  grid-template-rows: minmax(0, 1fr);
+  gap: 10px;
+  align-items: stretch;
+  flex: 1;
+  min-height: 340px;
+}
+
+/* ── Scroll suave e inercial dentro de paneles ──────────────── */
+.scroll-y {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+/* ── Fila de scroll horizontal (tabs, pills) ────────────────── */
+.scroll-x {
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.scroll-x::-webkit-scrollbar { display: none; }
+
+/* ── Barra superior ─────────────────────────────────────────────
+   Marca, pestañas y controles en una sola fila: en pantallas bajas cada píxel
+   de alto es contenido que no se ve. Bajo 1180px las pestañas no entran al lado
+   de los controles y pasan a su propia fila.
+   Las columnas laterales iguales centran las pestañas en la barra, no en el
+   hueco entre marca y controles.
+   z-index: la sombra tiene que caer sobre las tarjetas que scrollean debajo;
+   sin él, se pintan encima porque vienen después en el DOM. */
+.app-bar {
+  position: relative;
+  z-index: 3;
+  flex-shrink: 0;
+  display: grid;
+  grid-template-columns: minmax(max-content, 1fr) auto minmax(max-content, 1fr);
+  grid-template-areas: "marca tabs acciones";
+  align-items: center;
+  gap: 20px;
+  min-height: 68px;
+  padding: 8px 12px 8px 16px;
+  margin-bottom: 14px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  box-shadow: inset 0 1px 0 var(--bar-brillo), 0 14px 32px var(--bar-sombra);
+}
+.app-bar-marca {
+  grid-area: marca;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  min-width: 0;
+}
+.app-bar-logo {
+  display: block;
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+}
+.app-bar-titulo {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 23px;
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: -0.012em;
+  color: var(--text);
+}
+/* Bajo el título solo en mobile: ahí no entra al lado de los controles. */
+.app-bar-mep-movil { display: none; }
+
+.app-bar-acciones {
+  grid-area: acciones;
+  justify-self: end;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+/* Fecha y MEP apilados, con el ancho del MEP reservado: si fueran en fila, las
+   pestañas saltarían al cambiar de moneda. */
+.app-bar-datos {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  min-width: 116px;
+  margin-right: 8px;
+  font-size: 11.5px;
+  line-height: 1.2;
+  color: var(--text-sec);
+  white-space: nowrap;
+}
+.app-bar-datos span {
+  color: var(--text);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+.app-bar-btn {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--text-sec);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+/* Solo con mouse: en pantallas táctiles el :hover queda pegado después del toque. */
+@media (hover: hover) {
+  .app-bar-btn:hover {
+    background: var(--chip-hover);
+    color: var(--text);
+  }
+}
+.app-bar-moneda {
+  color: var(--primary);
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+.app-bar-btn:focus-visible,
+.nav-tab:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: -2px;
+}
+
+/* ── Estado de los archivos del mes: íconos dentro del botón de carga ──
+   Verde = cargado; gris con punto = pendiente; gris tenue = no se pudo saber.
+   El punto hace que el pendiente no dependa solo del color. */
+.app-bar-btn.app-bar-cargar {
+  width: auto;
+  gap: 8px;
+  padding: 0 11px 0 9px;
+}
+.estado-cargas {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.estado-carga {
+  position: relative;
+  display: flex;
+  flex-shrink: 0;
+}
+.estado-carga[data-estado="cargado"] { color: var(--up); }
+.estado-carga[data-estado="pendiente"] { color: var(--muted); }
+.estado-carga[data-estado="desconocido"] { color: var(--muted); opacity: 0.45; }
+.estado-carga[data-estado="pendiente"]::after {
+  content: '';
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--down);
+  box-shadow: 0 0 0 1px var(--card);
+}
+
+/* Bajo el encabezado del panel de carga */
+.estado-cargas-detalle {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 14px;
+  padding: 10px 24px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  font-size: 12px;
+  color: var(--text-sec);
+}
+.estado-cargas-mes {
+  font-weight: 700;
+  color: var(--text);
+}
+.estado-cargas-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+}
+.estado-cargas-marca { font-weight: 700; color: var(--down); }
+.estado-cargas-marca[data-cargado="true"] { color: var(--up); }
+.estado-cargas-detalle .estado-carga[data-estado="pendiente"]::after { box-shadow: 0 0 0 1px var(--bg); }
+
+/* ── Nav de pestañas ────────────────────────────────────────────
+   Si la fila de pestañas no entra en el ancho visible scrollea en horizontal, y
+   los degradés de borde avisan que hay más de un lado. Sin ellos, con
+   `scrollbar-width:none`, las últimas pestañas eran invisibles al entrar. */
+.nav-tabs-wrap {
+  grid-area: tabs;
+  justify-self: center;
+  position: relative;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  padding: 4px;
+  border-radius: 12px;
+  background: var(--card-alt);
+  box-shadow: inset 0 1px 3px var(--bar-hundido);
+}
+.nav-tabs {
+  display: flex;
+  gap: 2px;
+  scroll-behavior: smooth;
+  /* 2px de holgura: con el nav scrolleado a tope el borde de la última
+     pestaña caía justo 1px fuera del área visible (el scrollWidth es
+     fraccionario) y se veía cortada. */
+  padding-inline: 2px;
+}
+/* Sin esto los botones se comprimen en vez de desbordar y no hay nada que
+   scrollear. */
+.nav-tabs button { flex-shrink: 0; }
+
+.nav-tab {
+  height: 38px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--text-sec);
+  font-size: 12.5px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.nav-tab:hover { color: var(--text); }
+.nav-tab[aria-current="page"] {
+  background: var(--primary);
+  color: var(--chip-active-text);
+  font-weight: 700;
+}
+
+.nav-fade {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 28px;
+  pointer-events: none;
+  z-index: 2;
+}
+.nav-fade-izq {
+  left: 0;
+  background: linear-gradient(to right, var(--card-alt), transparent);
+}
+.nav-fade-der {
+  right: 0;
+  background: linear-gradient(to left, var(--card-alt), transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nav-tabs { scroll-behavior: auto; }
+}
+
+@media (max-width: 1240px) {
+  .app-bar {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "marca acciones"
+      "tabs  tabs";
+    gap: 6px 12px;
+    padding: 6px;
+  }
+  .app-bar-marca { padding-left: 6px; }
+}
+
+/* ── Área de contenido del tab: acá vive el scroll vertical ───
+   Regla base (no solo mobile): `main` tiene height:100vh fijo y cada
+   sección de tab usa flex:1 + minHeight:0, así que cualquier tab cuyo
+   contenido supere el viewport necesita poder scrollear también en
+   desktop. Sin esto el contenido excedente queda cortado y sin forma
+   de alcanzarlo (visto en Ratios: "Pares guardados" tapado). */
+.tab-scroll {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+}
+
+/* Ritmo vertical de las pestañas — el `gap` real lo pone <TabScroll> inline
+   (12px, el de Resumen), porque su `style` inline le gana a esta hoja. Antes
+   cada pestaña resolvía su espaciado por su cuenta: el `gap` iba a mano en la
+   llamada (12px Resumen, 8px Tenencias, ninguno en las otras 8) y encima cada
+   componente de tab traía el suyo (16px Proyecciones, 14px Performance/
+   Ingresos/Gastos, 12px el resto, 0 Informe). Al cambiar de pestaña se movía
+   todo el espaciado interno aunque el contenedor no se corriera un píxel: la
+   primera tarjeta arrancaba entre 0px y 101px del tope según la pestaña.
+
+   `min-width:0` en los hijos: son items de un flex column, así que sin esto
+   toman su max-content y una tabla ancha desborda la pestaña. */
+.tab-scroll > * { min-width: 0; }
+
+/* Único scroller vertical por pestaña: `.tab-scroll`.
+   Anidar un segundo scroller rompe el gesto (el wheel/drag lo consume el hijo y
+   la pestaña no scrollea), deja una franja muerta abajo y corta el contenido
+   con borde duro. Las clases de abajo son
+   contenedores de contenido, no scrollers; el scroll horizontal de tablas
+   anchas sigue permitido (`overflow-x`). */
+.variacion-root,
+.proy-root,
+.cal-root {
+  overflow: visible;
+  flex: none;
+  min-height: 0;
+}
+
+/* ──────────────────────────────────────────
+   MOBILE — ≤ 768px
+   El contenido scrollea; header y tabs quedan fijos arriba.
+─────────────────────────────────────────── */
+@media (max-width: 768px) {
+
+  /* El alto lo da `body > main { flex:1 }`: acá solo el padding con safe-area.
+     (Antes `height:100dvh` fijo; lo reemplaza el flex del body para que un
+     hermano previo no empuje el fondo del scroller fuera de pantalla.) */
+  main {
+    padding: calc(10px + env(safe-area-inset-top)) 12px 0 !important;
+    padding-left:  calc(12px + env(safe-area-inset-left))  !important;
+    padding-right: calc(12px + env(safe-area-inset-right)) !important;
+    gap: 0 !important;
+  }
+
+  /* ── Barra superior: marca y controles arriba, pestañas deslizables abajo ── */
+  .app-bar { margin-bottom: 10px; }
+  .app-bar-logo { width: 32px; height: 32px; }
+  .app-bar-marca { gap: 9px; }
+  .app-bar-titulo {
+    font-size: 20px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .app-bar-mep-movil {
+    display: block;
+    margin: 2px 0 0;
+    font-size: 11px;
+    color: var(--text-sec);
+    white-space: nowrap;
+  }
+  .app-bar-mep-movil span {
+    color: var(--text);
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Fecha y MEP: no entran al lado de los controles */
+  .app-bar-datos { display: none; }
+
+  /* Área táctil de 44px de alto */
+  .app-bar-acciones { flex-shrink: 0; gap: 0; }
+  .app-bar-btn { width: 42px; height: 44px; }
+  .app-bar-btn:active { background: var(--chip-hover); }
+  .estado-cargas-detalle { padding: 10px 18px; }
+
+  .nav-tabs-wrap { justify-self: stretch; }
+  .nav-tab {
+    height: 40px;
+    padding: 0 13px;
+    font-size: 13px;
+  }
+
+  /* ── Área de contenido del tab: overflow ya es regla base. Acá `main` no
+     tiene padding abajo, así que este espacio separa el final del borde de la
+     pantalla y de la zona del gesto del sistema. Va como hijo ::after y no como
+     padding-bottom del scroller: los tabs cuyo contenido es un hijo con
+     `flex:1; min-height:0` consumirían ese padding como espacio del flex. ── */
+  .tab-scroll::after {
+    content: '';
+    display: block;
+    flex: none;
+    height: calc(4px + env(safe-area-inset-bottom));
+  }
+
+  /* ── KPI grid: 1 columna ancha + 2 abajo, legible de un vistazo ── */
+  .kpi-grid, .kpi-grid-resumen {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+  /* La cartera total es el dato principal: ocupa el ancho completo */
+  .kpi-grid > *:first-child, .kpi-grid-resumen > *:first-child { grid-column: 1 / -1; }
+
+  /* Con la primera card a ancho completo quedan n-1 en dos columnas: si n-1 es
+     impar la última cae sola en media fila y deja un hueco. Estirarla al ancho
+     completo cierra la grilla. (`:nth-last-child(1)` + `:nth-child(even)`
+     identifica justo ese caso: última card en posición par = sobra lugar.) */
+  .kpi-grid > *:last-child:nth-child(even),
+  .kpi-grid-resumen > *:last-child:nth-child(even) { grid-column: 1 / -1; }
+
+  .kpi-card-mobile {
+    padding: 10px 12px 9px !important;
+    border-radius: 10px !important;
+    gap: 2px !important;
+  }
+
+  /* El label de 2 líneas ("TIR cartera · LECAP / Dual / Tamar / Badlar") es el
+     que define el alto de toda la fila de la grilla. Ajustar el interlineado
+     recorta ~6px por card sin perder legibilidad. */
+  .kpi-card-mobile .kpi-label { line-height: 1.3 !important; }
+
+  .kpi-card-mobile .kpi-label {
+    font-size: 9px !important;
+    letter-spacing: 0.08em !important;
+  }
+
+  .kpi-card-mobile .kpi-value {
+    font-size: 17px !important;
+    margin-top: 3px !important;
+  }
+  .kpi-grid > *:first-child .kpi-value, .kpi-grid-resumen > *:first-child .kpi-value { font-size: 26px !important; }
+
+  .kpi-card-mobile .kpi-sub {
+    font-size: 10px !important;
+    margin-top: 2px !important;
+    line-height: 1.25 !important;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* ── Tenencias: gráficos apilados con alto propio (ya no comprimidos) ── */
+  .tenencias-grid {
+    display: flex !important;
+    flex-direction: column;
+    gap: 10px;
+    flex: none !important;
+  }
+  .tenencias-grid > * { min-height: 300px; }
+
+  /* ── Pills / chips: área táctil mínima cómoda ── */
+  .pill-touch {
+    padding: 9px 14px !important;
+    font-size: 12px !important;
+    min-height: 38px;
+  }
+  /* `.pill-touch` iguala todos los pills a 12px: sin esto las sub-pestañas y los
+     controles que dependen de ellas se ven del mismo nivel. */
+  .sub-tabs > .pill-touch { font-size: 13px !important; }
+
+  /* Filas de pills que son navegación (sub-pestañas, grupos de tasa, períodos
+     del Resumen): con `flex-wrap` ocupaban 2 o 3 renglones y
+     empujaban el contenido real fuera de la primera pantalla. En una sola fila
+     deslizable el gesto es el mismo que el de la barra de pestañas de arriba.
+     `scrollbar-width:none` + el ::-webkit-scrollbar ocultan la barra, que en
+     una fila de 38px de alto se come parte del área táctil. */
+  .pill-row {
+    flex-wrap: nowrap !important;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: 2px;
+  }
+  .pill-row::-webkit-scrollbar { display: none; }
+  /* Sin esto los pills se comprimen hasta partir el texto en vez de desbordar
+     y no queda nada que scrollear. */
+  .pill-row > * { flex-shrink: 0; }
+
+  /* ── Calendario ── */
+  /* Las 3 cards de resumen (próximo cobro / mes / anual) van en columna: a
+     tres por fila el texto se corta y "Proyección anual" queda fuera de
+     pantalla (grid fijo de 1.3fr 1fr 1fr pensado para desktop). */
+  .cal-resumen-row { grid-template-columns: 1fr !important; }
+  .cal-grid { gap: 3px !important; }
+  .cal-dia {
+    min-height: 58px !important;
+    padding: 4px 3px !important;
+    border-radius: 6px !important;
+  }
+  .cal-dia-num { font-size: 10px !important; }
+  .cal-header-mes { font-size: 15px !important; min-width: 0 !important; }
+  .cal-nav-btn {
+    width: 40px; height: 40px;
+    display: flex; align-items: center; justify-content: center;
+    padding: 0 !important;
+    font-size: 16px !important;
+  }
+  /* La lista de eventos es más útil que la grilla en pantalla chica:
+     los logos se achican para que entren varios por día. */
+  .cal-evento-fila { flex-wrap: wrap; gap: 6px !important; }
+  .cal-evento-fila .cal-evento-monto { margin-left: auto; }
+
+  /* Proyecciones: el panel de parámetros pasa a ancho completo */
+  .proy-controles {
+    flex: 1 1 100% !important;
+    min-width: 0 !important;
+  }
+
+  /* Los 4 KPIs de proyección en 2 columnas dejan ~160px por card: un monto de
+     6 cifras a 22px ("USD 84.241") se sale de la tarjeta y se corta la primera
+     letra. En una columna entran enteros y la pestaña igual scrollea. */
+  .proy-kpis { grid-template-columns: 1fr !important; }
+
+  /* ── Ingresos: fila de acreditación ──
+     Fecha fija de 90px + nombre + monto con `flex-shrink:0` y 12px de gap no
+     entran en 360px: el monto se salía de la tarjeta. Se achica el gap, la
+     fecha pasa a su ancho natural y el nombre del empleador cede con ellipsis
+     (es el dato más redundante de la fila: ya está el color del punto). */
+  .ingreso-fila { gap: 8px !important; font-size: 12px !important; }
+  .ingreso-fecha { width: auto !important; }
+  .ingreso-empleador {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* Filtros de ticker: una sola fila deslizable en vez de un bloque enorme */
+  .filtro-tickers {
+    flex-wrap: nowrap !important;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: 2px;
+  }
+  .filtro-tickers::-webkit-scrollbar { display: none; }
+}
+
+/* ── Mobile (cont.): paneles flotantes ──────────────────────── */
+@media (max-width: 768px) {
+
+  /* El gráfico de Resumen necesita alto propio dentro del scroll */
+  .resumen-chart-wrap { flex: none !important; min-height: 340px; }
+
+  /* Controles de Tenencias en dos filas: slider arriba, dimensiones abajo */
+  .tenencias-controles { gap: 8px !important; }
+  .tenencias-slider { flex-basis: 100%; min-width: 0 !important; }
+  .tenencias-sep { display: none; }
+  .dim-selector {
+    flex-wrap: nowrap !important;
+    width: 100%;
+    gap: 5px !important;
+    padding-bottom: 2px;
+  }
+
+  /* ── Cargar datos: bottom sheet en vez de drawer lateral ── */
+  .upload-panel {
+    top: auto !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: 92dvh;
+    border-left: none !important;
+    border-top: 1px solid var(--border);
+    border-radius: 18px 18px 0 0;
+    box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.4) !important;
+    animation: sheet-up 0.22s ease-out;
+  }
+  .upload-panel-header { padding: 14px 18px !important; }
+  .upload-panel-body {
+    padding: 16px 18px calc(24px + env(safe-area-inset-bottom)) !important;
+  }
+
+}
+
+@keyframes sheet-up {
+  from { transform: translateY(14px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
+
+/* ── KPI: el ⓘ mide 14px, muy chico para el dedo ──────────────
+   Mismo truco que el thumb del MonthSlider: un pseudo-elemento transparente
+   centrado le da 40px de zona sensible sin tocar el círculo visible (que a
+   más tamaño competiría con el label). Solo en mobile: en desktop el mouse
+   acierta 14px sin problema y el área extra taparía el texto del label. */
+@media (max-width: 768px) {
+  .kpi-info::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 40px;
+    height: 40px;
+    transform: translate(-50%, -50%);
+  }
+}
+
+/* ── MonthSlider: agrandar el área táctil sin agrandar el círculo ──
+   El thumb visible mide 16px; el pseudo-elemento le da 44px de zona
+   sensible al dedo, que es el mínimo cómodo en pantalla táctil. */
+.month-thumb::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 44px;
+  height: 44px;
+  transform: translate(-50%, -50%);
+}
+.month-thumb:focus-visible {
+  box-shadow: 0 0 0 3px var(--primary-dim), 0 1px 6px rgba(0, 0, 0, 0.4);
+}
+
+@media (max-width: 768px) {
+  .month-thumb { width: 20px !important; height: 20px !important; }
+  .month-track { height: 32px !important; }
+  /* Las etiquetas de inicio/fin chocan con el thumb en pantalla angosta y son
+     redundantes: el mes elegido ya se muestra a la izquierda del track. */
+  .month-endlabel { display: none; }
+  /* El gráfico de benchmarks llena el alto restante de la pestaña (flex:1,
+     ya seteado inline); el piso de 280px es el mínimo legible si la pestaña
+     queda muy baja. `flex:none` acá dejaba una banda vacía debajo de la
+     tarjeta en paneles donde el alto disponible superaba el min-height. */
+  .bench-chart-card { min-height: 280px; }
+
+  /* Toggle USD/% de los gráficos */
+  .modo-toggle-btn {
+    padding: 10px 18px !important;
+    font-size: 12px !important;
+    min-height: 40px;
+  }
+}
+
+/* En fila, los íconos de estado cortaban el título: apilados entran en el alto
+   del botón y ocupan casi solo su ancho. */
+@media (max-width: 480px) {
+  .app-bar-btn.app-bar-cargar {
+    gap: 6px;
+    padding: 0 12px 0 8px;
+  }
+  .estado-cargas {
+    flex-direction: column;
+    gap: 1px;
+  }
+  .estado-cargas .estado-carga svg {
+    width: 13px;
+    height: 13px;
+    stroke-width: 1.8;
+  }
+  .estado-cargas .estado-carga[data-estado="pendiente"]::after {
+    top: -1px;
+    width: 5px;
+    height: 5px;
+  }
+}
+
+/* ── Pantallas muy angostas (≤ 380px) ───────────────────────── */
+@media (max-width: 340px) {
+  .app-bar-titulo { font-size: 18px; }
+  .app-bar-btn { width: 38px; }
+}
+
+@media (max-width: 380px) {
+  .kpi-card-mobile .kpi-value { font-size: 15px !important; }
+  .kpi-grid > *:first-child .kpi-value, .kpi-grid-resumen > *:first-child .kpi-value { font-size: 23px !important; }
+  .cal-dia { min-height: 50px !important; }
+}
+
+/* ── Landscape en celular: barra en una sola fila, el alto es lo que falta ── */
+@media (max-width: 900px) and (orientation: landscape) and (max-height: 500px) {
+  .app-bar {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas: "marca tabs acciones";
+    margin-bottom: 6px;
+  }
+  .nav-tabs-wrap { justify-self: stretch; }
+}
+
+/* ── Range input (sliders) ──────────────────────────────────── */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 4px;
+  border-radius: 4px;
+  background: var(--border);
+  outline: none;
+  cursor: pointer;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--primary);
+  cursor: pointer;
+  border: 2px solid var(--bg);
+  box-shadow: 0 0 0 1px var(--primary);
+  transition: transform 0.1s;
+}
+/* Sliders de categoría usan accentColor del activo vía inline style */
+.slider-cat::-webkit-slider-thumb {
+  background: currentColor;
+  box-shadow: none;
+  border-color: var(--card);
+}
+input[type="range"]::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+}
+input[type="range"]::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--primary);
+  cursor: pointer;
+  border: 2px solid var(--bg);
+  box-shadow: 0 0 0 1px var(--primary);
+}
+input[type="range"]::-moz-range-track {
+  background: var(--border);
+  height: 4px;
+  border-radius: 4px;
+}
+
+/* Mobile: la barra de 4px es imposible de agarrar con el dedo. Se le da 40px
+   de alto transparente y se repinta la pista con un gradiente centrado, así
+   se sigue viendo fina pero el área táctil cubre todo el alto.
+   Va después de las reglas base a propósito: misma especificidad, gana la
+   última que aparece en el archivo. */
+@media (max-width: 768px) {
+  input[type="range"] {
+    height: 40px;
+    border-radius: 0;
+    background: linear-gradient(var(--border), var(--border)) center / 100% 4px no-repeat;
+  }
+  input[type="range"]::-webkit-slider-thumb { width: 20px; height: 20px; }
+  input[type="range"]::-moz-range-thumb     { width: 20px; height: 20px; }
+  input[type="range"]::-moz-range-track     { background: transparent; }
+}
+
+/* Rango dual: 2 <input type="range"> superpuestos con position:absolute sobre
+   el mismo track (el elemento nativo no soporta 2 thumbs). El input entero
+   lleva pointer-events:none para no bloquear el drag del otro thumb ni tapar
+   el track/segmento resaltado que pinta el contenedor por debajo; solo el
+   thumb recupera pointer-events para poder arrastrarlo. Track propio oculto
+   (transparent) porque el fondo visible lo pinta el contenedor, no el input. */
+.dual-range {
+  background: transparent !important;
+  pointer-events: none;
+}
+.dual-range::-webkit-slider-thumb { pointer-events: auto; }
+.dual-range::-moz-range-thumb     { pointer-events: auto; }
+.dual-range::-moz-range-track     { background: transparent; }
+
+/* ── Tablas de datos ────────────────────────────────────────────
+   `width:100%` dentro de un `overflow-x:auto` nunca desborda: el ancho
+   disponible se reparte entre todas las columnas, así que en mobile una tabla
+   de 10 columnas comprime cada una a ~36px y los números se parten en dos
+   líneas. Con `min-width` en la tabla las columnas conservan su ancho natural
+   y el contenedor pasa a scrollear de verdad.
+
+   `width:auto` además deja que cada columna mida lo que necesita en vez de
+   estirarse: la tabla ocupa el ancho real de su contenido, que puede ser menor
+   al mínimo en las tablas de pocas columnas. */
+@media (max-width: 768px) {
+  .tabla-datos {
+    width: auto !important;
+    min-width: 100%;
+  }
+
+  /* El ticker es la clave de la fila: fijado a la izquierda, sigue visible
+     mientras se scrollea horizontalmente por las métricas. El borde derecho
+     marca el corte.
+
+     El fondo necesita dos capas. Las filas resaltadas pintan su color en el
+     `<tr>` con un inline `background` translúcido (`...11`, `primary-dim`), y
+     ese tinte no tapa lo que scrollea por debajo. Entonces la celda lleva el
+     color de la card como `background-image` —una capa opaca propia, que el
+     inline del `<tr>` no puede pisar porque vive en otro elemento— y el tinte
+     de la fila se sigue viendo encima por herencia del `<tr>`. Con
+     `background-color` en la celda, en cambio, el tinte de la fila quedaría
+     oculto y todas las filas se verían iguales en esa columna. */
+  .tabla-datos thead th:first-child,
+  .tabla-datos tbody td:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 2;
+    background-image: linear-gradient(var(--card), var(--card));
+    border-right: 1px solid var(--border-subtle);
+  }
+
+  /* El thead sticky vertical no sirve acá (el scroller vertical es
+     `.tab-scroll`, no el contenedor de la tabla) y en el cruce con la primera
+     columna se superponía mal. La cabecera de la columna fija necesita ganarle
+     al resto del thead. */
+  .tabla-datos thead th:first-child { z-index: 3; }
+
+  /* Celdas un poco más compactas: con el scroll horizontal el padding de 10px
+     por lado sumaba ~200px de ancho muerto en 10 columnas. */
+  .tabla-datos th { padding: 8px 8px !important; }
+  .tabla-datos td { padding: 8px 8px !important; }
+
+  /* Los números no deben partirse en dos líneas: con el ancho natural de la
+     columna ya no hace falta y una fila de alto doble rompe el barrido. */
+  .tabla-datos td, .tabla-datos th { white-space: nowrap; }
+
+  /* El borde redondeado del contenedor recorta la columna fija al scrollear;
+     el contenedor ya es el que lleva el radio. */
+  .tabla-wrap { -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain; }
+}
+
+/* ── Recharts overrides ─────────────────────────────────────── */
+.recharts-tooltip-wrapper .recharts-default-tooltip {
+  background: var(--card) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 10px !important;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.18) !important;
+}
+.recharts-legend-item-text {
+  color: var(--text-sec) !important;
+}
+.recharts-cartesian-grid-horizontal line {
+  stroke: var(--border-subtle) !important;
+}
+
+/* ── Gastos ─────────────────────────────────────────────────────
+   Lista, formulario y sugerencias de la pestaña Gastos. Van en clases (no inline)
+   porque la fila y el formulario se reacomodan en mobile y eso solo se resuelve
+   con media queries. Prefijo g-/gasto- para no pisar controles de otras pestañas. */
+.g-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px 20px;
+}
+.g-eyebrow {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 0 0 12px;
+}
+
+.gasto-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto 36px;
+  grid-template-areas: "nombre meta monto acc";
+  align-items: center;
+  column-gap: 12px;
+  row-gap: 2px;
+  padding: 6px 4px;
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: 13px;
+}
+.gasto-row.inactivo { opacity: 0.6; }
+.gasto-nombre {
+  grid-area: nombre;
+  color: var(--text);
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.gasto-meta {
+  grid-area: meta;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 4px 6px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.gasto-monto {
+  grid-area: monto;
+  min-width: 90px;
+  text-align: right;
+  color: var(--down);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.gasto-acc { grid-area: acc; display: flex; justify-content: flex-end; }
+
+/* Total del mes con el reparto por categoría. */
+.gasto-total {
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+  color: var(--text);
+  margin: 0 0 4px;
+}
+.gasto-barra {
+  display: flex;
+  height: 10px;
+  margin-top: 12px;
+  border-radius: 5px;
+  overflow: hidden;
+  background: var(--border);
+}
+.gasto-leyenda {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin-top: 8px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.gasto-leyenda > span { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+.gasto-leyenda .punto { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.gasto-leyenda strong { color: var(--text-sec); font-variant-numeric: tabular-nums; }
+
+.g-chip {
+  padding: 1px 8px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--chip-bg);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-sec);
+  white-space: nowrap;
+}
+/* Aviso que no bloquea (ej. períodos superpuestos): se nota más que una ayuda común. */
+.g-ayuda.aviso { color: var(--text-sec); border-left: 2px solid var(--primary); padding-left: 8px; }
+.g-chip-btn { font-family: inherit; cursor: pointer; }
+.g-chip-btn:hover { border-color: var(--primary); color: var(--primary); }
+/* Línea de tiempo de un gasto con varios períodos, sangrada bajo su fila. */
+.gasto-tramos {
+  margin: 2px 0 8px 10px;
+  padding-left: 10px;
+  border-left: 2px solid var(--border);
+  font-size: 12px;
+}
+.gasto-tramos .g-btn { margin-top: 6px; }
+.g-chip.destacado { color: var(--primary); border-color: var(--primary); background: var(--primary-dim); }
+.g-chip.baja { color: var(--down); }
+
+.g-icon-btn {
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: var(--muted);
+  font-size: 14px;
+  cursor: pointer;
+}
+.g-icon-btn:hover:not(:disabled) { background: var(--chip-hover); color: var(--text); }
+.g-icon-btn:disabled { cursor: default; opacity: 0.5; }
+
+.g-btn {
+  padding: 8px 16px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-sec);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.g-btn:hover:not(:disabled) { background: var(--chip-hover); color: var(--text); }
+.g-btn.primario { border-color: var(--primary); background: var(--primary-dim); color: var(--primary); }
+.g-btn.peligro { color: var(--down); border-color: var(--down); }
+.g-btn.chico { padding: 4px 10px; font-size: 12px; }
+.g-btn:disabled { cursor: default; opacity: 0.5; }
+
+/* Formulario en grilla de 12: los .c-N dicen cuántas columnas ocupa cada campo. */
+.g-form {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 12px 10px;
+  align-items: start;
+}
+.g-form .c-12 { grid-column: span 12; }
+.g-form .c-7  { grid-column: span 7; }
+.g-form .c-6  { grid-column: span 6; }
+.g-form .c-5  { grid-column: span 5; }
+.g-form .c-4  { grid-column: span 4; }
+.g-form .c-3  { grid-column: span 3; }
+.g-form .c-2  { grid-column: span 2; }
+.g-campo { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.g-campo > label, .g-etiqueta > label { font-size: 11px; color: var(--muted); }
+/* Un rótulo con su ⓘ al lado. */
+.g-etiqueta { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.g-campo input:not([type="radio"]), .g-campo select {
+  width: 100%;
+  min-width: 0;
+  padding: 7px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 13px;
+}
+.g-campo input:not([type="radio"]):focus-visible, .g-campo select:focus-visible { outline: 2px solid var(--primary); outline-offset: 1px; }
+.g-cambio {
+  min-width: 0;
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.g-cambio legend { font-size: 11px; color: var(--muted); padding: 0 6px; }
+.g-radio { display: flex; gap: 8px; align-items: flex-start; font-size: 13px; color: var(--text); cursor: pointer; }
+.g-radio input[type="radio"], .g-radio input[type="checkbox"] { margin-top: 3px; flex-shrink: 0; }
+.g-radio span { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; min-width: 0; }
+.g-radio span input {
+  padding: 7px 10px; border-radius: 6px; border: 1px solid var(--border);
+  background: var(--bg); color: var(--text); font-size: 13px;
+}
+.g-ayuda { font-size: 11px; line-height: 1.45; color: var(--muted); margin: 0; }
+.g-error { font-size: 12px; line-height: 1.45; color: var(--down); margin: 0; }
+.g-acciones { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.g-acciones .separador { flex: 1; }
+
+.g-resumen { cursor: pointer; font-size: 12px; font-weight: 700; color: var(--text); }
+.g-sugerencia {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: 13px;
+  color: var(--text-sec);
+}
+.g-sugerencia .texto { flex: 1; min-width: 0; }
+
+/* Proyecciones: el resultado a la vista mientras se mueven los sliders. Solo en
+   mobile; en desktop los KPIs ya están al lado de los controles. */
+.proy-resultado-fijo { display: none; }
+
+@media (max-width: 768px) {
+  .proy-resultado-fijo {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 2px 12px;
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    margin: -8px -8px 0;
+    padding: 8px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--card-alt);
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .proy-resultado-fijo strong { color: var(--text); font-variant-numeric: tabular-nums; }
+
+  /* La franja de finanzas personales se repite en las tres sub-pestañas: en 2×2
+     deja el contenido de cada una más cerca del principio de la pantalla. */
+  .kpi-grid-resumen.flujo-kpis > *:first-child,
+  .kpi-grid-resumen.flujo-kpis > *:last-child:nth-child(even) { grid-column: auto; }
+  .kpi-grid-resumen.flujo-kpis > *:first-child .kpi-value { font-size: 17px !important; }
+
+  .gasto-row {
+    grid-template-columns: minmax(0, 1fr) auto 40px;
+    grid-template-areas: "nombre monto acc" "meta meta meta";
+    padding: 8px 4px;
+  }
+  .gasto-meta { justify-content: flex-start; }
+  .g-chip-btn { padding: 6px 10px; }
+  .gasto-monto { min-width: 0; }
+  .g-icon-btn { width: 40px; height: 40px; }
+  .g-form .c-7, .g-form .c-6, .g-form .c-5, .g-form .c-4, .g-form .c-3, .g-form .c-2 { grid-column: span 12; }
+  .g-form .mitad { grid-column: span 6; }
+  /* iOS hace zoom al enfocar un input de menos de 16px (ver regla global de arriba). */
+  .g-campo input:not([type="radio"]), .g-campo select { font-size: 16px; padding: 9px 10px; }
+  .g-radio span input { font-size: 16px; padding: 9px 10px; }
+  .g-btn { min-height: 40px; }
+  .g-btn.chico { min-height: 36px; }
+}
