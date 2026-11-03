@@ -9,7 +9,8 @@ cobros la dispara GitHub Actions.
 ## El código se publica
 
 Se desarrolla en un repo privado, pero `HEAD` se publica como espejo sin
-historia (`npm run publicar`, ADR 0030): todo archivo versionado es público.
+historia (`npm run publicar`, ADR 0030; el script vive solo en el repo privado):
+todo archivo versionado es público.
 No escribas en ningún archivo versionado:
 
 - Tickers de posiciones reales, montos, cantidades, pesos de cartera.
@@ -72,7 +73,7 @@ antes de cerrar el tema — es el momento con la mejor información.
 | `npm test` | vitest (suites en `lib/*.test.ts`) |
 | `npm run mcp` | servidor MCP por stdio |
 | `npm run build` | build de producción |
-| `npm run publicar` | exporta `HEAD` al espejo público (`--push` para subirlo) |
+| `npm run publicar` | exporta `HEAD` al espejo público (`--push` para subirlo; solo en el repo privado) |
 
 ## Convenciones
 
