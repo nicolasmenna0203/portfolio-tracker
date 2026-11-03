@@ -1,18 +1,17 @@
 'use client';
 
-// Pestaña Tenencias: composición de la cartera en un mes dado, con tres
-// vistas — Composición (treemap + evolución), Variación vs. mes anterior
-// y Objetivo (metas de % editables). Extraído de Dashboard.tsx para que
-// cada pestaña sea su propio archivo, igual que el resto.
+// Pestaña Tenencias: composición de la cartera en un mes dado, con dos
+// vistas — Composición (treemap + evolución) y Rebalanceo (cambio vs. mes
+// anterior y metas de % editables, en las mismas barras). Extraído de
+// Dashboard.tsx para que cada pestaña sea su propio archivo, igual que el resto.
 //
-// Mes y dimensión son los mismos en las tres vistas: viven acá, en una sola
+// Mes y dimensión son los mismos en las dos vistas: viven acá, en una sola
 // barra que no cambia de forma ni pierde la selección al pasar de una a otra.
 //
 // El filtro por tipo (click en un grupo del Treemap) es un zoom de Composición:
-// afecta a sus dos gráficos y su pill solo se ve ahí. Objetivo no lo aplica
-// porque sus metas son % de la cartera entera (filtrada daría, por ejemplo, 100%
-// real contra 30% de objetivo), y Variación tampoco porque sus "pp" son
-// participación sobre el total.
+// afecta a sus dos gráficos y su pill solo se ve ahí. Rebalanceo no lo aplica porque sus "pp" son participación sobre el total y las metas son %
+// de la cartera entera (filtrada daría, por ejemplo, 100% real contra 30% de
+// objetivo).
 
 import { useState, useMemo } from 'react';
 import type { DashboardData, TenenciaActual } from '@/types';
@@ -20,8 +19,7 @@ import type { Moneda } from '@/lib/format';
 import TreemapChart from './TreemapChart';
 import EvolucionTipoChart from './EvolucionTipoChart';
 import MonthSlider from './MonthSlider';
-import VariacionTab from './VariacionTab';
-import ObjetivosComposicion from './ObjetivosComposicion';
+import RebalanceoTab from './RebalanceoTab';
 import SubTabs from './SubTabs';
 
 const DIMS_TENENCIAS = [
@@ -35,8 +33,7 @@ type DimTenencias = typeof DIMS_TENENCIAS[number]['key'];
 
 const VISTAS_TENENCIAS = [
   { id: 'composicion', label: 'Composición' },
-  { id: 'variacion',   label: 'Variación'   },
-  { id: 'objetivo',    label: 'Objetivo'    },
+  { id: 'rebalanceo',  label: 'Rebalanceo'  },
 ] as const;
 type VistaTenencias = typeof VISTAS_TENENCIAS[number]['id'];
 
@@ -168,18 +165,14 @@ export default function TenenciasTab({ data, hideValues, moneda }: Props) {
         </div>
       )}
 
-      {vistaTenencias === 'variacion' && (
-        <VariacionTab
+      {vistaTenencias === 'rebalanceo' && (
+        <RebalanceoTab
           tenenciasPorMes={tenenciasPorMes}
           hideValues={hideValues}
           moneda={moneda}
           mesSel={mesKey}
           dim={dimTenencias}
         />
-      )}
-
-      {vistaTenencias === 'objetivo' && (
-        <ObjetivosComposicion tenencias={tenenciasMesRaw} dim={dimTenencias} />
       )}
     </>
   );

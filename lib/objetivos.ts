@@ -3,7 +3,7 @@
 // ── Objetivos de composición de cartera ─────────────────────────────────────
 //
 // El % objetivo de cada categoría, por dimensión (tipo de activo, riesgo,
-// moneda, tipo de renta, geografía). Es lo que la pestaña de Proyecciones
+// moneda, tipo de renta, geografía). Es lo que la vista Rebalanceo de Tenencias
 // compara contra la composición real para mostrar cuánto falta o sobra.
 //
 // Viven en la hoja `Objetivos` del Sheet y no en localStorage del navegador,
@@ -38,9 +38,10 @@ import { getAuth, esHojaInexistente } from './sheets';
 
 export const HOJA = 'Objetivos';
 
-/** Dimensiones por las que se puede fijar una composición objetivo. */
-export const DIMENSIONES = ['TIPO', 'RIESGO', 'MONEDA', 'RENTA', 'SECTOR_GEO'] as const;
-export type Dimension = (typeof DIMENSIONES)[number];
+// Las dimensiones y su etiquetado viven en `dimensiones.ts`, que también usa el
+// cliente; acá se re-exportan para los que ya las importaban de este módulo.
+import { DIMENSIONES, type Dimension } from './dimensiones';
+export { DIMENSIONES, type Dimension };
 
 /** Encabezado legible de cada bloque. La clave interna va en un comentario aparte. */
 const TITULO: Record<Dimension, string> = {

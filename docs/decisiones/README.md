@@ -52,8 +52,8 @@ viejo pasa a "Reemplazadas". Ver [PLANTILLA.md](PLANTILLA.md) para el flujo comp
 | # | Decisión | Código |
 |---|---|---|
 | [0016](0016-perfil-inversor-como-memoria-del-asesor.md) | Memoria del asesor en un archivo de perfil local, con escritura acotada | `lib/perfilInversor.ts` |
-| [0017](0017-objetivos-de-composicion-en-el-sheet.md) | Objetivos de composición en el Sheet, no en localStorage | `lib/objetivos.ts` |
-| [0029](0029-lectura-fallida-no-es-lista-vacia.md) | Tratar una lectura fallida del Sheet como error, no como lista vacía, en las hojas que se reescriben enteras | `lib/sheets.ts`, `lib/gastosFijos.ts`, `lib/objetivos.ts`, `lib/ratiosGuardados.ts`, `components/GastosSection.tsx`, `components/ObjetivosComposicion.tsx`, `components/RatiosTab.tsx` |
+| [0017](0017-objetivos-de-composicion-en-el-sheet.md) | Objetivos de composición en el Sheet, no en localStorage | `lib/objetivos.ts`, `lib/dimensiones.ts`, `components/RebalanceoTab.tsx` |
+| [0029](0029-lectura-fallida-no-es-lista-vacia.md) | Tratar una lectura fallida del Sheet como error, no como lista vacía, en las hojas que se reescriben enteras | `lib/sheets.ts`, `lib/gastosFijos.ts`, `lib/objetivos.ts`, `lib/ratiosGuardados.ts`, `components/GastosSection.tsx`, `lib/useObjetivos.ts`, `components/RatiosTab.tsx` |
 
 ## Fuentes externas
 

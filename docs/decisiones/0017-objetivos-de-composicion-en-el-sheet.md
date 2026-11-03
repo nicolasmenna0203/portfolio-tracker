@@ -3,7 +3,7 @@ numero: 0017
 titulo: Mover los objetivos de composición de localStorage al Google Sheet
 estado: Aceptada
 fecha: 2026-08-08
-codigo: lib/objetivos.ts, app/api/objetivos/route.ts, components/ProyeccionesTab.tsx, lib/agentTools.ts
+codigo: lib/objetivos.ts, app/api/objetivos/route.ts, lib/dimensiones.ts, lib/useObjetivos.ts, components/RebalanceoTab.tsx, lib/agentTools.ts
 ---
 
 # 0017 — Mover los objetivos de composición de localStorage al Google Sheet
@@ -93,6 +93,12 @@ Las etiquetas de categoría y el filtrado de la tool **replican los de
 `ProyeccionesTab.tsx`** —incluido que geografía se calcula solo sobre renta
 variable—. Si no coincidieran, las categorías no cruzarían con los objetivos
 guardados y el desvío sería inventado.
+
+> **Actualización:** los objetivos ya no viven en Proyecciones. Pasaron a una vista
+> propia de Tenencias y después se fusionaron con Variación en la vista
+> Rebalanceo. Con la fusión, el etiquetado y el filtro de geografía se
+> centralizaron en `lib/dimensiones.ts`, que usan la vista, `lib/useObjetivos.ts`
+> y la tool del MCP: el límite de abajo sobre el criterio duplicado ya no aplica.
 
 ## Consecuencias y límites
 

@@ -22,7 +22,8 @@
  */
 
 import { fetchDashboardData } from './sheets';
-import { RIESGO_LABEL, RENTA_LABEL, GEO_LABEL, MONEDA_LABEL } from './constants';
+import { RIESGO_LABEL, RENTA_LABEL, GEO_LABEL } from './constants';
+import { participacionPorCategoria, sumarPorCategoria } from './dimensiones';
 import { tickersDeCartera } from './tickersElegibles';
 import { fetchCalendarioFinanciero } from './calendario';
 import { fetchPerformance } from './performance';
@@ -237,11 +238,10 @@ async function distribucion({
  * Composición real de la cartera contra los objetivos fijados en el dashboard,
  * con el desvío de cada categoría.
  *
- * Las etiquetas y el criterio de filtrado replican los de la pestaña de
- * Proyecciones (`components/ProyeccionesTab.tsx`), que es donde se cargan los
- * objetivos: si no coincidieran, las categorías no cruzarían y el desvío sería
- * inventado. En particular, geografía se calcula solo sobre renta variable,
- * igual que en la UI.
+ * Las etiquetas y el filtrado salen de `lib/dimensiones.ts`, el mismo módulo que
+ * usa la vista donde se cargan los objetivos: si no coincidieran, las categorías
+ * no cruzarían y el desvío sería inventado. En particular, geografía se calcula
+ * solo sobre renta variable.
  */
 async function objetivosComposicion({ dimension }: { dimension?: string }) {
   const [data, objetivos] = await Promise.all([getData(), leerObjetivos()]);
@@ -250,30 +250,13 @@ async function objetivosComposicion({ dimension }: { dimension?: string }) {
 
   const tenencias = data.tenenciasPorMes[mesKey] ?? [];
 
-  const etiqueta: Record<Dimension, (t: TenenciaActual) => string> = {
-    TIPO:       (t) => t.TIPO || 'Sin dato',
-    RIESGO:     (t) => RIESGO_LABEL[Number(t.RIESGO)] ?? 'Sin dato',
-    MONEDA:     (t) => MONEDA_LABEL[t.MONEDA] ?? t.MONEDA ?? 'Sin dato',
-    RENTA:      (t) => RENTA_LABEL[t.RENTA] ?? t.RENTA ?? 'Sin dato',
-    SECTOR_GEO: (t) => GEO_LABEL[t.SECTOR_GEO] ?? t.SECTOR_GEO ?? 'Sin dato',
-  };
-
   const pedidas = dimension && esDimension(dimension.toUpperCase())
     ? [dimension.toUpperCase() as Dimension]
     : [...DIMENSIONES];
 
   const salida = pedidas.map((dim) => {
-    // Geografía solo aplica a renta variable — mismo filtro que la UI.
-    const src = dim === 'SECTOR_GEO'
-      ? tenencias.filter((t) => t.RENTA === 'VAR' || t.RENTA === 'VARIABLE')
-      : tenencias;
-    const total = src.reduce((s, t) => s + t.tenencia_usd, 0);
-
-    const realPct: Record<string, number> = {};
-    for (const t of src) {
-      const cat = etiqueta[dim](t);
-      realPct[cat] = (realPct[cat] ?? 0) + (total > 0 ? (t.tenencia_usd / total) * 100 : 0);
-    }
+    const total = Object.values(sumarPorCategoria(tenencias, dim, 'tenencia_usd')).reduce((s, v) => s + v, 0);
+    const realPct = participacionPorCategoria(tenencias, dim);
 
     const obj = objetivos[dim] ?? {};
     const categorias = [...new Set([...Object.keys(realPct), ...Object.keys(obj)])].sort();
@@ -930,7 +913,7 @@ export const AGENT_TOOLS: AgentTool[] = [
   {
     name: 'objetivos_composicion',
     description:
-      'Compara la composición real de la cartera contra los objetivos de asignación que el usuario fijó en la pestaña Proyecciones del dashboard, por tipo de activo, riesgo, moneda, tipo de renta y geografía. Devuelve el desvío en puntos porcentuales y cuántos USD habría que mover para alcanzar cada objetivo. Usar SIEMPRE que la pregunta sea sobre rebalanceo, si algo se fue de peso, o si la cartera está donde debería estar: el usuario rebalancea por peso contra estos objetivos, así que opinar sin leerlos es opinar sin el criterio. Si una dimensión tiene tiene_objetivos=false, no hay objetivo fijado y no hay que inferir uno.',
+      'Compara la composición real de la cartera contra los objetivos de asignación que el usuario fijó en la vista Rebalanceo de la pestaña Tenencias del dashboard, por tipo de activo, riesgo, moneda, tipo de renta y geografía. Devuelve el desvío en puntos porcentuales y cuántos USD habría que mover para alcanzar cada objetivo. Usar SIEMPRE que la pregunta sea sobre rebalanceo, si algo se fue de peso, o si la cartera está donde debería estar: el usuario rebalancea por peso contra estos objetivos, así que opinar sin leerlos es opinar sin el criterio. Si una dimensión tiene tiene_objetivos=false, no hay objetivo fijado y no hay que inferir uno.',
     inputSchema: {
       type: 'object',
       properties: {

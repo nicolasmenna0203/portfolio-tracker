@@ -3,7 +3,7 @@ numero: 0029
 titulo: Tratar una lectura fallida del Sheet como error, no como lista vacía, en las hojas que se reescriben enteras
 estado: Aceptada
 fecha: 2026-11-02
-codigo: lib/sheets.ts, lib/gastosFijos.ts, lib/objetivos.ts, lib/ratiosGuardados.ts, components/GastosSection.tsx, components/ObjetivosComposicion.tsx, components/RatiosTab.tsx
+codigo: lib/sheets.ts, lib/gastosFijos.ts, lib/objetivos.ts, lib/ratiosGuardados.ts, components/GastosSection.tsx, lib/useObjetivos.ts, components/RatiosTab.tsx
 ---
 
 # 0029 — Tratar una lectura fallida del Sheet como error, no como lista vacía, en las hojas que se reescriben enteras

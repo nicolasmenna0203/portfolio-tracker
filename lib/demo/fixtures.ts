@@ -258,13 +258,15 @@ export function buildIngresos(): IngresosResponse {
 
 // ── Objetivos de composición ─────────────────────────────────────────────
 
+// Las claves son etiquetas (`etiquetaCategoria` de lib/dimensiones.ts), no los
+// códigos del Sheet: con `EU` en vez de `EEUU` ninguna fila cruzaba su objetivo.
 export function buildObjetivos(): ObjetivosPorDimension {
   return {
     TIPO: { ACCIONES: 30, ETF: 30, ARGY: 25, FCI: 15 },
     RIESGO: { CONSERVADOR: 20, MODERADO: 35, 'MODERADO-ALTO': 30, AGRESIVO: 15 },
     MONEDA: { USD: 70, CER: 15, ARS: 15 },
     RENTA: { VARIABLE: 60, FIJA: 40 },
-    SECTOR_GEO: { EU: 45, ARG: 30, EMER: 15, GLO: 10 },
+    SECTOR_GEO: { EEUU: 45, ARG: 30, EMERGENTES: 15, GLOBAL: 10 },
   };
 }
 

@@ -470,7 +470,7 @@ input, select, textarea { font-size: 16px; }
    con borde duro. Las clases de abajo son
    contenedores de contenido, no scrollers; el scroll horizontal de tablas
    anchas sigue permitido (`overflow-x`). */
-.variacion-root,
+.rebalanceo-root,
 .proy-root,
 .cal-root {
   overflow: visible;

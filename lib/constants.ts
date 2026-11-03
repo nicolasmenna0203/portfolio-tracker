@@ -13,7 +13,7 @@ export const PALETA_TIPO: Record<string, string> = {
 // Paleta de respaldo para categorías sin color asignado arriba (ej. un TIPO
 // nuevo en el Sheet). Se elige por hash del nombre, no por índice de aparición,
 // para que la misma categoría tenga siempre el mismo color sin importar en qué
-// gráfico o en qué orden aparezca (Treemap, EvolucionTipoChart, VariacionTab, etc).
+// gráfico o en qué orden aparezca (Treemap, EvolucionTipoChart, RebalanceoTab, etc).
 const FALLBACK_PALETTE = [
   '#cfab6e', '#6a9bab', '#8d7fc7', '#d4b95e',
   '#c15c4a', '#7fb0c2', '#5fb896', '#b98fae', '#8a7d6a',

@@ -21,7 +21,7 @@ Seis tabs, todas dentro de una sola página:
 | Tab | Qué muestra |
 |---|---|
 | **Resumen** | KPIs (total, aportes, rendimiento neto, TIR anual), evolución mensual |
-| **Tenencias** | Composición (treemap con filtro por tipo y evolución), variación y objetivos del mes seleccionado, con selector común de mes y dimensión |
+| **Tenencias** | Composición (treemap con filtro por tipo y evolución) y Rebalanceo (variación contra el mes anterior y distancia a los objetivos, editables) del mes seleccionado, con selector común de mes y dimensión |
 | **Benchmarks** | Cartera vs S&P 500, inflación, MEP, BTC y oro, en base 100 |
 | **Calendario** | Cobros esperados: dividendos, renta y amortización de bonos, balances |
 | **Performance** | Renta fija (TIR, duration, paridad, sensibilidad), renta variable (fundamentals), carry trade, FCI y ratios |
