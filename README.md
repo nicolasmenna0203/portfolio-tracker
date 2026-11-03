@@ -35,7 +35,7 @@ Además: carga de tenencias, movimientos y haberes desde PDF; alerta semanal de 
 
 **[portfolio-tracker-demo-lake.vercel.app/demo](https://portfolio-tracker-demo-lake.vercel.app/demo)**
 
-La ruta `/demo` (y sus `/api/demo/*` correspondientes) sirve el mismo `<Dashboard>` con datos 100% sintéticos generados en `lib/demo/` — nunca lee Google Sheets ni pega a Yahoo/bonistas/CAFCI, así que no requiere login ni expone la cartera real. Los montos se muestran siempre ocultos. Corre como un segundo proyecto de Vercel (`portfolio-tracker-demo`), deployado desde esta misma rama, con su propia URL desvinculada del dominio real.
+La ruta `/demo` (y sus `/api/demo/*` correspondientes) sirve el mismo `<Dashboard>` con datos 100% sintéticos generados en `lib/demo/` — nunca lee Google Sheets ni pega a Yahoo/bonistas/CAFCI, así que no requiere login ni expone la cartera real. Los montos se muestran siempre ocultos. Corre como un segundo proyecto de Vercel (`portfolio-tracker-demo`), deployado desde el mismo código que la app real, con su propia URL desvinculada del dominio real.
 
 ## Arquitectura
 
