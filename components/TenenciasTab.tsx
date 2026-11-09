@@ -21,13 +21,14 @@ import EvolucionTipoChart from './EvolucionTipoChart';
 import MonthSlider from './MonthSlider';
 import RebalanceoTab from './RebalanceoTab';
 import SubTabs from './SubTabs';
+import Segmented from './Segmented';
 
 const DIMS_TENENCIAS = [
-  { key: 'TIPO',       label: 'Tipo de Activo'    },
-  { key: 'RIESGO',     label: 'Nivel de Riesgo'   },
-  { key: 'MONEDA',     label: 'Tipo de Moneda'    },
-  { key: 'RENTA',      label: 'Tipo de Renta'     },
-  { key: 'SECTOR_GEO', label: 'Sector Geográfico' },
+  { key: 'TIPO',       label: 'Tipo de activo', corto: 'Tipo' },
+  { key: 'RIESGO',     label: 'Riesgo'            },
+  { key: 'MONEDA',     label: 'Moneda'            },
+  { key: 'RENTA',      label: 'Renta'             },
+  { key: 'SECTOR_GEO', label: 'Región'            },
 ] as const;
 type DimTenencias = typeof DIMS_TENENCIAS[number]['key'];
 
@@ -105,24 +106,14 @@ export default function TenenciasTab({ data, hideValues, moneda }: Props) {
         <div className="tenencias-sep" style={{ width: 1, height: 20, background: 'var(--border)', flexShrink: 0 }} />
 
         {/* Selector de dimensión unificado — fila deslizable en mobile. */}
-        <div className="dim-selector scroll-x" style={{ display: 'flex', gap: 3, flexWrap: 'wrap', flexShrink: 0 }}>
-          {DIMS_TENENCIAS.map((d) => (
-            <button
-              key={d.key}
-              className="pill-touch"
-              onClick={() => setDimTenencias(d.key)}
-              aria-pressed={dimTenencias === d.key}
-              style={{
-                padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600,
-                cursor: 'pointer', border: '1px solid',
-                borderColor: dimTenencias === d.key ? 'var(--primary)' : 'var(--border)',
-                background: dimTenencias === d.key ? 'var(--primary-dim)' : 'transparent',
-                color: dimTenencias === d.key ? 'var(--primary)' : 'var(--muted)',
-                transition: 'all 0.12s', whiteSpace: 'nowrap', flexShrink: 0,
-              }}
-            >{d.label}</button>
-          ))}
-        </div>
+        <Segmented
+          opciones={DIMS_TENENCIAS.map((d) => ({ id: d.key, label: d.label, corto: 'corto' in d ? d.corto : undefined }))}
+          activa={dimTenencias}
+          onChange={setDimTenencias}
+          chico
+          etiqueta="Agrupar por"
+          className="dim-selector"
+        />
 
       </div>
 

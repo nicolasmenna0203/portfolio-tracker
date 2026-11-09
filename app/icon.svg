@@ -1,19 +1,23 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  <rect width="32" height="32" rx="7" fill="#211d17"/>
+  <defs>
+    <!-- Degradé vertical de ícono de iOS: arriba más claro, como luz cenital. -->
+    <linearGradient id="fondo" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3b9bff"/>
+      <stop offset="1" stop-color="#0060df"/>
+    </linearGradient>
+  </defs>
 
-  <!-- anillo dorado, abierto a la derecha -->
-  <path d="M 21.5 9.2
-           A 9 9 0 1 0 21.5 22.8"
-        fill="none" stroke="#cfab6e" stroke-width="1.6" stroke-linecap="round"/>
+  <!-- Radio ~22.5% del lado: la proporción de los íconos de iOS -->
+  <rect width="32" height="32" rx="7.2" fill="url(#fondo)"/>
 
   <!-- barras -->
-  <rect x="9"    y="17.5" width="3" height="6.5" rx="0.8" fill="#5fb896"/>
-  <rect x="14.2" y="14"   width="3" height="10"  rx="0.8" fill="#5fb896" opacity="0.55"/>
-  <rect x="19.4" y="11"   width="3" height="13"  rx="0.8" fill="#5fb896" opacity="0.85"/>
+  <rect x="8"    y="18" width="3.4" height="7" rx="1.2" fill="#fff" opacity="0.45"/>
+  <rect x="14.3" y="15" width="3.4" height="10" rx="1.2" fill="#fff" opacity="0.6"/>
+  <rect x="20.6" y="12" width="3.4" height="13" rx="1.2" fill="#fff" opacity="0.75"/>
 
   <!-- línea ascendente con flecha -->
-  <path d="M 7.5 21 L 12.5 16.5 L 15.5 19.5 L 23.5 11.5"
-        fill="none" stroke="#e8cf8a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M 19.5 11 L 24 11 L 24 15.5"
-        fill="none" stroke="#e8cf8a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 7 15.5 L 12.5 11 L 16 13.5 L 24 7"
+        fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 19.8 7 L 24 7 L 24 11.2"
+        fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>

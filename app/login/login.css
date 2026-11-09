@@ -1,89 +1,62 @@
+/* Login con el lenguaje de Apple: el ícono de la app, el nombre y los campos
+   rellenos, sobre el fondo agrupado. Usa los tokens de globals.css, así que
+   sigue el tema del sistema igual que el dashboard. */
 .login-root {
   min-height: 100vh;
   min-height: 100dvh; /* respeta la barra del navegador móvil */
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: #211d17;
-  font-family: var(--font-sans), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background-color: var(--bg);
+  font-family: var(--font-body);
   position: relative;
   overflow: hidden;
-}
-
-.login-grid {
-  position: absolute;
-  inset: 0;
-  background-image:
-    linear-gradient(rgba(207, 171, 110, 0.05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(207, 171, 110, 0.05) 1px, transparent 1px);
-  background-size: 48px 48px;
-  pointer-events: none;
 }
 
 /* ── Card ── */
 .login-card {
   position: relative;
   width: 100%;
-  max-width: 400px;
+  max-width: 380px;
   margin: 0 16px;
-  background-color: #2c2620;
-  border: 1px solid #4a4133;
-  border-radius: 16px;
-  padding: 40px 36px;
-  box-shadow: 0 0 0 1px rgba(207, 171, 110, 0.08), 0 32px 64px rgba(0, 0, 0, 0.5);
+  background-color: var(--card);
+  border-radius: 20px;
+  padding: 36px 32px 28px;
+  text-align: center;
+  box-shadow: 0 0 0 0.5px var(--material-borde), 0 24px 60px rgba(0, 0, 0, 0.18);
 }
 
-/* ── Logo ── */
-.login-logo-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 28px;
+/* ── Ícono y títulos ── */
+.login-logo {
+  display: block;
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 16px;
+  border-radius: 14px;
+  box-shadow: 0 6px 16px rgba(0, 96, 223, 0.3);
 }
 
-.login-logo-icon {
-  width: 36px;
-  height: 36px;
-  flex-shrink: 0;
-  border-radius: 10px;
-  background-color: rgba(207, 171, 110, 0.14);
-  border: 1px solid rgba(207, 171, 110, 0.3);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #cfab6e;
-}
-
-.login-logo-text {
-  font-family: var(--font-serif), Georgia, serif;
-  font-size: 17px;
-  font-weight: 600;
-  color: #ece5d8;
-  letter-spacing: -0.01em;
-}
-
-/* ── Headings ── */
 .login-title {
-  font-family: var(--font-serif), Georgia, serif;
-  font-size: 23px;
-  font-weight: 600;
-  color: #ece5d8;
-  margin: 0 0 6px;
-  letter-spacing: -0.01em;
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0 0 4px;
+  letter-spacing: -0.02em;
 }
 
 .login-subtitle {
-  font-size: 13px;
-  color: #8a7d6a;
+  font-size: 15px;
+  color: var(--text-sec);
   margin: 0 0 28px;
-  line-height: 1.5;
+  line-height: 1.4;
 }
 
 /* ── Form ── */
 .login-form {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
+  text-align: left;
 }
 
 .login-field-group {
@@ -93,10 +66,10 @@
 }
 
 .login-label {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 500;
-  color: #a89b87;
-  letter-spacing: 0.01em;
+  color: var(--text-sec);
+  padding-left: 4px;
 }
 
 .login-input-wrapper {
@@ -108,20 +81,22 @@
 .login-input-icon {
   position: absolute;
   left: 12px;
-  color: #8a7d6a;
+  color: var(--muted);
   display: flex;
   align-items: center;
   pointer-events: none;
 }
 
+/* Campo relleno, sin borde, como los de iOS. El borde aparece con el foco. */
 .login-input {
   width: 100%;
-  padding: 10px 12px 10px 36px;
-  background-color: #241f19;
-  border: 1px solid #4a4133;
-  border-radius: 8px;
-  color: #ece5d8;
-  font-size: 14px;
+  min-height: 44px;
+  padding: 10px 12px 10px 38px;
+  background-color: var(--seg-track);
+  border: 1px solid transparent;
+  border-radius: 10px;
+  color: var(--text);
+  font-size: 16px; /* evita el zoom automático de iOS */
   font-family: inherit;
   outline: none;
   transition: border-color 0.15s, box-shadow 0.15s;
@@ -129,20 +104,23 @@
 }
 
 .login-input--pass {
-  padding-right: 2.5rem;
+  padding-right: 2.75rem;
 }
 
 .login-input:focus {
-  border-color: #cfab6e;
-  box-shadow: 0 0 0 3px rgba(207, 171, 110, 0.14);
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-dim);
 }
 
 .login-eye-btn {
   position: absolute;
-  right: 10px;
+  right: 2px;
+  min-width: 40px;
+  min-height: 40px;
+  justify-content: center;
   background: none;
   border: none;
-  color: #8a7d6a;
+  color: var(--muted);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -156,31 +134,30 @@
   align-items: center;
   gap: 8px;
   padding: 10px 12px;
-  background-color: rgba(217, 112, 90, 0.1);
-  border: 1px solid rgba(217, 112, 90, 0.25);
-  border-radius: 8px;
-  color: #d9705a;
+  background-color: color-mix(in srgb, var(--down) 12%, transparent);
+  border-radius: 10px;
+  color: var(--down);
   font-size: 13px;
 }
 
-/* ── Submit button ── */
+/* ── Botón: el prominente de iOS ── */
 .login-submit {
-  margin-top: 4px;
+  margin-top: 6px;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
+  min-height: 50px;
   padding: 12px 20px;
-  background-color: #cfab6e;
-  color: #211d17;
+  background-color: var(--primary);
+  color: #fff;
   border: none;
-  border-radius: 8px;
-  font-size: 14px;
+  border-radius: 12px;
+  font-size: 17px;
   font-weight: 600;
   font-family: inherit;
-  letter-spacing: -0.01em;
   cursor: pointer;
-  transition: opacity 0.15s, transform 0.1s;
+  transition: opacity 0.15s, transform 0.15s var(--ease-ios);
   -webkit-tap-highlight-color: transparent;
 }
 
@@ -188,8 +165,13 @@
   transform: scale(0.98);
 }
 
+.login-submit:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 3px;
+}
+
 .login-submit--disabled {
-  opacity: 0.45;
+  opacity: 0.4;
   cursor: not-allowed;
 }
 
@@ -197,8 +179,8 @@
 .login-spinner {
   width: 16px;
   height: 16px;
-  border: 2px solid rgba(33, 29, 23, 0.3);
-  border-top-color: #211d17;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #fff;
   border-radius: 50%;
   animation: login-spin 0.6s linear infinite;
   display: inline-block;
@@ -210,73 +192,32 @@
 
 /* ── Footer ── */
 .login-footer {
-  margin-top: 24px;
+  margin: 20px 0 0;
   text-align: center;
   font-size: 12px;
-  color: #8a7d6a;
+  color: var(--muted);
 }
 
 /* ──────────────────────────────────────────
    Mobile — pantallas <= 480px
-   Card ocupa toda la pantalla, sin bordes
+   Sin tarjeta: el formulario ocupa la pantalla, como un inicio de sesión
+   nativo. La tarjeta flotando con márgenes de 16px desperdiciaba ancho.
 ─────────────────────────────────────────── */
 @media (max-width: 480px) {
   .login-root {
-    align-items: flex-end; /* card sube desde abajo como sheet */
+    align-items: flex-start;
+    padding-top: calc(12vh + env(safe-area-inset-top));
   }
 
   .login-card {
     margin: 0;
     max-width: 100%;
-    border-radius: 24px 24px 0 0;
-    padding: 36px 24px 40px;
-    border-left: none;
-    border-right: none;
-    border-bottom: none;
-    /* pequeño indicador de sheet */
-    padding-top: 20px;
-  }
-
-  .login-card::before {
-    content: '';
-    display: block;
-    width: 36px;
-    height: 4px;
-    background: #4a4133;
-    border-radius: 2px;
-    margin: 0 auto 24px;
-  }
-
-  .login-title {
-    font-size: 20px;
+    background: transparent;
+    box-shadow: none;
+    padding: 0 20px calc(32px + env(safe-area-inset-bottom));
   }
 
   .login-input {
-    font-size: 16px; /* evita zoom automático en iOS */
-    padding-top: 13px;
-    padding-bottom: 13px;
-    min-height: 48px;
-  }
-
-  .login-submit {
-    padding: 14px 20px;
-    font-size: 15px;
     min-height: 50px;
-  }
-
-  /* El ojito de mostrar/ocultar también necesita área táctil propia */
-  .login-eye-btn {
-    min-width: 44px;
-    min-height: 44px;
-    justify-content: center;
-  }
-
-  /* Respetar la barra de gestos en iPhone */
-  .login-card {
-    padding-bottom: calc(40px + env(safe-area-inset-bottom));
-  }
-
-  .login-grid {
-    background-size: 32px 32px;
   }
 }

@@ -15,8 +15,8 @@ interface Props {
 }
 
 // Paleta categórica validada (skill dataviz, slots 1-2-3-7-4-5: blue/orange/aqua/
-// violet/amber/magenta) contra las superficies reales del tema Prestige (--card
-// claro #ffffff, oscuro #2c2620).
+// violet/amber/magenta) contra las superficies de tarjeta (--card
+// claro #ffffff, oscuro #1c1c1e).
 // TIRs de distinto grupo no son comparables entre sí (moneda/índice distinto),
 // así que cada uno tiene su propio color en vez de un gradiente continuo.
 const GRUPO_META: Record<GrupoBono, { label: string; color: string; colorDark: string }> = {
@@ -50,8 +50,8 @@ interface ScatterShapeProps {
   payload?: BondPerformance;
 }
 
-// Ancho aproximado del label en px por caracter a fontSize 11 (Public Sans,
-// bold) — no hay forma de medir texto real en un shape SVG sin acceso al
+// Ancho aproximado del label en px por caracter a fontSize 11 (SF Pro o
+// Inter, bold) — no hay forma de medir texto real en un shape SVG sin acceso al
 // DOM, así que se estima para centrar el fondo del label sin dejarlo
 // desalineado del texto.
 const ANCHO_POR_CARACTER = 6.2;
@@ -341,7 +341,7 @@ export default function RentaFijaSection({ tenencias }: Props) {
       onClick={() => toggleSort(key)}
       style={{
         cursor: 'pointer', textAlign: 'right', padding: '8px 10px',
-        fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase',
+        fontSize: 11, fontWeight: 600,
         color: sortKey === key ? 'var(--primary)' : 'var(--muted)', whiteSpace: 'nowrap',
       }}
     >
@@ -360,8 +360,8 @@ export default function RentaFijaSection({ tenencias }: Props) {
   if (error) {
     return (
       <div style={{
-        background: 'var(--card)', border: '1px solid #ef553b', borderRadius: 10,
-        padding: '10px 14px', fontSize: 12, color: '#ef553b',
+        background: 'var(--card)', border: '1px solid var(--down)', borderRadius: 10,
+        padding: '10px 14px', fontSize: 12, color: 'var(--down)',
       }}>
         Error cargando performance: {error}
       </div>
@@ -383,7 +383,6 @@ export default function RentaFijaSection({ tenencias }: Props) {
               value={kpi ? fmtPct1(kpi.tirPonderada) : 'Sin posición'}
               sub={kpi ? `Duration ponderada: ${fmtDuration(kpi.durationPonderada)}` : undefined}
               subColor={meta.color}
-              accentColor={meta.color}
             />
           );
         })}
@@ -419,7 +418,7 @@ export default function RentaFijaSection({ tenencias }: Props) {
 
       {/* ── Curva TIR vs Duration ─────────────────────────────────────────── */}
       <div style={{
-        background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 12,
+        background: 'var(--card)', border: '1px solid var(--border-subtle)', borderRadius: 12,
         padding: '14px 16px 8px', minHeight: 320, display: 'flex', flexDirection: 'column', flexShrink: 0,
       }}>
         <div style={{ marginBottom: 10, flexShrink: 0 }}>
@@ -486,7 +485,7 @@ export default function RentaFijaSection({ tenencias }: Props) {
         {/* ── Selector de rango de duration — acota el scatter y la tabla ──── */}
         <div style={{ padding: '10px 4px 4px', flexShrink: 0 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-            <span style={{ fontSize: 10, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 700 }}>
+            <span style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 600 }}>
               Rango de duration
             </span>
             <span style={{ fontSize: 11, color: 'var(--text-sec)', fontWeight: 600 }}>
@@ -566,22 +565,22 @@ export default function RentaFijaSection({ tenencias }: Props) {
 
       {/* ── Tabla de métricas por bono ────────────────────────────────────── */}
       <div className="tabla-wrap" style={{
-        background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 12,
+        background: 'var(--card)', border: '1px solid var(--border-subtle)', borderRadius: 12,
         overflowX: 'auto',
       }}>
         <table className="tabla-datos" style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
           <thead style={{ position: 'sticky', top: 0, background: 'var(--card)', zIndex: 1 }}>
             <tr style={{ borderBottom: '1px solid var(--border)' }}>
-              <th onClick={() => toggleSort('ticker')} style={{ cursor: 'pointer', textAlign: 'left', padding: '8px 10px', fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: sortKey === 'ticker' ? 'var(--primary)' : 'var(--muted)' }}>
+              <th onClick={() => toggleSort('ticker')} style={{ cursor: 'pointer', textAlign: 'left', padding: '8px 10px', fontSize: 11, fontWeight: 600, color: sortKey === 'ticker' ? 'var(--primary)' : 'var(--muted)' }}>
                 Ticker{sortKey === 'ticker' ? (sortDesc ? ' ▼' : ' ▲') : ''}
               </th>
               {cabecera('tir', 'TIR')}
-              <th style={{ textAlign: 'right', padding: '8px 10px', fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--muted)' }}>TNA</th>
+              <th style={{ textAlign: 'right', padding: '8px 10px', fontSize: 11, fontWeight: 600, color: 'var(--muted)' }}>TNA</th>
               {cabecera('modifiedDuration', 'Duration')}
               {cabecera('parity', 'Paridad')}
               <th
                 title="Aproximación de primer orden vía duration modificada: TIR ± 5%/duration. No incluye convexidad."
-                style={{ textAlign: 'right', padding: '8px 10px', fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--muted)', cursor: 'help' }}
+                style={{ textAlign: 'right', padding: '8px 10px', fontSize: 11, fontWeight: 600, color: 'var(--muted)', cursor: 'help' }}
               >TIR si precio -5% / +5%</th>
             </tr>
           </thead>

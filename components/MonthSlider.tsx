@@ -104,9 +104,10 @@ export default function MonthSlider({ meses, selected, onSelect }: Props) {
             onKeyDown={handleKeyDown}
             style={{
               position: 'absolute', left: `${pct}%`, transform: 'translateX(-50%)',
-              width: 16, height: 16, borderRadius: '50%', touchAction: 'none',
-              background: 'var(--card)', border: '2px solid var(--primary)',
-              boxShadow: '0 1px 6px rgba(0,0,0,0.4)',
+              width: 22, height: 22, borderRadius: '50%', touchAction: 'none',
+              // Thumb de UISlider: círculo blanco con sombra, sin borde.
+              background: '#fff', border: '0.5px solid rgba(0,0,0,0.04)',
+              boxShadow: '0 0.5px 4px rgba(0,0,0,0.12), 0 6px 13px rgba(0,0,0,0.12)',
               cursor: 'grab', zIndex: 3, outline: 'none',
               transition: 'left 0.08s ease',
             }}

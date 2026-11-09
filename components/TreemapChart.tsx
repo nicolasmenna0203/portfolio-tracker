@@ -77,7 +77,7 @@ function CustomCell({ x, y, width, height, name, value, depth, root, group, colo
   if (depth === 0 || !width || !height || width < 4 || height < 4) return <g />;
 
   const groupName  = depth === 1 ? name : group;
-  const cellColor  = color ?? '#8a7d6a';
+  const cellColor  = color ?? '#8e8e93';
   const total      = root?.value ?? 1;
   const pct        = Math.round((value / total) * 100);
   const dimmed     = filtroActivo != null && groupName !== filtroActivo;
@@ -86,6 +86,12 @@ function CustomCell({ x, y, width, height, name, value, depth, root, group, colo
     const label = width > 80 ? `${name}  ${pct}%` : name;
     return (
       <g style={{ cursor: 'pointer' }}>
+        {/* Base oscura en los dos temas bajo los tickers translúcidos: sobre
+            el blanco del tema claro las celdas livianas quedaban casi blancas
+            y el ticker en blanco no se leía. Con la base, el texto blanco
+            contrasta siempre, como en el mapa de calor de Bolsa. En oscuro la
+            base es el mismo --card de antes. */}
+        <rect x={x} y={y} width={width} height={height} fill="var(--mapa-base)" fillOpacity={dimmed ? 0.25 : 1} rx={6} />
         <rect
           x={x} y={y} width={width} height={height}
           fill={cellColor} fillOpacity={dimmed ? 0.03 : 0.1}
@@ -127,8 +133,8 @@ function CustomCell({ x, y, width, height, name, value, depth, root, group, colo
       <rect
         x={x + 1} y={y + 1} width={width - 2} height={height - 2}
         fill={cellColor} fillOpacity={dimmed ? 0.12 : (fo ?? 0.7)}
-        stroke="var(--bg)" strokeWidth={1.5}
-        rx={3}
+        stroke="var(--card)" strokeWidth={1.5}
+        rx={4}
       />
       {width > 26 && height > 16 && (
         <text
@@ -150,9 +156,10 @@ function TooltipContent({ active, payload, hideValues, moneda }: any) {
   const currency: Moneda = moneda === 'ARS' ? 'ARS' : 'USD';
   return (
     <div style={{
-      background: 'var(--card)', border: '1px solid var(--border)',
-      borderRadius: 10, padding: '10px 14px', fontSize: 12,
-      boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+      background: 'var(--material)', backdropFilter: 'saturate(180%) blur(20px)', WebkitBackdropFilter: 'saturate(180%) blur(20px)',
+      border: '0.5px solid var(--material-borde)',
+      borderRadius: 12, padding: '10px 14px', fontSize: 12,
+      boxShadow: '0 10px 30px rgba(0,0,0,0.2)',
     }}>
       <p style={{ fontWeight: 600, color: 'var(--text)', marginBottom: 4 }}>{d.name}</p>
       <p style={{ color: 'var(--text-sec)', fontVariantNumeric: 'tabular-nums' }}>{formatMoney(d.value, { currency, hidden: hideValues })}</p>
@@ -182,7 +189,7 @@ export default function TreemapChart({ tenencias, dim, filtroTipo, onFiltroTipo,
   return (
     <div style={{
       background: 'var(--card)',
-      border: filtroTipo ? '1px solid var(--primary)' : '1px solid var(--border)',
+      border: filtroTipo ? '1px solid var(--primary)' : '1px solid var(--border-subtle)',
       borderRadius: 12,
       padding: '12px 14px 10px',
       transition: 'border-color 0.15s',

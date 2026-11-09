@@ -119,7 +119,7 @@ function CarryTooltip({ active, payload }: { active?: boolean; payload?: Tooltip
 
   return (
     <div style={{
-      background: 'var(--card)', border: '1px solid var(--border)',
+      background: 'var(--card)', border: '1px solid var(--border-subtle)',
       borderRadius: 8, padding: '10px 14px', fontSize: 12,
       boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
     }}>
@@ -220,7 +220,7 @@ export default function CarryTradeSection({ tenencias }: Props) {
       onClick={() => toggleSort(key)}
       style={{
         cursor: 'pointer', textAlign: align, padding: '8px 10px',
-        fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase',
+        fontSize: 11, fontWeight: 600,
         color: sortKey === key ? 'var(--primary)' : 'var(--muted)', whiteSpace: 'nowrap',
       }}
     >
@@ -295,8 +295,8 @@ export default function CarryTradeSection({ tenencias }: Props) {
   if (error) {
     return (
       <div style={{
-        background: 'var(--card)', border: '1px solid #ef553b', borderRadius: 10,
-        padding: '10px 14px', fontSize: 12, color: '#ef553b',
+        background: 'var(--card)', border: '1px solid var(--down)', borderRadius: 10,
+        padding: '10px 14px', fontSize: 12, color: 'var(--down)',
       }}>
         Error cargando performance: {error}
       </div>
@@ -308,7 +308,7 @@ export default function CarryTradeSection({ tenencias }: Props) {
 
       {/* ── Barra de control: FX spot + modo + carry custom ──────────────── */}
       <div style={{
-        background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 12,
+        background: 'var(--card)', border: '1px solid var(--border-subtle)', borderRadius: 12,
         padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 12,
       }}>
         <p style={{ margin: 0, fontSize: 12, color: 'var(--text-sec)', lineHeight: 1.5 }}>
@@ -373,31 +373,30 @@ export default function CarryTradeSection({ tenencias }: Props) {
 
       {/* ── Tabla: precio, retorno directo y heatmap de carry por escenario ─ */}
       <div className="tabla-wrap" style={{
-        background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 12,
+        background: 'var(--card)', border: '1px solid var(--border-subtle)', borderRadius: 12,
         overflowX: 'auto',
       }}>
         <table className="tabla-datos" style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
           <thead style={{ position: 'sticky', top: 0, background: 'var(--card)', zIndex: 1 }}>
             <tr style={{ borderBottom: '1px solid var(--border)' }}>
               {cabecera('ticker', 'Ticker', 'left')}
-              <th style={{ textAlign: 'right', padding: '8px 10px', fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--muted)' }}>Precio</th>
+              <th style={{ textAlign: 'right', padding: '8px 10px', fontSize: 11, fontWeight: 600, color: 'var(--muted)' }}>Precio</th>
               {cabecera('diasAlVencimiento', 'Días al Vto.')}
-              <th style={{ textAlign: 'right', padding: '8px 10px', fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--muted)' }}>Vto.</th>
-              <th style={{ textAlign: 'right', padding: '8px 10px', fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--muted)' }}>Pr. finish</th>
+              <th style={{ textAlign: 'right', padding: '8px 10px', fontSize: 11, fontWeight: 600, color: 'var(--muted)' }}>Vto.</th>
+              <th style={{ textAlign: 'right', padding: '8px 10px', fontSize: 11, fontWeight: 600, color: 'var(--muted)' }}>Pr. finish</th>
               {cabecera(modoTasa === 'directa' ? 'retornoDirectoArs' : 'tir', modoTasa === 'directa' ? 'Retorno directo' : 'TIR')}
               {columnasCarry.map((c) => (
                 <th
                   key={c.key}
                   style={{
-                    textAlign: 'right', padding: '8px 10px', fontSize: 10, fontWeight: 700,
-                    letterSpacing: '0.06em', textTransform: 'uppercase',
+                    textAlign: 'right', padding: '8px 10px', fontSize: 11, fontWeight: 600,
                     color: c.custom ? 'var(--primary)' : 'var(--muted)',
                   }}
                 >{c.label}</th>
               ))}
               <th
                 title="Retorno en USD si el MEP de salida termina en el techo de banda cambiaria proyectado a esa fecha con la inflación mensual asumida."
-                style={{ textAlign: 'right', padding: '8px 10px', fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--muted)', cursor: 'help' }}
+                style={{ textAlign: 'right', padding: '8px 10px', fontSize: 11, fontWeight: 600, color: 'var(--muted)', cursor: 'help' }}
               >Banda superior</th>
             </tr>
           </thead>
@@ -446,7 +445,7 @@ export default function CarryTradeSection({ tenencias }: Props) {
 
       {/* ── Curva de breakeven: MEP breakeven vs. vencimiento + banda proyectada ── */}
       <div style={{
-        background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 12,
+        background: 'var(--card)', border: '1px solid var(--border-subtle)', borderRadius: 12,
         padding: '14px 16px 8px', minHeight: 320, display: 'flex', flexDirection: 'column',
       }}>
         <div style={{ marginBottom: 10 }}>

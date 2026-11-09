@@ -107,28 +107,29 @@ function fmtMonto(monto: number, moneda = 'USD'): string {
 //
 // Hexadecimales literales, no variables CSS: los clientes de mail (Gmail,
 // Outlook) descartan :root/var() y todo tiene que ir inline. Se toma el tema
-// claro de la app (globals.css, "Prestige") porque el fondo del cliente de
-// mail no es controlable y el claro es el que se ve bien en ambos.
+// claro de la app (globals.css, superficies agrupadas de Apple) porque el
+// fondo del cliente de mail no es controlable y el claro es el que se ve bien
+// en ambos.
 //
-// UP/DOWN son una versión levemente más profunda del par --up/--down de la
-// app: validado con el script de la skill dataviz (banda de luminosidad,
-// chroma, separación CVD deutan/protan ΔE 8.4, contraste ≥3:1 sobre blanco).
+// UP/DOWN son el par --up/--down del tema claro de la app: validado con el
+// script de la skill dataviz (banda de luminosidad, chroma, separación CVD
+// deutan ΔE 8.4, contraste ≥3:1 sobre blanco).
 // Aun así el signo nunca depende solo del color — siempre lo acompañan la
 // flecha ▲/▼ y el número con signo.
 const C = {
-  bg: '#f7f4ec',
+  bg: '#f2f2f7',
   card: '#ffffff',
-  cardAlt: '#faf8f2',
-  border: '#e6dfcd',
-  borderStrong: '#ddd3ba',
-  text: '#322c22',
-  textSec: '#675e4d',
-  muted: '#8a7d6a',
-  accent: '#9a7038',
-  up: '#1f7a55',
-  down: '#c33f27',
-  upSoft: '#e3f0ea',
-  downSoft: '#f8e5e0',
+  cardAlt: '#f9f9fb',
+  border: '#e8e8ed',
+  borderStrong: '#d8d8dc',
+  text: '#1d1d1f',
+  textSec: '#6e6e73',
+  muted: '#7c7c80',
+  accent: '#007aff',
+  up: '#1a8a5a',
+  down: '#d70015',
+  upSoft: '#e5f3ec',
+  downSoft: '#fde7e9',
 };
 
 const FONT = "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif";

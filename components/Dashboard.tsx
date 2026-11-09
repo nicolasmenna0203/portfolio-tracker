@@ -14,17 +14,37 @@ import BenchmarksTab from './BenchmarksTab';
 import CalendarioTab from './CalendarioTab';
 import PerformanceTab from './PerformanceTab';
 import FinanzasPersonalesTab from './FinanzasPersonalesTab';
-import { IconOjo, IconOjoTachado, IconSol, IconLuna, IconCargar } from './HeaderIcons';
+import {
+  IconOjo, IconOjoTachado, IconSol, IconLuna, IconCargar,
+  IconSeccionResumen, IconSeccionTenencias, IconSeccionBenchmarks,
+  IconSeccionCalendario, IconSeccionPerformance, IconSeccionFinanzas,
+} from './HeaderIcons';
 type Tab = 'resumen' | 'tenencias' | 'benchmarks' | 'calendario' | 'performance' | 'finanzas-personales';
 
-const TABS: { id: Tab; label: string }[] = [
-  { id: 'resumen',              label: 'Resumen'             },
-  { id: 'tenencias',            label: 'Tenencias'           },
-  { id: 'benchmarks',           label: 'Benchmarks'          },
-  { id: 'calendario',           label: 'Calendario'          },
-  { id: 'performance',          label: 'Performance'         },
-  { id: 'finanzas-personales',  label: 'Finanzas Personales' },
+// `corto`: la etiqueta de la tab bar de mobile y el large title, donde
+// "Finanzas personales" no entra. El ícono solo se ve en esa tab bar.
+const TABS: { id: Tab; label: string; corto: string; Icono: (p: { size?: number }) => React.ReactNode }[] = [
+  { id: 'resumen',             label: 'Resumen',             corto: 'Resumen',     Icono: IconSeccionResumen     },
+  { id: 'tenencias',           label: 'Tenencias',           corto: 'Tenencias',   Icono: IconSeccionTenencias   },
+  { id: 'benchmarks',          label: 'Benchmarks',          corto: 'Comparar',    Icono: IconSeccionBenchmarks  },
+  { id: 'calendario',          label: 'Calendario',          corto: 'Calendario',  Icono: IconSeccionCalendario  },
+  { id: 'performance',         label: 'Performance',         corto: 'Análisis',    Icono: IconSeccionPerformance },
+  { id: 'finanzas-personales', label: 'Finanzas personales', corto: 'Finanzas',    Icono: IconSeccionFinanzas    },
 ];
+
+// ── Tema ──────────────────────────────────────────────────────────────────────
+// Por defecto sigue al del sistema (CSS: prefers-color-scheme). El botón fija
+// uno a mano y lo recuerda; el script de app/layout.tsx lo aplica antes del
+// primer pintado. Para el ícono del botón hace falta saber el tema efectivo,
+// que sin elección explícita sale del media query.
+const TEMA_KEY = 'tema_v1';
+type Tema = 'dark' | 'light';
+
+function temaEfectivo(): Tema {
+  const elegido = document.documentElement.getAttribute('data-theme');
+  if (elegido === 'light' || elegido === 'dark') return elegido;
+  return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+}
 
 // ── Scroller de pestaña ───────────────────────────────────────────────────────
 // Cada pestaña se monta y desmonta con el render condicional, así que su
@@ -83,7 +103,7 @@ export default function Dashboard({ data, valoresSiempreOcultos = false }: Props
 
   const [tab, setTab]               = useState<Tab>('resumen');
   const [uploadOpen, setUploadOpen] = useState(false);
-  const [theme, setTheme]           = useState<'dark' | 'light'>('dark');
+  const [theme, setTheme]           = useState<Tema>('dark');
   const [hideValuesElegido, setHideValuesElegido] = useState(false);
   const hideValues = valoresSiempreOcultos || hideValuesElegido;
   const [moneda, setMoneda]         = useState<Moneda>('USD');
@@ -155,15 +175,43 @@ export default function Dashboard({ data, valoresSiempreOcultos = false }: Props
     return keys.length > 0 ? mepPorMes.get(keys[keys.length - 1])! : null;
   }, [mepPorMes]);
 
+  // Tema efectivo al montar, y seguirlo si cambia el del sistema mientras no
+  // haya uno elegido a mano.
   useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme === 'light' ? 'light' : '');
-  }, [theme]);
+    setTheme(temaEfectivo());
+    const mq = window.matchMedia('(prefers-color-scheme: light)');
+    const alCambiar = () => setTheme(temaEfectivo());
+    mq.addEventListener('change', alCambiar);
+    return () => mq.removeEventListener('change', alCambiar);
+  }, []);
+
+  function alternarTema() {
+    const next: Tema = theme === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    try { localStorage.setItem(TEMA_KEY, next); } catch {}
+    setTheme(next);
+  }
+
+  // Sheet de carga: Esc cierra, y el foco vuelve al botón que lo abrió.
+  const botonCargarRef = useRef<HTMLButtonElement | null>(null);
+  const cerrarCarga = useCallback(() => {
+    setUploadOpen(false);
+    botonCargarRef.current?.focus();
+  }, []);
+  useEffect(() => {
+    if (!uploadOpen) return;
+    const alTeclear = (e: KeyboardEvent) => { if (e.key === 'Escape') cerrarCarga(); };
+    window.addEventListener('keydown', alTeclear);
+    return () => window.removeEventListener('keydown', alTeclear);
+  }, [uploadOpen, cerrarCarga]);
+
+  const tabActual = TABS.find((t) => t.id === tab)!;
 
   return (
     <main style={{
       maxWidth: 1280,
       margin: '0 auto',
-      padding: '14px 24px 20px',
+      padding: '16px 24px 20px',
       display: 'flex',
       flexDirection: 'column',
       gap: 0,
@@ -177,9 +225,12 @@ export default function Dashboard({ data, valoresSiempreOcultos = false }: Props
       <header className="app-bar">
         <div className="app-bar-marca">
           {/* El ícono de la webapp (app/icon.svg), servido por Next: una sola fuente. */}
-          <img className="app-bar-logo" src="/icon.svg" alt="" width={36} height={36} />
+          <img className="app-bar-logo" src="/icon.svg" alt="" width={30} height={30} />
           <div style={{ minWidth: 0 }}>
-            <h1 className="app-bar-titulo">Portfolio</h1>
+            <h1 className="app-bar-titulo">
+              <span className="titulo-marca">Portfolio</span>
+              <span className="titulo-seccion">{tabActual.corto}</span>
+            </h1>
             {moneda === 'ARS' && mepActual != null && (
               <p className="app-bar-mep-movil" title="Dólar MEP usado para convertir a pesos">
                 MEP <span>{formatFx(mepActual)}</span>
@@ -189,12 +240,14 @@ export default function Dashboard({ data, valoresSiempreOcultos = false }: Props
         </div>
 
         {/* Wrapper: los degradés de borde se posicionan sobre el nav y solo
-            aparecen del lado donde queda contenido fuera de vista. */}
+            aparecen del lado donde queda contenido fuera de vista. En mobile
+            es la tab bar fija de abajo (ver globals.css). */}
         <div className="nav-tabs-wrap">
           <nav
             ref={navRef}
             onScroll={actualizarSombras}
             className="nav-tabs scroll-x"
+            aria-label="Secciones"
           >
             {TABS.map((t) => (
               <button
@@ -203,8 +256,12 @@ export default function Dashboard({ data, valoresSiempreOcultos = false }: Props
                 onClick={() => setTab(t.id)}
                 className="nav-tab"
                 aria-current={tab === t.id ? 'page' : undefined}
+                data-tab={t.id}
+                aria-label={t.label}
               >
-                {t.label}
+                <span className="nav-tab-icono" aria-hidden="true"><t.Icono /></span>
+                <span className="nav-tab-largo">{t.label}</span>
+                <span className="nav-tab-corto" aria-hidden="true">{t.corto}</span>
               </button>
             ))}
           </nav>
@@ -241,13 +298,14 @@ export default function Dashboard({ data, valoresSiempreOcultos = false }: Props
           )}
           <button
             className="app-bar-btn"
-            onClick={() => setTheme(t => t === 'dark' ? 'light' : 'dark')}
+            onClick={alternarTema}
             title={theme === 'dark' ? 'Cambiar a tema claro' : 'Cambiar a tema oscuro'}
             aria-label={theme === 'dark' ? 'Cambiar a tema claro' : 'Cambiar a tema oscuro'}
           >
             {theme === 'dark' ? <IconSol /> : <IconLuna />}
           </button>
           <button
+            ref={botonCargarRef}
             className="app-bar-btn app-bar-cargar"
             onClick={() => setUploadOpen(true)}
             title="Cargar datos"
@@ -259,58 +317,24 @@ export default function Dashboard({ data, valoresSiempreOcultos = false }: Props
         </div>
       </header>
 
-      {/* ── Modal: Cargar Datos ──────────────────────────────────────────────── */}
+      {/* ── Sheet: cargar datos ─────────────────────────────────────────────────
+          Panel lateral en desktop, sheet desde abajo en mobile (ver
+          .upload-panel en globals.css). */}
       {uploadOpen && (
         <>
-          {/* Backdrop */}
-          <div
-            onClick={() => setUploadOpen(false)}
-            style={{
-              position: 'fixed', inset: 0,
-              background: 'rgba(0,0,0,0.5)',
-              zIndex: 100,
-            }}
-          />
-          {/* Panel — drawer lateral en desktop, bottom sheet en mobile (ver globals.css) */}
-          <div className="upload-panel" style={{
-            position: 'fixed', top: 0, right: 0, bottom: 0,
-            width: 520, maxWidth: '95vw',
-            background: 'var(--bg)',
-            borderLeft: '1px solid var(--border)',
-            zIndex: 101,
-            display: 'flex', flexDirection: 'column',
-            boxShadow: '-8px 0 32px rgba(0,0,0,0.3)',
-          }}>
-            {/* Panel header */}
-            <div className="upload-panel-header" style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              padding: '18px 24px',
-              borderBottom: '1px solid var(--border)',
-              flexShrink: 0,
-            }}>
-              <div>
-                <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--primary)', margin: 0 }}>
-                  Actualizar datos
-                </p>
-                <p style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)', margin: '2px 0 0' }}>
-                  Cargar Datos
-                </p>
-              </div>
-              <button
-                onClick={() => setUploadOpen(false)}
-                aria-label="Cerrar"
-                style={{
-                  background: 'none', border: '1px solid var(--border)',
-                  borderRadius: 8, cursor: 'pointer',
-                  color: 'var(--muted)', fontSize: 18, lineHeight: 1,
-                  width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  flexShrink: 0,
-                }}
-              >×</button>
+          <div className="sheet-velo" onClick={cerrarCarga} />
+          <div className="upload-panel" role="dialog" aria-modal="true" aria-labelledby="upload-titulo">
+            <span className="sheet-grabber" aria-hidden="true" />
+            <div className="upload-panel-header">
+              <h2 id="upload-titulo" className="sheet-titulo">Cargar datos</h2>
+              {/* Foco inicial acá: Esc o Enter cierran sin buscar el botón. */}
+              <button className="sheet-listo" onClick={cerrarCarga} autoFocus>
+                Listo
+              </button>
             </div>
             <EstadoCargasDetalle estado={estadoCargas} />
-            {/* Panel body — scrolleable */}
-            <div className="scroll-y upload-panel-body" style={{ flex: 1, padding: '20px 24px' }}>
+            {/* Cuerpo scrolleable */}
+            <div className="scroll-y upload-panel-body">
               <UploadTenencias onCargado={recargarEstadoCargas} />
             </div>
           </div>

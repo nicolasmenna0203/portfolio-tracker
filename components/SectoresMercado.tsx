@@ -7,6 +7,7 @@ import { useHistoricoTicker } from '@/lib/useHistoricoTicker';
 import { formatPercent } from '@/lib/format';
 import type { RangoHistorico } from '@/types';
 import SectorHoldingsModal from './SectorHoldingsModal';
+import Segmented from './Segmented';
 
 // ETFs SPDR Select Sector: cada uno trackea uno de los 11 sectores GICS del
 // S&P 500. Es el proxy sectorial más líquido y estándar de mercado, por eso
@@ -121,7 +122,7 @@ export default function SectoresMercado() {
 
   return (
     <div style={{
-      background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 12,
+      background: 'var(--card)', border: '1px solid var(--border-subtle)', borderRadius: 12,
       padding: '14px 16px',
     }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10, marginBottom: 12 }}>
@@ -133,33 +134,14 @@ export default function SectoresMercado() {
             ETFs SPDR Select Sector
           </span>
         </div>
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-          {RANGOS.map((r) => {
-            const activo = rango === r.id;
-            return (
-              <button
-                key={r.id}
-                onClick={() => setRango(r.id)}
-                className="pill-touch"
-                aria-pressed={activo}
-                style={{
-                  padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600,
-                  cursor: 'pointer', border: '1px solid',
-                  borderColor: activo ? 'var(--primary)' : 'var(--border)',
-                  background: activo ? 'var(--primary-dim)' : 'transparent',
-                  color: activo ? 'var(--primary)' : 'var(--muted)',
-                }}
-              >{r.label}</button>
-            );
-          })}
-        </div>
+        <Segmented opciones={RANGOS} activa={rango} onChange={setRango} chico etiqueta="Rango" />
       </div>
 
       {loading && (
         <p style={{ margin: 0, fontSize: 12, color: 'var(--muted)' }}>Cargando sectores…</p>
       )}
       {error && (
-        <p style={{ margin: 0, fontSize: 12, color: '#ef553b' }}>Error cargando sectores: {error}</p>
+        <p style={{ margin: 0, fontSize: 12, color: 'var(--down)' }}>Error cargando sectores: {error}</p>
       )}
 
       {!loading && !error && (

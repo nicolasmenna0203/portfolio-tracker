@@ -1,4 +1,4 @@
-function Trazo({ size, children }: { size: number; children: React.ReactNode }) {
+function Trazo({ size, grosor = 1.5, children }: { size: number; grosor?: number; children: React.ReactNode }) {
   return (
     <svg
       width={size}
@@ -6,7 +6,7 @@ function Trazo({ size, children }: { size: number; children: React.ReactNode }) 
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth="1.5"
+      strokeWidth={grosor}
       strokeLinecap="round"
       strokeLinejoin="round"
       aria-hidden="true"
@@ -91,6 +91,70 @@ export function IconHaberes({ size = 18 }: { size?: number }) {
       <rect x="2" y="6" width="20" height="12" rx="2" />
       <circle cx="12" cy="12" r="2.5" />
       <path d="M6 12h.01M18 12h.01" />
+    </Trazo>
+  );
+}
+
+// ── Secciones (tab bar de mobile) ─────────────────────────────────────────────
+// Mismo trazo que el resto, un poco más grueso: a 24px en la tab bar, el 1.5
+// de los íconos de acción se lee desvaído al lado de la etiqueta.
+
+export function IconSeccionResumen({ size = 24 }: { size?: number }) {
+  return (
+    <Trazo size={size} grosor={1.7}>
+      <path d="M3 17l5-5 4 3 8-8" />
+      <path d="M15 7h5v5" />
+      <path d="M3 21h18" />
+    </Trazo>
+  );
+}
+
+export function IconSeccionTenencias({ size = 24 }: { size?: number }) {
+  return (
+    <Trazo size={size} grosor={1.7}>
+      <path d="M12 3a9 9 0 1 0 9 9h-9z" />
+      <path d="M15 3.5A9 9 0 0 1 20.5 9H15z" />
+    </Trazo>
+  );
+}
+
+export function IconSeccionBenchmarks({ size = 24 }: { size?: number }) {
+  return (
+    <Trazo size={size} grosor={1.7}>
+      <path d="M5 20V10" />
+      <path d="M12 20V4" />
+      <path d="M19 20v-7" />
+    </Trazo>
+  );
+}
+
+export function IconSeccionCalendario({ size = 24 }: { size?: number }) {
+  return (
+    <Trazo size={size} grosor={1.7}>
+      <rect x="3.5" y="5" width="17" height="15.5" rx="3" />
+      <path d="M3.5 10h17" />
+      <path d="M8 3v4M16 3v4" />
+    </Trazo>
+  );
+}
+
+export function IconSeccionPerformance({ size = 24 }: { size?: number }) {
+  return (
+    <Trazo size={size} grosor={1.7}>
+      <path d="M4.5 18a8.5 8.5 0 1 1 15 0" />
+      <path d="M12 14l4-5" />
+      <circle cx="12" cy="14.5" r="1.2" />
+    </Trazo>
+  );
+}
+
+export function IconSeccionFinanzas({ size = 24 }: { size?: number }) {
+  return (
+    <Trazo size={size} grosor={1.7}>
+      <rect x="3" y="6" width="18" height="14" rx="3" />
+      <path d="M3 10h18" />
+      <path d="M16 15h2" />
+      <path d="M6 6l9-3 1.5 3" />
     </Trazo>
   );
 }

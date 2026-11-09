@@ -16,7 +16,7 @@ export const IMPUESTO_CHEQUE = 0.006;
 /**
  * Fracción del dividendo bruto que efectivamente se acredita: 0.694.
  *
- * Deliberadamente NO incluye la comisión del depositario (Comafi), que ronda el
+ * Deliberadamente NO incluye la comisión del depositario local, que ronda el
  * 1-2% pero varía por CEDEAR y por evento y no tiene fuente pública confiable.
  * Se prefiere sobreestimar levemente antes que inventar un número — mismo
  * criterio que el mapeo de bonos en `bonosArg.ts`.

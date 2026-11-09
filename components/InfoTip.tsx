@@ -81,9 +81,10 @@ export default function InfoTip({ label, children }: Props) {
           style={{
             position: 'absolute', top: 18, left: 0, zIndex: 20,
             width: 240, maxWidth: 'calc(100vw - 32px)',
-            background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 8,
-            padding: '8px 10px', fontSize: 11, lineHeight: 1.45, color: 'var(--text-sec)',
-            boxShadow: '0 8px 32px rgba(0,0,0,0.5)', fontWeight: 400, textTransform: 'none',
+            background: 'var(--material)', backdropFilter: 'saturate(180%) blur(20px)', WebkitBackdropFilter: 'saturate(180%) blur(20px)',
+            border: '0.5px solid var(--material-borde)', borderRadius: 12,
+            padding: '10px 12px', fontSize: 12, lineHeight: 1.45, color: 'var(--text)',
+            boxShadow: '0 10px 30px rgba(0,0,0,0.2)', fontWeight: 400, textTransform: 'none',
             letterSpacing: 'normal', whiteSpace: 'normal', textAlign: 'left',
           }}
         >

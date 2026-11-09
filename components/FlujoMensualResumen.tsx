@@ -17,8 +17,8 @@ interface Props {
   errorIngresos: string | null;
 }
 
-const COLOR_GASTOS = '#d9824e';
-const COLOR_SIN_ASIGNAR = '#8d7fc7';
+const COLOR_GASTOS = '#d96f00';
+const COLOR_SIN_ASIGNAR = '#b455e8';
 const COLOR_AHORRO = 'var(--up)';
 
 export default function FlujoMensualResumen({ resumen, moneda, hideValues, errorIngresos }: Props) {
@@ -28,7 +28,7 @@ export default function FlujoMensualResumen({ resumen, moneda, hideValues, error
   if (resumen.mesesBase === 0 || resumen.ingresoProm == null) {
     return (
       <div style={{
-        background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 12,
+        background: 'var(--card)', border: '1px solid var(--border-subtle)', borderRadius: 12,
         padding: '12px 18px', fontSize: 12, color: 'var(--muted)', lineHeight: 1.5,
       }}>
         {errorIngresos
@@ -65,7 +65,6 @@ export default function FlujoMensualResumen({ resumen, moneda, hideValues, error
           label="Ingreso mensual"
           value={money(ingresoProm)}
           sub="lo que entra por mes"
-          accentColor="var(--primary)"
           tooltip="Promedio de los últimos meses cerrados con ingresos cargados. El mes en curso no entra: suele tener el sueldo sin acreditar."
         />
         <KPICard
@@ -74,14 +73,12 @@ export default function FlujoMensualResumen({ resumen, moneda, hideValues, error
           sub={resumen.gastosIncompleto
             ? 'sin MEP para convertir algún gasto'
             : `${pct(resumen.gastosPct)} del ingreso`}
-          accentColor={COLOR_GASTOS}
           tooltip="Gasto mensual promedio de los mismos meses cerrados que el ingreso. En cada mes suman solo los gastos vigentes en ese mes (uno cargado hace poco no cuenta antes de su mes de inicio, y uno dado de baja deja de contar), los anuales /12. Los de otra moneda se convierten con el MEP actual. Puede diferir del total mensual de la pestaña Gastos, que es el de este mes."
         />
         <KPICard
           label="Aporte mensual"
           value={money(aporteProm)}
           sub="a la cartera"
-          accentColor="var(--up)"
           tooltip="Aportes netos (menos retiros) que entraron a la cartera. Los traspasos entre cuentas propias no cuentan."
         />
         <KPICard
@@ -92,17 +89,16 @@ export default function FlujoMensualResumen({ resumen, moneda, hideValues, error
             : aporte > ingresoProm
               ? 'aportes mayores al ingreso'
               : 'aportes + gastos > ingreso'}
-          accentColor="var(--up)"
           tooltip="Aportes a la cartera sobre ingresos: cuánto del ingreso terminó invertido. Cuenta cualquier aporte, venga del sueldo o de otra fuente (venta de un bien), así que un mes puede pasar el 100%. No es ingreso menos gastos: lo que no cargaste como gasto quedaría contado como inversión. 'Sin asignar' es el residuo: gasto sin cargar más ahorro fuera de la cartera."
         />
       </div>
 
       {partes.length > 0 && !hideValues && (
         <div style={{
-          background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 12,
+          background: 'var(--card)', border: '1px solid var(--border-subtle)', borderRadius: 12,
           padding: '12px 18px',
         }}>
-          <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--muted)', margin: '0 0 8px' }}>
+          <p style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', margin: '0 0 8px' }}>
             A dónde va cada ingreso
           </p>
           <div

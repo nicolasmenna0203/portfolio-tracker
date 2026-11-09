@@ -16,6 +16,7 @@ import { formatMoney, formatPercent, type Moneda } from '@/lib/format';
 import { calcularMetricasPeriodo, recortarSerie, PERIODOS, type PeriodoId } from '@/lib/periodo';
 import { deflactarARS, ultimoMesPublicado, type PuntoIndice } from '@/lib/inflacion';
 import KPICard from './KPICard';
+import Segmented from './Segmented';
 import EvolucionChart from './EvolucionChart';
 
 const INFLACION_KEY = 'resumen_inflacion_v1';
@@ -147,49 +148,27 @@ export default function ResumenTab({ data, hideValues, moneda }: Props) {
   return (
     <>
       {/* Selector de período para Ganancia / TWR / TIR (KPIs 2 a 4) y el gráfico */}
-      <div className="pill-row" style={{ display: 'flex', gap: 6, flexWrap: 'wrap', flexShrink: 0 }}>
-        {PERIODOS.map((p) => (
-          <button
-            key={p.id}
-            onClick={() => setPeriodo(p.id)}
-            className="pill-touch"
-            aria-pressed={periodo === p.id}
-            style={{
-              padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600,
-              cursor: 'pointer', border: '1px solid',
-              borderColor: periodo === p.id ? 'var(--primary)' : 'var(--border)',
-              background: periodo === p.id ? 'var(--primary-dim)' : 'transparent',
-              color: periodo === p.id ? 'var(--primary)' : 'var(--muted)',
-              transition: 'all 0.12s',
-            }}
-          >
-            {p.label}
-          </button>
-        ))}
+      <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '10px 16px', flexShrink: 0 }}>
+        <Segmented opciones={PERIODOS} activa={periodo} onChange={setPeriodo} etiqueta="Período" />
         {moneda === 'ARS' && (
           <button
+            type="button"
+            role="switch"
+            aria-checked={ajustar}
             onClick={toggleAjuste}
-            className="pill-touch"
-            aria-pressed={ajustar}
+            className="switch"
             title="Expresa la serie en pesos constantes del último mes, deflactada con el IPC del INDEC"
-            style={{
-              marginLeft: 'auto',
-              padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600,
-              cursor: 'pointer', border: '1px solid',
-              borderColor: ajustar ? 'var(--primary)' : 'var(--border)',
-              background: ajustar ? 'var(--primary-dim)' : 'transparent',
-              color: ajustar ? 'var(--primary)' : 'var(--muted)',
-              transition: 'all 0.12s',
-            }}
+            style={{ marginLeft: 'auto' }}
           >
-            {ajustar ? '✓ ' : ''}Ajustar por inflación
+            Ajustar por inflación
+            <span className="switch-pista" aria-hidden="true" />
           </button>
         )}
       </div>
 
       <div className="kpi-grid-resumen">
         <KPICard
-          label="Total Cartera"
+          label="Total cartera"
           tooltip={`Valuación total de la cartera al ${kpis.fechaStr}.`}
           value={
             moneda === 'USD'
@@ -205,10 +184,9 @@ export default function ResumenTab({ data, hideValues, moneda }: Props) {
                 : 's/d vs mes anterior'
           }
           subColor={moneda === 'ARS' && kpisArs ? (kpisArs.deltaCarteraArs >= 0 ? 'var(--up)' : 'var(--down)') : deltaColor}
-          accentColor="var(--primary)"
         />
         <KPICard
-          label="Ganancia Acumulada"
+          label="Ganancia acumulada"
           tooltip={
             periodo === 'max'
               ? 'Valuación menos aportes netos (excluye traspasos entre cuentas propias). El % es sobre lo aportado. No pondera cuándo entró cada peso — para eso están TWR y TIR.'
@@ -221,7 +199,6 @@ export default function ResumenTab({ data, hideValues, moneda }: Props) {
           }
           sub={hideValues ? '••••' : gananciaSub}
           subColor={rendColor}
-          accentColor={rendColor}
         />
         <KPICard
           label="Retorno TWR"
@@ -229,7 +206,6 @@ export default function ResumenTab({ data, hideValues, moneda }: Props) {
           value={twrPct != null ? formatPercent(twrPct, { sign: false }) : 'N/D'}
           sub={esReal ? 'rendimiento real de la cartera' : 'rendimiento de la cartera'}
           subColor={twrColor}
-          accentColor={twrColor}
           extra={
             <p style={{ fontSize: 11, color: 'var(--muted)', margin: '4px 0 0' }}>
               TWR anual{' '}
@@ -240,12 +216,11 @@ export default function ResumenTab({ data, hideValues, moneda }: Props) {
           }
         />
         <KPICard
-          label="TIR Anual"
+          label="TIR anual"
           tooltip="XIRR sobre los flujos reales (aportes y retiros) con sus fechas exactas, más el valor actual como flujo terminal. Pondera cuándo entró cada peso."
           value={tirPeriodoPct != null ? formatPercent(tirPeriodoPct, { sign: false }) : 'N/D'}
           sub={esReal ? 'rendimiento real del capital' : 'rendimiento del capital'}
           subColor={tirColor}
-          accentColor={tirColor}
         />
       </div>
 

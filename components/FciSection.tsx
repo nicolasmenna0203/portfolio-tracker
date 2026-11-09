@@ -21,7 +21,7 @@ function fmtPct1(v: number | null): string {
 
 function colorPct(v: number | null): string {
   if (v == null) return 'var(--muted)';
-  return v >= 0 ? '#1baf7a' : '#ef553b';
+  return v >= 0 ? 'var(--up)' : 'var(--down)';
 }
 
 function fmtVcp(v: number, moneda: string): string {
@@ -72,7 +72,7 @@ export default function FciSection({ tenencias, hideValues = false }: Props) {
       onClick={() => toggleSort(key)}
       style={{
         cursor: 'pointer', textAlign: 'right', padding: '8px 10px',
-        fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase',
+        fontSize: 11, fontWeight: 600,
         color: sortKey === key ? 'var(--primary)' : 'var(--muted)', whiteSpace: 'nowrap',
       }}
     >
@@ -91,8 +91,8 @@ export default function FciSection({ tenencias, hideValues = false }: Props) {
   if (error) {
     return (
       <div style={{
-        background: 'var(--card)', border: '1px solid #ef553b', borderRadius: 10,
-        padding: '10px 14px', fontSize: 12, color: '#ef553b',
+        background: 'var(--card)', border: '1px solid var(--down)', borderRadius: 10,
+        padding: '10px 14px', fontSize: 12, color: 'var(--down)',
       }}>
         Error cargando FCI: {error}
       </div>
@@ -107,21 +107,20 @@ export default function FciSection({ tenencias, hideValues = false }: Props) {
           label="En Cartera (FCI)"
           value={formatMoney(totalEnCartera, { currency: 'USD', hidden: hideValues })}
           sub={`${fondos.filter((f) => f.tenenciaUsd).length} de ${fondos.length} fondos con posición`}
-          accentColor={COLOR_FCI}
         />
       </div>
 
       <div className="tabla-wrap" style={{
-        background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 12,
+        background: 'var(--card)', border: '1px solid var(--border-subtle)', borderRadius: 12,
         overflowX: 'auto',
       }}>
         <table className="tabla-datos" style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
           <thead style={{ position: 'sticky', top: 0, background: 'var(--card)', zIndex: 1 }}>
             <tr style={{ borderBottom: '1px solid var(--border)' }}>
-              <th onClick={() => toggleSort('ticker')} style={{ cursor: 'pointer', textAlign: 'left', padding: '8px 10px', fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: sortKey === 'ticker' ? 'var(--primary)' : 'var(--muted)' }}>
+              <th onClick={() => toggleSort('ticker')} style={{ cursor: 'pointer', textAlign: 'left', padding: '8px 10px', fontSize: 11, fontWeight: 600, color: sortKey === 'ticker' ? 'var(--primary)' : 'var(--muted)' }}>
                 Fondo{sortKey === 'ticker' ? (sortDesc ? ' ▼' : ' ▲') : ''}
               </th>
-              <th style={{ textAlign: 'right', padding: '8px 10px', fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--muted)' }}>VCP</th>
+              <th style={{ textAlign: 'right', padding: '8px 10px', fontSize: 11, fontWeight: 600, color: 'var(--muted)' }}>VCP</th>
               {cabecera('variacionDiaria', 'Var. diaria')}
               {cabecera('rendimientoMes', 'Mes')}
               {cabecera('rendimientoAnio', 'Año')}

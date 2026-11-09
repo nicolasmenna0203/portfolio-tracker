@@ -1,70 +1,159 @@
 @import "tailwindcss";
 
-/* ── Dark theme (default) — Prestige ───────────────────────────
-   Paleta cálida oscura con acento dorado. Los tokens semánticos
-   (--up/--down) se mantienen independientes del acento de marca. */
+/* ── Tokens — lenguaje visual de Apple ─────────────────────────
+   Superficies "agrupadas" de iOS/macOS: fondo, tarjeta y tarjeta anidada se
+   distinguen por el relleno, no por bordes ni sombras. Acento = azul de
+   sistema; --up/--down = verde/rojo de sistema, independientes del acento.
+
+   En tema claro los colores de texto y de estado son variantes oscuras: el
+   #34C759 de sistema da 2.2:1 sobre blanco, ilegible en un "+3,4%" de 11px.
+   El verde además va apenas hacia el turquesa (#1a8a5a, no el #248a3d de
+   Apple): contra el rojo, el de Apple da ΔE 5 para deuteranopía y este 8.4
+   (validate_palette.js de la skill dataviz). En oscuro el par de sistema da
+   7.9, banda que solo vale con codificación secundaria: el signo nunca va
+   solo en color (siempre hay "−", ▲ o ▼).
+
+   Los textos secundarios son opacos, no el rgba(235,235,245,.6) de UIKit: hay
+   componentes que los usan sobre fondos distintos y con alfa cambiarían de tono.
+
+   El tema oscuro es el bloque base; el claro se aplica por preferencia del
+   sistema o por elección explícita (data-theme, ver app/layout.tsx). Las dos
+   reglas del claro tienen que quedar idénticas. */
 :root {
-  --bg:            #211d17;
-  --surface:       #241f19;
-  --card:          #2c2620;
-  --card-alt:      #362f26;
-  --border:        #4a4133;
-  --border-subtle: #3a332a;
+  color-scheme: dark;
 
-  --primary:       #cfab6e;
-  --primary-dim:   rgba(207, 171, 110, 0.14);
-  --accent:        #cfab6e;
+  --bg:            #000000;
+  --surface:       #000000;
+  --card:          #1c1c1e;
+  --card-alt:      #2c2c2e;
+  --border:        #38383a;
+  --border-subtle: #2c2c2e;
 
-  --text:          #ece5d8;
-  --text-sec:      #a89b87;
-  --muted:         #8a7d6a;
+  --primary:       #0a84ff;
+  --primary-dim:   rgba(10, 132, 255, 0.16);
+  --accent:        #0a84ff;
 
-  --up:            #5fb896;
-  --down:          #d9705a;
+  --text:          #ffffff;
+  --text-sec:      #aeaeb2;
+  --muted:         #8e8e93;
 
-  --chip-bg:       #362f26;
-  --chip-hover:    #423a2e;
-  --chip-active-text: #211d17;
+  --up:            #30d158;
+  --down:          #ff453a;
+  --warn:          #ff9f0a;
 
-  --track:         #423a2e;
+  --chip-bg:       #2c2c2e;
+  --chip-hover:    #3a3a3c;
+  --chip-active-text: #ffffff;
+
+  --track:         #3a3a3c;
+  --mapa-base:     #1c1c1e;
+
+  /* Segmented control: pista y segmento elegido (UISegmentedControl). */
+  --seg-track:     rgba(118, 118, 128, 0.24);
+  --seg-thumb:     #636366;
+  --seg-sombra:    0 3px 8px rgba(0, 0, 0, 0.12), 0 3px 1px rgba(0, 0, 0, 0.04);
+
+  /* Materiales translúcidos (barras, sheets, tooltips). */
+  --material:      rgba(30, 30, 30, 0.72);
+  --material-borde: rgba(255, 255, 255, 0.08);
+  --velo:          rgba(0, 0, 0, 0.48);
 
   --bar-brillo:    rgba(255, 255, 255, 0.06);
   --bar-sombra:    rgba(0, 0, 0, 0.32);
   --bar-hundido:   rgba(0, 0, 0, 0.22);
 
-  --font-body:     var(--font-sans), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --font-display:  var(--font-serif), Georgia, serif;
+  --font-body:     -apple-system, BlinkMacSystemFont, 'SF Pro Text', var(--font-inter), 'Segoe UI', system-ui, sans-serif;
+  /* SF Rounded para las cifras grandes, como Salud o Wallet. Fuera de Apple
+     cae en Inter: el redondeo se pierde, la jerarquía no. */
+  --font-display:  ui-rounded, 'SF Pro Rounded', -apple-system, BlinkMacSystemFont, var(--font-inter), system-ui, sans-serif;
+
+  --ease-ios:      cubic-bezier(0.32, 0.72, 0, 1);
 }
 
-/* ── Light theme — Prestige ─────────────────────────────────── */
-[data-theme="light"] {
-  --bg:            #f7f4ec;
-  --surface:       #f7f4ec;
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    color-scheme: light;
+
+    --bg:            #f2f2f7;
+    --surface:       #f2f2f7;
+    --card:          #ffffff;
+    --card-alt:      #f2f2f7;
+    --border:        #d8d8dc;
+    --border-subtle: #e8e8ed;
+
+    --primary:       #007aff;
+    --primary-dim:   rgba(0, 122, 255, 0.1);
+    --accent:        #007aff;
+
+    --text:          #1d1d1f;
+    --text-sec:      #6e6e73;
+    --muted:         #7c7c80;
+
+    --up:            #1a8a5a;
+    --down:          #d70015;
+    --warn:          #c93400;
+
+    --chip-bg:       #e9e9eb;
+    --chip-hover:    #dedee3;
+    --chip-active-text: #ffffff;
+
+    --track:         #e5e5ea;
+    --mapa-base:     #3a3a3c;
+
+    --seg-track:     rgba(118, 118, 128, 0.12);
+    --seg-thumb:     #ffffff;
+    --seg-sombra:    0 3px 8px rgba(0, 0, 0, 0.12), 0 3px 1px rgba(0, 0, 0, 0.04);
+
+    --material:      rgba(249, 249, 249, 0.78);
+    --material-borde: rgba(0, 0, 0, 0.08);
+    --velo:          rgba(0, 0, 0, 0.28);
+
+    --bar-brillo:    rgba(255, 255, 255, 0.9);
+    --bar-sombra:    rgba(0, 0, 0, 0.06);
+    --bar-hundido:   rgba(0, 0, 0, 0.05);
+  }
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+
+  --bg:            #f2f2f7;
+  --surface:       #f2f2f7;
   --card:          #ffffff;
-  --card-alt:      #eee7d7;
-  --border:        #ddd3ba;
-  --border-subtle: #e6dfcd;
+  --card-alt:      #f2f2f7;
+  --border:        #d8d8dc;
+  --border-subtle: #e8e8ed;
 
-  --primary:       #9a7038;
-  --primary-dim:   rgba(154, 112, 56, 0.1);
-  --accent:        #9a7038;
+  --primary:       #007aff;
+  --primary-dim:   rgba(0, 122, 255, 0.1);
+  --accent:        #007aff;
 
-  --text:          #322c22;
-  --text-sec:      #675e4d;
-  --muted:         #8a7d6a;
+  --text:          #1d1d1f;
+  --text-sec:      #6e6e73;
+  --muted:         #7c7c80;
 
-  --up:            #3f8f6f;
-  --down:          #b8503b;
+  --up:            #1a8a5a;
+  --down:          #d70015;
+  --warn:          #c93400;
 
-  --chip-bg:       #eee7d7;
-  --chip-hover:    #e4dac2;
-  --chip-active-text: #fdfbf5;
+  --chip-bg:       #e9e9eb;
+  --chip-hover:    #dedee3;
+  --chip-active-text: #ffffff;
 
-  --track:         #e4dac2;
+  --track:         #e5e5ea;
+  --mapa-base:     #3a3a3c;
+
+  --seg-track:     rgba(118, 118, 128, 0.12);
+  --seg-thumb:     #ffffff;
+  --seg-sombra:    0 3px 8px rgba(0, 0, 0, 0.12), 0 3px 1px rgba(0, 0, 0, 0.04);
+
+  --material:      rgba(249, 249, 249, 0.78);
+  --material-borde: rgba(0, 0, 0, 0.08);
+  --velo:          rgba(0, 0, 0, 0.28);
 
   --bar-brillo:    rgba(255, 255, 255, 0.9);
-  --bar-sombra:    rgba(80, 60, 30, 0.14);
-  --bar-hundido:   rgba(80, 60, 30, 0.08);
+  --bar-sombra:    rgba(0, 0, 0, 0.06);
+  --bar-hundido:   rgba(0, 0, 0, 0.05);
 }
 
 * { box-sizing: border-box; }
@@ -115,13 +204,12 @@ html { -webkit-text-size-adjust: 100%; }
 input, select, textarea { font-size: 16px; }
 
 /* ── Scrollbar ─────────────────────────────────────────────── */
-::-webkit-scrollbar          { width: 5px; height: 5px; }
-::-webkit-scrollbar-track    { background: var(--bg); }
-::-webkit-scrollbar-thumb    { background: var(--border); border-radius: 4px; }
-::-webkit-scrollbar-thumb:hover { background: var(--border-subtle); }
+/* Fina y sobre fondo transparente, como las barras overlay de macOS. */
+::-webkit-scrollbar          { width: 8px; height: 8px; }
+::-webkit-scrollbar-track    { background: transparent; }
+::-webkit-scrollbar-thumb    { background: var(--border); border-radius: 4px; border: 2px solid transparent; background-clip: padding-box; }
+::-webkit-scrollbar-thumb:hover { background-color: var(--muted); }
 
-/* ── Section divider ───────────────────────────────────────── */
-/* ── Theme toggle button ───────────────────────────────────── */
 /* ── KPI grid ───────────────────────────────────────────────── */
 .kpi-grid {
   display: grid;
@@ -130,11 +218,59 @@ input, select, textarea { font-size: 16px; }
 }
 
 /* Resumen tiene 4 KPIs (Total, Ganancia, TWR, TIR) en vez de 3 — grid propio
-   para no afectar el resto de las pestañas que usan .kpi-grid con 3. */
+   para no afectar el resto de las pestañas que usan .kpi-grid con 3. La
+   primera columna es más ancha: el total de la cartera es la cifra que se
+   viene a mirar, y va más grande (ver .kpi-value abajo). */
 .kpi-grid-resumen {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: minmax(0, 1.5fr) repeat(3, minmax(0, 1fr));
   gap: 12px;
+}
+
+/* ── Tarjeta KPI ────────────────────────────────────────────────
+   Label en gris y en minúscula (nada de mayúsculas espaciadas), cifra en SF
+   Rounded con números tabulares para que no bailen al cambiar de período. */
+.kpi-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  padding: 14px 18px 14px;
+  border-radius: 14px;
+  background: var(--card);
+}
+.kpi-label {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.3;
+  color: var(--text-sec);
+}
+.kpi-value {
+  margin: 6px 0 0;
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.kpi-grid-resumen > :first-child .kpi-value { font-size: 34px; font-weight: 700; }
+/* La franja de finanzas personales usa la grilla de 4 pero sin cifra principal. */
+.kpi-grid-resumen.flujo-kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.kpi-grid-resumen.flujo-kpis > :first-child .kpi-value { font-size: 26px; font-weight: 600; }
+.kpi-sub {
+  margin: 6px 0 0;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.35;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
 }
 
 /* ── Tenencias: controles ───────────────────────────────────────
@@ -190,13 +326,13 @@ input, select, textarea { font-size: 16px; }
 .scroll-x::-webkit-scrollbar { display: none; }
 
 /* ── Barra superior ─────────────────────────────────────────────
-   Marca, pestañas y controles en una sola fila: en pantallas bajas cada píxel
-   de alto es contenido que no se ve. Bajo 1180px las pestañas no entran al lado
-   de los controles y pasan a su propia fila.
-   Las columnas laterales iguales centran las pestañas en la barra, no en el
-   hueco entre marca y controles.
-   z-index: la sombra tiene que caer sobre las tarjetas que scrollean debajo;
-   sin él, se pintan encima porque vienen después en el DOM. */
+   Toolbar de macOS: marca, segmented control de secciones y acciones en una
+   fila, sobre el fondo y sin tarjeta propia (el contenido es lo que tiene
+   relleno; la barra es cromo). Bajo 1240px las secciones no entran al lado de
+   los controles y pasan a su propia fila. En mobile las secciones se van a la
+   tab bar inferior (ver bloque mobile) y arriba queda el large title de iOS.
+   Las columnas laterales iguales centran las secciones en la barra, no en el
+   hueco entre marca y controles. */
 .app-bar {
   position: relative;
   z-index: 3;
@@ -206,36 +342,35 @@ input, select, textarea { font-size: 16px; }
   grid-template-areas: "marca tabs acciones";
   align-items: center;
   gap: 20px;
-  min-height: 68px;
-  padding: 8px 12px 8px 16px;
+  min-height: 52px;
+  padding: 0 0 0 2px;
   margin-bottom: 14px;
-  border-radius: 16px;
-  border: 1px solid var(--border);
-  background: var(--card);
-  box-shadow: inset 0 1px 0 var(--bar-brillo), 0 14px 32px var(--bar-sombra);
 }
 .app-bar-marca {
   grid-area: marca;
   display: flex;
   align-items: center;
-  gap: 11px;
+  gap: 10px;
   min-width: 0;
 }
 .app-bar-logo {
   display: block;
-  width: 36px;
-  height: 36px;
+  width: 30px;
+  height: 30px;
   flex-shrink: 0;
+  border-radius: 7px;
 }
 .app-bar-titulo {
   margin: 0;
-  font-family: var(--font-display);
-  font-size: 23px;
-  font-weight: 500;
-  line-height: 1;
-  letter-spacing: -0.012em;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
   color: var(--text);
 }
+/* El título de la sección es el large title de mobile; en desktop la sección
+   ya se lee en el segmented control. */
+.app-bar-titulo .titulo-seccion { display: none; }
 /* Bajo el título solo en mobile: ahí no entra al lado de los controles. */
 .app-bar-mep-movil { display: none; }
 
@@ -244,10 +379,10 @@ input, select, textarea { font-size: 16px; }
   justify-self: end;
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: 4px;
 }
 /* Fecha y MEP apilados, con el ancho del MEP reservado: si fueran en fila, las
-   pestañas saltarían al cambiar de moneda. */
+   secciones saltarían al cambiar de moneda. */
 .app-bar-datos {
   display: flex;
   flex-direction: column;
@@ -255,47 +390,50 @@ input, select, textarea { font-size: 16px; }
   gap: 2px;
   min-width: 116px;
   margin-right: 8px;
-  font-size: 11.5px;
+  font-size: 12px;
   line-height: 1.2;
-  color: var(--text-sec);
+  color: var(--muted);
   white-space: nowrap;
 }
+.app-bar-datos p { margin: 0; }
 .app-bar-datos span {
   color: var(--text);
-  font-weight: 500;
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
 .app-bar-btn {
-  width: 40px;
-  height: 40px;
+  width: 36px;
+  height: 36px;
   flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
   border: 0;
-  border-radius: 9px;
-  background: transparent;
-  color: var(--text-sec);
+  border-radius: 50%;
+  background: var(--seg-track);
+  color: var(--primary);
   cursor: pointer;
-  transition: background 0.15s, color 0.15s;
+  transition: background 0.15s, transform 0.15s var(--ease-ios);
 }
+.app-bar-btn:active { transform: scale(0.92); }
 /* Solo con mouse: en pantallas táctiles el :hover queda pegado después del toque. */
 @media (hover: hover) {
-  .app-bar-btn:hover {
-    background: var(--chip-hover);
-    color: var(--text);
-  }
+  .app-bar-btn:hover { background: var(--chip-hover); }
 }
 .app-bar-moneda {
-  color: var(--primary);
-  font-size: 11.5px;
-  font-weight: 700;
-  letter-spacing: 0.05em;
+  width: auto;
+  min-width: 52px;
+  padding: 0 12px;
+  border-radius: 18px;
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
 }
 .app-bar-btn:focus-visible,
-.nav-tab:focus-visible {
+.nav-tab:focus-visible,
+.seg-btn:focus-visible {
   outline: 2px solid var(--primary);
-  outline-offset: -2px;
+  outline-offset: 2px;
 }
 
 /* ── Estado de los archivos del mes: íconos dentro del botón de carga ──
@@ -304,7 +442,8 @@ input, select, textarea { font-size: 16px; }
 .app-bar-btn.app-bar-cargar {
   width: auto;
   gap: 8px;
-  padding: 0 11px 0 9px;
+  padding: 0 12px 0 10px;
+  border-radius: 18px;
 }
 .estado-cargas {
   display: flex;
@@ -338,7 +477,7 @@ input, select, textarea { font-size: 16px; }
   align-items: center;
   gap: 6px 14px;
   padding: 10px 24px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--border-subtle);
   flex-shrink: 0;
   font-size: 12px;
   color: var(--text-sec);
@@ -357,10 +496,10 @@ input, select, textarea { font-size: 16px; }
 .estado-cargas-marca[data-cargado="true"] { color: var(--up); }
 .estado-cargas-detalle .estado-carga[data-estado="pendiente"]::after { box-shadow: 0 0 0 1px var(--bg); }
 
-/* ── Nav de pestañas ────────────────────────────────────────────
-   Si la fila de pestañas no entra en el ancho visible scrollea en horizontal, y
-   los degradés de borde avisan que hay más de un lado. Sin ellos, con
-   `scrollbar-width:none`, las últimas pestañas eran invisibles al entrar. */
+/* ── Secciones: segmented control (desktop) / tab bar (mobile) ──
+   Si la fila no entra en el ancho visible scrollea en horizontal, y los
+   degradés de borde avisan que hay más de un lado. Sin ellos, con
+   `scrollbar-width:none`, las últimas secciones eran invisibles al entrar. */
 .nav-tabs-wrap {
   grid-area: tabs;
   justify-self: center;
@@ -368,43 +507,61 @@ input, select, textarea { font-size: 16px; }
   min-width: 0;
   max-width: 100%;
   overflow: hidden;
-  padding: 4px;
-  border-radius: 12px;
-  background: var(--card-alt);
-  box-shadow: inset 0 1px 3px var(--bar-hundido);
+  padding: 2px;
+  border-radius: 9px;
+  background: var(--seg-track);
 }
 .nav-tabs {
   display: flex;
-  gap: 2px;
+  gap: 0;
   scroll-behavior: smooth;
   /* 2px de holgura: con el nav scrolleado a tope el borde de la última
      pestaña caía justo 1px fuera del área visible (el scrollWidth es
      fraccionario) y se veía cortada. */
-  padding-inline: 2px;
+  padding-inline: 1px;
 }
 /* Sin esto los botones se comprimen en vez de desbordar y no hay nada que
    scrollear. */
 .nav-tabs button { flex-shrink: 0; }
 
 .nav-tab {
-  height: 38px;
-  padding: 0 14px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 30px;
+  padding: 0 16px;
   border: 0;
-  border-radius: 9px;
+  border-radius: 7px;
   background: transparent;
-  color: var(--text-sec);
-  font-size: 12.5px;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 13px;
   font-weight: 500;
   white-space: nowrap;
   cursor: pointer;
-  transition: background 0.15s, color 0.15s;
+  transition: background 0.2s var(--ease-ios), box-shadow 0.2s var(--ease-ios);
 }
-.nav-tab:hover { color: var(--text); }
+/* Separador fino entre segmentos no elegidos, como en UISegmentedControl. */
+.nav-tab + .nav-tab::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 8px;
+  bottom: 8px;
+  width: 1px;
+  background: var(--border);
+  opacity: 0.6;
+}
+.nav-tab[aria-current="page"]::before,
+.nav-tab[aria-current="page"] + .nav-tab::before { opacity: 0; }
 .nav-tab[aria-current="page"] {
-  background: var(--primary);
-  color: var(--chip-active-text);
-  font-weight: 700;
+  background: var(--seg-thumb);
+  box-shadow: var(--seg-sombra);
+  font-weight: 600;
 }
+/* Ícono y etiqueta corta solo en la tab bar de mobile. */
+.nav-tab-icono, .nav-tab-corto { display: none; }
 
 .nav-fade {
   position: absolute;
@@ -416,11 +573,11 @@ input, select, textarea { font-size: 16px; }
 }
 .nav-fade-izq {
   left: 0;
-  background: linear-gradient(to right, var(--card-alt), transparent);
+  background: linear-gradient(to right, var(--bg), transparent);
 }
 .nav-fade-der {
   right: 0;
-  background: linear-gradient(to left, var(--card-alt), transparent);
+  background: linear-gradient(to left, var(--bg), transparent);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -433,11 +590,98 @@ input, select, textarea { font-size: 16px; }
     grid-template-areas:
       "marca acciones"
       "tabs  tabs";
-    gap: 6px 12px;
-    padding: 6px;
+    gap: 10px 12px;
   }
-  .app-bar-marca { padding-left: 6px; }
 }
+
+/* ── Segmented control genérico ─────────────────────────────────
+   Sub-pestañas, períodos, dimensiones: el mismo control de iOS en todos lados.
+   `.seg-chico` para los controles que dependen de otro (un nivel más abajo). */
+.seg {
+  display: inline-flex;
+  align-self: flex-start;
+  max-width: 100%;
+  padding: 2px;
+  border-radius: 9px;
+  background: var(--seg-track);
+  flex-shrink: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.seg::-webkit-scrollbar { display: none; }
+.seg-btn {
+  position: relative;
+  flex-shrink: 0;
+  min-height: 28px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.2s var(--ease-ios), box-shadow 0.2s var(--ease-ios);
+}
+.seg-btn + .seg-btn::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 7px;
+  bottom: 7px;
+  width: 1px;
+  background: var(--border);
+  opacity: 0.6;
+}
+.seg-btn[aria-pressed="true"]::before,
+.seg-btn[aria-pressed="true"] + .seg-btn::before { opacity: 0; }
+.seg-btn[aria-pressed="true"] {
+  background: var(--seg-thumb);
+  box-shadow: var(--seg-sombra);
+  font-weight: 600;
+}
+.seg-chico .seg-btn { min-height: 26px; padding: 0 11px; font-size: 12px; }
+.seg-corto { display: none; }
+
+/* Interruptor (UISwitch) para opciones de prender/apagar. */
+.switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text-sec);
+  font-family: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.switch-pista {
+  position: relative;
+  width: 40px;
+  height: 24px;
+  flex-shrink: 0;
+  border-radius: 12px;
+  background: var(--seg-track);
+  transition: background 0.2s var(--ease-ios);
+}
+.switch-pista::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  transition: transform 0.25s var(--ease-ios);
+}
+.switch[aria-checked="true"] .switch-pista { background: var(--up); }
+.switch[aria-checked="true"] .switch-pista::after { transform: translateX(16px); }
+.switch:focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; border-radius: 12px; }
 
 /* ── Área de contenido del tab: acá vive el scroll vertical ───
    Regla base (no solo mobile): `main` tiene height:100vh fijo y cada
@@ -480,7 +724,7 @@ input, select, textarea { font-size: 16px; }
 
 /* ──────────────────────────────────────────
    MOBILE — ≤ 768px
-   El contenido scrollea; header y tabs quedan fijos arriba.
+   El contenido scrollea; el header queda arriba y las secciones en la tab bar.
 ─────────────────────────────────────────── */
 @media (max-width: 768px) {
 
@@ -494,55 +738,113 @@ input, select, textarea { font-size: 16px; }
     gap: 0 !important;
   }
 
-  /* ── Barra superior: marca y controles arriba, pestañas deslizables abajo ── */
-  .app-bar { margin-bottom: 10px; }
-  .app-bar-logo { width: 32px; height: 32px; }
-  .app-bar-marca { gap: 9px; }
+  /* ── Barra superior de iOS: botones arriba a la derecha, large title abajo ──
+     El título es la sección actual (como en Ajustes o Salud), no la marca: la
+     marca ya está en el ícono de la app. Las secciones bajan a la tab bar. */
+  .app-bar {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "acciones"
+      "marca";
+    gap: 2px;
+    min-height: 0;
+    padding: 0;
+    margin-bottom: 12px;
+  }
+  .app-bar-logo { display: none; }
   .app-bar-titulo {
-    font-size: 20px;
+    font-size: 30px;
+    font-weight: 700;
+    letter-spacing: -0.025em;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
   }
+  .app-bar-titulo .titulo-marca { display: none; }
+  .app-bar-titulo .titulo-seccion { display: inline; }
   .app-bar-mep-movil {
     display: block;
     margin: 2px 0 0;
-    font-size: 11px;
-    color: var(--text-sec);
+    font-size: 12px;
+    color: var(--muted);
     white-space: nowrap;
   }
   .app-bar-mep-movil span {
-    color: var(--text);
-    font-weight: 500;
+    color: var(--text-sec);
+    font-weight: 600;
     font-variant-numeric: tabular-nums;
   }
 
   /* Fecha y MEP: no entran al lado de los controles */
   .app-bar-datos { display: none; }
 
-  /* Área táctil de 44px de alto */
-  .app-bar-acciones { flex-shrink: 0; gap: 0; }
-  .app-bar-btn { width: 42px; height: 44px; }
-  .app-bar-btn:active { background: var(--chip-hover); }
+  /* Círculos de 36px con 40px de alto táctil: el área la da el botón, el
+     círculo visible es el fondo. */
+  .app-bar-acciones { flex-shrink: 0; gap: 8px; justify-self: end; }
+  .app-bar-btn { width: 40px; height: 40px; }
   .estado-cargas-detalle { padding: 10px 18px; }
 
-  .nav-tabs-wrap { justify-self: stretch; }
-  .nav-tab {
-    height: 40px;
-    padding: 0 13px;
-    font-size: 13px;
+  /* ── Tab bar inferior (UITabBar): las secciones al alcance del pulgar ──
+     Fija abajo, sobre un material translúcido: el contenido pasa por debajo
+     (el espacio final lo reserva `.tab-scroll::after`). */
+  /* `justify-self: stretch` no es redundante con left/right: un item de grid
+     con position:fixed y justify-self:center (la regla de desktop) toma el
+     ancho de su contenido, y la tab bar quedaba angosta y centrada. */
+  .nav-tabs-wrap {
+    justify-self: stretch;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 50;
+    padding: 0 calc(4px + env(safe-area-inset-right)) env(safe-area-inset-bottom) calc(4px + env(safe-area-inset-left));
+    border-radius: 0;
+    border-top: 0.5px solid var(--material-borde);
+    background: var(--material);
+    -webkit-backdrop-filter: saturate(180%) blur(20px);
+    backdrop-filter: saturate(180%) blur(20px);
   }
+  .nav-tabs { overflow: visible; padding: 0; }
+  .nav-tabs button { flex: 1 1 0; min-width: 0; }
+  .nav-tab {
+    flex-direction: column;
+    gap: 3px;
+    height: 52px;
+    padding: 5px 0 0;
+    justify-content: flex-start;
+    color: var(--muted);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+  }
+  .nav-tab::before { display: none; }
+  .nav-tab[aria-current="page"] {
+    background: transparent;
+    box-shadow: none;
+    color: var(--primary);
+    font-weight: 600;
+  }
+  .nav-tab-icono { display: block; }
+  .nav-tab-largo { display: none; }
+  .nav-tab-corto {
+    display: block;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .nav-fade { display: none; }
 
   /* ── Área de contenido del tab: overflow ya es regla base. Acá `main` no
-     tiene padding abajo, así que este espacio separa el final del borde de la
-     pantalla y de la zona del gesto del sistema. Va como hijo ::after y no como
-     padding-bottom del scroller: los tabs cuyo contenido es un hijo con
-     `flex:1; min-height:0` consumirían ese padding como espacio del flex. ── */
+     tiene padding abajo, así que este espacio deja el final del contenido por
+     encima de la tab bar y de la zona del gesto del sistema. Va como hijo
+     ::after y no como padding-bottom del scroller: los tabs cuyo contenido es
+     un hijo con `flex:1; min-height:0` consumirían ese padding como espacio
+     del flex. ── */
   .tab-scroll::after {
     content: '';
     display: block;
     flex: none;
-    height: calc(4px + env(safe-area-inset-bottom));
+    height: calc(64px + env(safe-area-inset-bottom));
   }
 
   /* ── KPI grid: 1 columna ancha + 2 abajo, legible de un vistazo ── */
@@ -561,32 +863,27 @@ input, select, textarea { font-size: 16px; }
   .kpi-grid > *:last-child:nth-child(even),
   .kpi-grid-resumen > *:last-child:nth-child(even) { grid-column: 1 / -1; }
 
-  .kpi-card-mobile {
-    padding: 10px 12px 9px !important;
-    border-radius: 10px !important;
-    gap: 2px !important;
-  }
+  .kpi-card { padding: 12px 14px; border-radius: 12px; }
+
+  /* Segmented: más alto para el dedo y con menos aire lateral, así las cinco
+     sub-pestañas de Performance entran en 360px sin scrollear. */
+  .seg-btn { min-height: 32px; padding: 0 10px; }
+  .seg-chico .seg-btn { min-height: 30px; padding: 0 9px; }
+  .seg-largo { display: none; }
+  .seg-corto { display: inline; }
 
   /* El label de 2 líneas ("TIR cartera · LECAP / Dual / Tamar / Badlar") es el
-     que define el alto de toda la fila de la grilla. Ajustar el interlineado
-     recorta ~6px por card sin perder legibilidad. */
-  .kpi-card-mobile .kpi-label { line-height: 1.3 !important; }
+     que define el alto de toda la fila de la grilla: interlineado justo. */
+  .kpi-label { font-size: 12px; line-height: 1.25; }
 
-  .kpi-card-mobile .kpi-label {
-    font-size: 9px !important;
-    letter-spacing: 0.08em !important;
-  }
+  .kpi-value { font-size: 20px; margin-top: 4px; }
+  .kpi-grid > :first-child .kpi-value,
+  .kpi-grid-resumen > :first-child .kpi-value { font-size: 34px; }
 
-  .kpi-card-mobile .kpi-value {
-    font-size: 17px !important;
-    margin-top: 3px !important;
-  }
-  .kpi-grid > *:first-child .kpi-value, .kpi-grid-resumen > *:first-child .kpi-value { font-size: 26px !important; }
-
-  .kpi-card-mobile .kpi-sub {
-    font-size: 10px !important;
-    margin-top: 2px !important;
-    line-height: 1.25 !important;
+  .kpi-sub {
+    font-size: 11px;
+    margin-top: 3px;
+    line-height: 1.25;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -706,31 +1003,109 @@ input, select, textarea { font-size: 16px; }
     padding-bottom: 2px;
   }
 
-  /* ── Cargar datos: bottom sheet en vez de drawer lateral ── */
-  .upload-panel {
-    top: auto !important;
-    left: 0 !important;
-    right: 0 !important;
-    bottom: 0 !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    height: 92dvh;
-    border-left: none !important;
-    border-top: 1px solid var(--border);
-    border-radius: 18px 18px 0 0;
-    box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.4) !important;
-    animation: sheet-up 0.22s ease-out;
-  }
-  .upload-panel-header { padding: 14px 18px !important; }
-  .upload-panel-body {
-    padding: 16px 18px calc(24px + env(safe-area-inset-bottom)) !important;
-  }
+}
 
+/* ── Sheet de carga ─────────────────────────────────────────────
+   Desktop: panel flotante a la derecha, separado del borde como los
+   inspectores de macOS. Mobile: sheet de iOS desde abajo, con grabber. */
+.sheet-velo {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: var(--velo);
+  animation: velo-in 0.25s ease-out;
+}
+.upload-panel {
+  position: fixed;
+  top: 12px;
+  right: 12px;
+  bottom: 12px;
+  z-index: 101;
+  width: 520px;
+  max-width: calc(100vw - 24px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 16px;
+  background: var(--bg);
+  box-shadow: 0 0 0 0.5px var(--material-borde), 0 24px 64px rgba(0, 0, 0, 0.35);
+  animation: panel-in 0.35s var(--ease-ios);
+}
+.sheet-grabber { display: none; }
+.upload-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 20px 12px 24px;
+  flex-shrink: 0;
+}
+.sheet-titulo {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+.sheet-listo {
+  min-height: 40px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--primary);
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.sheet-listo:focus-visible { outline: 2px solid var(--primary); outline-offset: 0; }
+@media (hover: hover) {
+  .sheet-listo:hover { background: var(--primary-dim); }
+}
+.upload-panel-body {
+  flex: 1;
+  padding: 20px 24px;
+}
+
+@media (max-width: 768px) {
+  .upload-panel {
+    top: auto;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    max-width: 100%;
+    height: 92dvh;
+    border-radius: 12px 12px 0 0;
+    animation: sheet-up 0.4s var(--ease-ios);
+  }
+  .sheet-grabber {
+    display: block;
+    flex-shrink: 0;
+    width: 36px;
+    height: 5px;
+    margin: 6px auto 0;
+    border-radius: 3px;
+    background: var(--border);
+  }
+  .upload-panel-header { padding: 6px 10px 8px 18px; }
+  .upload-panel-body {
+    padding: 16px 18px calc(24px + env(safe-area-inset-bottom));
+  }
 }
 
 @keyframes sheet-up {
-  from { transform: translateY(14px); opacity: 0; }
-  to   { transform: translateY(0);    opacity: 1; }
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+@keyframes panel-in {
+  from { transform: translateX(24px); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
+@keyframes velo-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -771,7 +1146,7 @@ input, select, textarea { font-size: 16px; }
 }
 
 @media (max-width: 768px) {
-  .month-thumb { width: 20px !important; height: 20px !important; }
+  .month-thumb { width: 26px !important; height: 26px !important; }
   .month-track { height: 32px !important; }
   /* Las etiquetas de inicio/fin chocan con el thumb en pantalla angosta y son
      redundantes: el mes elegido ya se muestra a la izquierda del track. */
@@ -782,46 +1157,17 @@ input, select, textarea { font-size: 16px; }
      tarjeta en paneles donde el alto disponible superaba el min-height. */
   .bench-chart-card { min-height: 280px; }
 
-  /* Toggle USD/% de los gráficos */
-  .modo-toggle-btn {
-    padding: 10px 18px !important;
-    font-size: 12px !important;
-    min-height: 40px;
-  }
-}
-
-/* En fila, los íconos de estado cortaban el título: apilados entran en el alto
-   del botón y ocupan casi solo su ancho. */
-@media (max-width: 480px) {
-  .app-bar-btn.app-bar-cargar {
-    gap: 6px;
-    padding: 0 12px 0 8px;
-  }
-  .estado-cargas {
-    flex-direction: column;
-    gap: 1px;
-  }
-  .estado-cargas .estado-carga svg {
-    width: 13px;
-    height: 13px;
-    stroke-width: 1.8;
-  }
-  .estado-cargas .estado-carga[data-estado="pendiente"]::after {
-    top: -1px;
-    width: 5px;
-    height: 5px;
-  }
 }
 
 /* ── Pantallas muy angostas (≤ 380px) ───────────────────────── */
 @media (max-width: 340px) {
-  .app-bar-titulo { font-size: 18px; }
-  .app-bar-btn { width: 38px; }
+  .app-bar-titulo { font-size: 26px; }
+  .app-bar-acciones { gap: 4px; }
 }
 
 @media (max-width: 380px) {
-  .kpi-card-mobile .kpi-value { font-size: 15px !important; }
-  .kpi-grid > *:first-child .kpi-value, .kpi-grid-resumen > *:first-child .kpi-value { font-size: 23px !important; }
+  .kpi-value { font-size: 18px; }
+  .kpi-grid > :first-child .kpi-value, .kpi-grid-resumen > :first-child .kpi-value { font-size: 30px; }
   .cal-dia { min-height: 50px !important; }
 }
 
@@ -845,35 +1191,36 @@ input[type="range"] {
   outline: none;
   cursor: pointer;
 }
+/* Thumb de UISlider: círculo blanco con sombra. */
 input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 14px;
-  height: 14px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
-  background: var(--primary);
+  background: #fff;
   cursor: pointer;
-  border: 2px solid var(--bg);
-  box-shadow: 0 0 0 1px var(--primary);
-  transition: transform 0.1s;
+  border: 0.5px solid rgba(0, 0, 0, 0.04);
+  box-shadow: 0 0.5px 4px rgba(0, 0, 0, 0.12), 0 6px 13px rgba(0, 0, 0, 0.12);
+  transition: transform 0.15s var(--ease-ios);
 }
 /* Sliders de categoría usan accentColor del activo vía inline style */
 .slider-cat::-webkit-slider-thumb {
   background: currentColor;
-  box-shadow: none;
-  border-color: var(--card);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+  border: 2px solid var(--card);
 }
 input[type="range"]::-webkit-slider-thumb:hover {
-  transform: scale(1.2);
+  transform: scale(1.08);
 }
 input[type="range"]::-moz-range-thumb {
-  width: 14px;
-  height: 14px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
-  background: var(--primary);
+  background: #fff;
   cursor: pointer;
-  border: 2px solid var(--bg);
-  box-shadow: 0 0 0 1px var(--primary);
+  border: 0.5px solid rgba(0, 0, 0, 0.04);
+  box-shadow: 0 0.5px 4px rgba(0, 0, 0, 0.12), 0 6px 13px rgba(0, 0, 0, 0.12);
 }
 input[type="range"]::-moz-range-track {
   background: var(--border);
@@ -892,8 +1239,8 @@ input[type="range"]::-moz-range-track {
     border-radius: 0;
     background: linear-gradient(var(--border), var(--border)) center / 100% 4px no-repeat;
   }
-  input[type="range"]::-webkit-slider-thumb { width: 20px; height: 20px; }
-  input[type="range"]::-moz-range-thumb     { width: 20px; height: 20px; }
+  input[type="range"]::-webkit-slider-thumb { width: 26px; height: 26px; }
+  input[type="range"]::-moz-range-thumb     { width: 26px; height: 26px; }
   input[type="range"]::-moz-range-track     { background: transparent; }
 }
 
@@ -969,11 +1316,14 @@ input[type="range"]::-moz-range-track {
 }
 
 /* ── Recharts overrides ─────────────────────────────────────── */
+/* Material translúcido, como los popovers de macOS. */
 .recharts-tooltip-wrapper .recharts-default-tooltip {
-  background: var(--card) !important;
-  border: 1px solid var(--border) !important;
-  border-radius: 10px !important;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.18) !important;
+  background: var(--material) !important;
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  backdrop-filter: saturate(180%) blur(20px);
+  border: 0.5px solid var(--material-borde) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18) !important;
 }
 .recharts-legend-item-text {
   color: var(--text-sec) !important;
@@ -988,16 +1338,15 @@ input[type="range"]::-moz-range-track {
    con media queries. Prefijo g-/gasto- para no pisar controles de otras pestañas. */
 .g-card {
   background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 12px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 14px;
   padding: 16px 20px;
 }
 .g-eyebrow {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--muted);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--text);
   margin: 0 0 12px;
 }
 
@@ -1044,8 +1393,9 @@ input[type="range"]::-moz-range-track {
 /* Total del mes con el reparto por categoría. */
 .gasto-total {
   font-family: var(--font-display);
-  font-size: 26px;
-  font-weight: 600;
+  font-size: 28px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
   line-height: 1.1;
   letter-spacing: -0.01em;
   color: var(--text);
@@ -1103,7 +1453,7 @@ input[type="range"]::-moz-range-track {
   align-items: center;
   justify-content: center;
   border: none;
-  border-radius: 6px;
+  border-radius: 8px;
   background: none;
   color: var(--muted);
   font-size: 14px;
@@ -1114,7 +1464,7 @@ input[type="range"]::-moz-range-track {
 
 .g-btn {
   padding: 8px 16px;
-  border-radius: 6px;
+  border-radius: 8px;
   border: 1px solid var(--border);
   background: transparent;
   color: var(--text-sec);
@@ -1123,7 +1473,9 @@ input[type="range"]::-moz-range-track {
   cursor: pointer;
 }
 .g-btn:hover:not(:disabled) { background: var(--chip-hover); color: var(--text); }
-.g-btn.primario { border-color: var(--primary); background: var(--primary-dim); color: var(--primary); }
+/* Botón prominente de iOS: relleno del acento, texto blanco. */
+.g-btn.primario { border-color: var(--primary); background: var(--primary); color: #fff; }
+.g-btn.primario:hover:not(:disabled) { background: var(--primary); color: #fff; filter: brightness(1.08); }
 .g-btn.peligro { color: var(--down); border-color: var(--down); }
 .g-btn.chico { padding: 4px 10px; font-size: 12px; }
 .g-btn:disabled { cursor: default; opacity: 0.5; }
@@ -1150,7 +1502,7 @@ input[type="range"]::-moz-range-track {
   width: 100%;
   min-width: 0;
   padding: 7px 10px;
-  border-radius: 6px;
+  border-radius: 8px;
   border: 1px solid var(--border);
   background: var(--bg);
   color: var(--text);
@@ -1172,7 +1524,7 @@ input[type="range"]::-moz-range-track {
 .g-radio input[type="radio"], .g-radio input[type="checkbox"] { margin-top: 3px; flex-shrink: 0; }
 .g-radio span { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; min-width: 0; }
 .g-radio span input {
-  padding: 7px 10px; border-radius: 6px; border: 1px solid var(--border);
+  padding: 7px 10px; border-radius: 8px; border: 1px solid var(--border);
   background: var(--bg); color: var(--text); font-size: 13px;
 }
 .g-ayuda { font-size: 11px; line-height: 1.45; color: var(--muted); margin: 0; }
@@ -1218,9 +1570,10 @@ input[type="range"]::-moz-range-track {
 
   /* La franja de finanzas personales se repite en las tres sub-pestañas: en 2×2
      deja el contenido de cada una más cerca del principio de la pantalla. */
+  .kpi-grid-resumen.flujo-kpis { grid-template-columns: 1fr 1fr; }
   .kpi-grid-resumen.flujo-kpis > *:first-child,
   .kpi-grid-resumen.flujo-kpis > *:last-child:nth-child(even) { grid-column: auto; }
-  .kpi-grid-resumen.flujo-kpis > *:first-child .kpi-value { font-size: 17px !important; }
+  .kpi-grid-resumen.flujo-kpis > :first-child .kpi-value { font-size: 20px; }
 
   .gasto-row {
     grid-template-columns: minmax(0, 1fr) auto 40px;

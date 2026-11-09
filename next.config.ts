@@ -46,6 +46,10 @@ const SECURITY_HEADERS = [
 ];
 
 const nextConfig: NextConfig = {
+  // El indicador de Next (solo en dev) queda abajo a la izquierda, encima de la
+  // tab bar de mobile, y se come los toques sobre "Resumen". Los errores de
+  // compilación siguen apareciendo en su overlay.
+  devIndicators: false,
   async headers() {
     return [{ source: '/:path*', headers: SECURITY_HEADERS }];
   },

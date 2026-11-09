@@ -17,9 +17,9 @@ export default async function Home() {
       <div className="flex items-center justify-center min-h-screen">
         <div
           className="rounded-xl p-8 max-w-lg text-center"
-          style={{ background: 'var(--card)', border: '1px solid #ef553b' }}
+          style={{ background: 'var(--card)', border: '1px solid var(--down)' }}
         >
-          <p className="text-lg font-semibold mb-2" style={{ color: '#ef553b' }}>
+          <p className="text-lg font-semibold mb-2" style={{ color: 'var(--down)' }}>
             Error cargando datos
           </p>
           <p style={{ color: 'var(--muted)' }} className="text-sm">

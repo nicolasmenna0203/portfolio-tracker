@@ -88,8 +88,8 @@ function ActivosFaltantesForm({
   const allFilled = activos.every((a) => a.tipo && a.riesgo && a.sectorGeo && a.renta && a.moneda);
 
   const labelStyle: React.CSSProperties = {
-    fontSize: 10, fontWeight: 700, color: 'var(--muted)',
-    textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 3, display: 'block',
+    fontSize: 11, fontWeight: 600, color: 'var(--muted)',
+    marginBottom: 3, display: 'block',
   };
   const selectStyle: React.CSSProperties = {
     width: '100%', padding: '5px 8px', borderRadius: 6,
@@ -104,7 +104,7 @@ function ActivosFaltantesForm({
         background: 'rgba(245,197,24,0.08)', border: '1px solid rgba(245,197,24,0.35)',
         borderRadius: 8, padding: '10px 14px',
       }}>
-        <p style={{ fontSize: 12, fontWeight: 700, color: '#f5c518', margin: '0 0 3px' }}>
+        <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--warn)', margin: '0 0 3px' }}>
           ⚠ {tickers.length} activo{tickers.length !== 1 ? 's' : ''} nuevo{tickers.length !== 1 ? 's' : ''} detectado{tickers.length !== 1 ? 's' : ''}
         </p>
         <p style={{ fontSize: 12, color: 'var(--muted)', margin: 0 }}>
@@ -328,13 +328,13 @@ function Uploader({
 
   return (
     <div style={{
-      background: 'var(--card)', border: '1px solid var(--border)',
+      background: 'var(--card)', border: '1px solid var(--border-subtle)',
       borderRadius: 12, padding: '20px 24px',
       display: 'flex', flexDirection: 'column', gap: 14,
     }}>
       {/* Header */}
       <div>
-        <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--primary)', marginBottom: 3 }}>
+        <p style={{ fontSize: 11, fontWeight: 600, color: 'var(--primary)', marginBottom: 3 }}>
           {title}
         </p>
         <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)', margin: 0 }}>
@@ -375,7 +375,7 @@ function Uploader({
             background: 'rgba(99,102,241,0.07)', border: '1px solid rgba(99,102,241,0.25)',
             borderRadius: 8, padding: '14px 18px', display: 'flex', flexDirection: 'column', gap: 10,
           }}>
-            <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--primary)', margin: 0, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+            <p style={{ fontSize: 11, fontWeight: 600, color: 'var(--primary)', margin: 0 }}>
               Vista previa — revisá antes de confirmar
             </p>
             {renderPreview(state.preview, actualizarPreview)}
@@ -423,7 +423,7 @@ function Uploader({
             background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.3)',
             borderRadius: 8, padding: '14px 18px', display: 'flex', flexDirection: 'column', gap: 8,
           }}>
-            <p style={{ fontSize: 12, fontWeight: 700, color: '#22c55e', margin: 0 }}>✓ Subido correctamente</p>
+            <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--up)', margin: 0 }}>✓ Subido correctamente</p>
             {renderDone(state.confirmed)}
           </div>
           <button style={btnSecondary} onClick={reset}>Cargar otro mes</button>
@@ -437,7 +437,7 @@ function Uploader({
             background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.3)',
             borderRadius: 8, padding: '14px 18px',
           }}>
-            <p style={{ fontSize: 12, fontWeight: 700, color: '#ef4444', margin: '0 0 4px' }}>Error</p>
+            <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--down)', margin: '0 0 4px' }}>Error</p>
             <p style={{ fontSize: 13, color: 'var(--text)', margin: 0 }}>{state.error}</p>
           </div>
           <button style={btnPrimary} onClick={reset}>Intentar de nuevo</button>
@@ -569,7 +569,7 @@ function PreviewTenencias({ p, onMes }: { p: Record<string, unknown>; onMes: (me
         </p>
       </div>
       <div style={{ borderTop: '1px solid var(--border)', paddingTop: 8, marginTop: 2 }}>
-        <p style={{ fontSize: 11, color: 'var(--muted)', margin: '0 0 6px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+        <p style={{ fontSize: 11, color: 'var(--muted)', margin: '0 0 6px', fontWeight: 600 }}>
           Todas las posiciones
         </p>
         {rows.map((r) => (
@@ -610,7 +610,7 @@ function PreviewMovimientos({ p }: { p: Record<string, unknown> }) {
       <Row label="Depósitos (→ Egreso TIR)"   value={`${salidas.length} operación${salidas.length !== 1 ? 'es' : ''}`} />
       {movs.length > 0 && (
         <div style={{ borderTop: '1px solid var(--border)', paddingTop: 8, marginTop: 2 }}>
-          <p style={{ fontSize: 11, color: 'var(--muted)', margin: '0 0 6px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+          <p style={{ fontSize: 11, color: 'var(--muted)', margin: '0 0 6px', fontWeight: 600 }}>
             Detalle
           </p>
           {movs.map((m, i) => (
@@ -666,7 +666,7 @@ function PreviewHaberes({ p }: { p: Record<string, unknown> }) {
         <Row label="Ya cargadas (omitidas)" value={`${omitidas}`} />
       )}
       <div style={{ borderTop: '1px solid var(--border)', paddingTop: 8, marginTop: 2 }}>
-        <p style={{ fontSize: 11, color: 'var(--muted)', margin: '0 0 6px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+        <p style={{ fontSize: 11, color: 'var(--muted)', margin: '0 0 6px', fontWeight: 600 }}>
           Detalle (ARS convertido a USD con el MEP del día de cada pago)
         </p>
         {rows.map((r, i) => (
@@ -712,8 +712,8 @@ function EmpleadoresNuevosForm({
   const allFilled = nombres.every((n) => valores[n]?.trim());
 
   const labelStyle: React.CSSProperties = {
-    fontSize: 10, fontWeight: 700, color: 'var(--muted)',
-    textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 3, display: 'block',
+    fontSize: 11, fontWeight: 600, color: 'var(--muted)',
+    marginBottom: 3, display: 'block',
   };
   const inputStyle: React.CSSProperties = {
     width: '100%', padding: '5px 8px', borderRadius: 6,
@@ -727,7 +727,7 @@ function EmpleadoresNuevosForm({
         background: 'rgba(245,197,24,0.08)', border: '1px solid rgba(245,197,24,0.35)',
         borderRadius: 8, padding: '10px 14px',
       }}>
-        <p style={{ fontSize: 12, fontWeight: 700, color: '#f5c518', margin: '0 0 3px' }}>
+        <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--warn)', margin: '0 0 3px' }}>
           ⚠ {nombres.length} empleador{nombres.length !== 1 ? 'es' : ''} nuevo{nombres.length !== 1 ? 's' : ''} detectado{nombres.length !== 1 ? 's' : ''}
         </p>
         <p style={{ fontSize: 12, color: 'var(--muted)', margin: 0 }}>
@@ -934,12 +934,12 @@ function UploaderHaberes({ onCargado }: { onCargado?: () => void }) {
 
   return (
     <div style={{
-      background: 'var(--card)', border: '1px solid var(--border)',
+      background: 'var(--card)', border: '1px solid var(--border-subtle)',
       borderRadius: 12, padding: '20px 24px',
       display: 'flex', flexDirection: 'column', gap: 14,
     }}>
       <div>
-        <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--primary)', marginBottom: 3 }}>
+        <p style={{ fontSize: 11, fontWeight: 600, color: 'var(--primary)', marginBottom: 3 }}>
           Sueldos / Haberes
         </p>
         <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)', margin: 0 }}>
@@ -990,7 +990,7 @@ function UploaderHaberes({ onCargado }: { onCargado?: () => void }) {
             background: 'rgba(99,102,241,0.07)', border: '1px solid rgba(99,102,241,0.25)',
             borderRadius: 8, padding: '14px 18px', display: 'flex', flexDirection: 'column', gap: 10,
           }}>
-            <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--primary)', margin: 0, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+            <p style={{ fontSize: 11, fontWeight: 600, color: 'var(--primary)', margin: 0 }}>
               Vista previa combinada — revisá antes de confirmar
             </p>
             <PreviewHaberes p={state.preview} />
@@ -1023,7 +1023,7 @@ function UploaderHaberes({ onCargado }: { onCargado?: () => void }) {
             background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.3)',
             borderRadius: 8, padding: '14px 18px', display: 'flex', flexDirection: 'column', gap: 8,
           }}>
-            <p style={{ fontSize: 12, fontWeight: 700, color: '#22c55e', margin: 0 }}>✓ Subido correctamente</p>
+            <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--up)', margin: 0 }}>✓ Subido correctamente</p>
             <DoneHaberes p={state.confirmed} />
           </div>
           <button style={btnSecondary} onClick={reset}>Cargar otro resumen</button>
@@ -1036,7 +1036,7 @@ function UploaderHaberes({ onCargado }: { onCargado?: () => void }) {
             background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.3)',
             borderRadius: 8, padding: '14px 18px',
           }}>
-            <p style={{ fontSize: 12, fontWeight: 700, color: '#ef4444', margin: '0 0 4px' }}>Error</p>
+            <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--down)', margin: '0 0 4px' }}>Error</p>
             <p style={{ fontSize: 13, color: 'var(--text)', margin: 0 }}>{state.error}</p>
           </div>
           {archivos.length > 0 && (

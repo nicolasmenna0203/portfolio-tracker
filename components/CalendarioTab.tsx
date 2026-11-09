@@ -14,11 +14,11 @@ interface Props {
 }
 
 const TIPO_EVENTO_META: Record<EventoTipo, { label: string; color: string }> = {
-  dividendo:      { label: 'Dividendo',        color: '#6a9bab' },
-  'dividendo-fut':{ label: 'Div. confirmado',  color: '#7fb0c2' },
-  earnings:       { label: 'Balance',          color: '#c15c4a' },
-  renta:          { label: 'Renta',            color: '#5fb896' },
-  amortizacion:   { label: 'Amortización',     color: '#cfab6e' },
+  dividendo:      { label: 'Dividendo',        color: '#0a84ff' },
+  'dividendo-fut':{ label: 'Div. confirmado',  color: '#5e5ce6' },
+  earnings:       { label: 'Balance',          color: '#d96f00' },
+  renta:          { label: 'Renta',            color: '#1e9ab0' },
+  amortizacion:   { label: 'Amortización',     color: '#b455e8' },
 };
 
 // Tipos agrupados para los filtros (dividendo histórico + futuro se filtran juntos).
@@ -57,7 +57,7 @@ function tooltipMonto(tipo: EventoTipo): string {
     return `Neto estimado a acreditar, según tu tenencia y el precio de mercado actual.\n`
       + `Ya descontado: ${formatPercent(RETENCION_USA * 100, { sign: false, decimals: 0 })} de retención de EE.UU. + ${formatPercent(IMPUESTO_CHEQUE * 100, { sign: false })} de débitos y créditos `
       + `(llega el ${formatPercent(FACTOR_NETO_DIVIDENDO * 100, { sign: false })} del bruto).\n`
-      + `No incluye la comisión del depositario (Comafi, ~1-2%).`;
+      + `No incluye la comisión del depositario local (~1-2%).`;
   }
   return 'Cobro estimado según tu tenencia y el precio de mercado actual.\nSin retención de origen: los bonos ARG se acreditan completos.';
 }
@@ -86,7 +86,7 @@ function Pill({ label, active, color, onClick }: {
 function Card({ children }: { children: React.ReactNode }) {
   return (
     <div style={{
-      background: 'var(--card)', border: '1px solid var(--border)',
+      background: 'var(--card)', border: '1px solid var(--border-subtle)',
       borderRadius: 12, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 10,
     }}>
       {children}
@@ -410,7 +410,7 @@ export default function CalendarioTab({ data, hideValues = false }: Props) {
                 borderRadius: 12, padding: '10px 14px',
                 display: 'flex', flexDirection: 'column', gap: 4, justifyContent: 'center',
               }}>
-                <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--muted)' }}>
+                <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)' }}>
                   Próximo cobro
                 </span>
                 {proximoCobro ? (
@@ -432,10 +432,10 @@ export default function CalendarioTab({ data, hideValues = false }: Props) {
               </div>
 
               <div style={{
-                background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 12,
+                background: 'var(--card)', border: '1px solid var(--border-subtle)', borderRadius: 12,
                 padding: '10px 14px', display: 'flex', flexDirection: 'column', gap: 2, justifyContent: 'center',
               }}>
-                <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--muted)' }}>
+                <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)' }}>
                   A cobrar este mes
                 </span>
                 {Object.keys(totalMesPorMoneda).length > 0 ? (
@@ -454,10 +454,10 @@ export default function CalendarioTab({ data, hideValues = false }: Props) {
               </div>
 
               <div style={{
-                background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 12,
+                background: 'var(--card)', border: '1px solid var(--border-subtle)', borderRadius: 12,
                 padding: '10px 14px', display: 'flex', flexDirection: 'column', gap: 2, justifyContent: 'center',
               }}>
-                <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--muted)' }}>
+                <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)' }}>
                   Proyección anual
                 </span>
                 {cobroAnualTotal > 0 ? (
@@ -505,7 +505,7 @@ export default function CalendarioTab({ data, hideValues = false }: Props) {
           </div>
 
           <Card>
-            <p style={{ margin: 0, fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--primary)' }}>
+            <p style={{ margin: 0, fontSize: 11, fontWeight: 600, color: 'var(--primary)' }}>
               Eventos de {MESES_LABEL[mesIdx]}
             </p>
             {eventosDelMes.length === 0 ? (
@@ -558,7 +558,7 @@ export default function CalendarioTab({ data, hideValues = false }: Props) {
       )}
 
       {errorEventos && (
-        <p style={{ margin: 0, fontSize: 11, color: '#ef553b' }}>Algunos eventos no pudieron cargarse: {errorEventos}</p>
+        <p style={{ margin: 0, fontSize: 11, color: 'var(--down)' }}>Algunos eventos no pudieron cargarse: {errorEventos}</p>
       )}
     </div>
   );

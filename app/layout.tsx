@@ -1,18 +1,14 @@
 import type { Metadata, Viewport } from 'next';
-import { Public_Sans, Spectral } from 'next/font/google';
+import { Inter } from 'next/font/google';
 import './globals.css';
 
-const publicSans = Public_Sans({
+// Tipografía: SF Pro en dispositivos Apple (`-apple-system` en la pila de
+// globals.css) e Inter como reemplazo en Windows y Android, donde SF no existe y
+// no se puede servir. Inter va como variable, no como clase: la pila decide.
+const inter = Inter({
   subsets: ['latin'],
   weight: ['400', '500', '600', '700'],
-  variable: '--font-sans',
-  display: 'swap',
-});
-
-const spectral = Spectral({
-  subsets: ['latin'],
-  weight: ['400', '500', '600'],
-  variable: '--font-serif',
+  variable: '--font-inter',
   display: 'swap',
 });
 
@@ -35,14 +31,22 @@ export const viewport: Viewport = {
   maximumScale: 5,
   viewportFit: 'cover',
   themeColor: [
-    { media: '(prefers-color-scheme: dark)',  color: '#211d17' },
-    { media: '(prefers-color-scheme: light)', color: '#f7f4ec' },
+    { media: '(prefers-color-scheme: dark)',  color: '#000000' },
+    { media: '(prefers-color-scheme: light)', color: '#f2f2f7' },
   ],
 };
 
+// El tema sigue al del sistema salvo que se haya elegido otro a mano (ver
+// Dashboard). Se aplica antes del primer pintado: si esperara a la hidratación,
+// quien eligió el tema contrario al del sistema vería un destello del otro.
+const SCRIPT_TEMA = `try{var t=localStorage.getItem('tema_v1');if(t==='light'||t==='dark')document.documentElement.setAttribute('data-theme',t)}catch(e){}`;
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="es" className={`${publicSans.variable} ${spectral.variable}`}>
+    <html lang="es" className={inter.variable} suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: SCRIPT_TEMA }} />
+      </head>
       <body className="min-h-screen antialiased">{children}</body>
     </html>
   );

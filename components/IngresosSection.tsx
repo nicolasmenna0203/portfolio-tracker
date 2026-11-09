@@ -27,7 +27,7 @@ interface Props {
 // Paleta fija por empleador, asignada en orden de aparición (nunca por índice
 // recalculado al filtrar, para que un empleador no cambie de color si otro
 // desaparece del set visible).
-const EMPLEADOR_COLORS = ['#cfab6e', '#5fb896', '#8d7fc7', '#d9824e', '#6fa8d6', '#c15c4a'];
+const EMPLEADOR_COLORS = ['#0a84ff', '#d96f00', '#1e9ab0', '#b455e8', '#b98a00', '#f2385a'];
 
 // Cuántas acreditaciones se muestran antes de pedir "Ver todos".
 const PAGE_INGRESOS = 12;
@@ -44,7 +44,7 @@ function CustomTooltip({ active, payload, label, moneda }: { active?: boolean; p
   const currency: Moneda = moneda === 'USD' ? 'USD' : 'ARS';
   return (
     <div style={{
-      background: 'var(--card)', border: '1px solid var(--border)',
+      background: 'var(--card)', border: '1px solid var(--border-subtle)',
       borderRadius: 8, padding: '10px 14px', fontSize: 12,
       boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
     }}>
@@ -76,7 +76,7 @@ function InversionTooltip({ active, payload, moneda }: { active?: boolean; paylo
   const m = payload[0].payload;
   return (
     <div style={{
-      background: 'var(--card)', border: '1px solid var(--border)',
+      background: 'var(--card)', border: '1px solid var(--border-subtle)',
       borderRadius: 8, padding: '10px 14px', fontSize: 12,
       boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
     }}>
@@ -223,7 +223,7 @@ export default function IngresosSection({ resp, loading, error, serie, hideValue
         background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.3)',
         borderRadius: 8, padding: '14px 18px', margin: 12,
       }}>
-        <p style={{ fontSize: 12, fontWeight: 700, color: '#ef4444', margin: '0 0 4px' }}>Error</p>
+        <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--down)', margin: '0 0 4px' }}>Error</p>
         <p style={{ fontSize: 13, color: 'var(--text)', margin: 0 }}>{error}</p>
       </div>
     );
@@ -246,7 +246,6 @@ export default function IngresosSection({ resp, loading, error, serie, hideValue
             ? formatMoney(kpis!.totalArs, { currency: 'ARS', hidden: hideValues })
             : formatMoney(kpis!.totalUsd, { currency: 'USD', hidden: hideValues })}
           sub={`${resp.empleadores.length} empleador${resp.empleadores.length !== 1 ? 'es' : ''}`}
-          accentColor="var(--primary)"
         />
         <KPICard
           label={`Total acumulado (${moneda === 'ARS' ? 'USD' : 'ARS'})`}
@@ -256,7 +255,6 @@ export default function IngresosSection({ resp, loading, error, serie, hideValue
               ? (kpis!.totalUsd > 0 ? formatMoney(kpis!.totalUsd, { currency: 'USD' }) : 's/d')
               : formatMoney(kpis!.totalArs, { currency: 'ARS' })}
           sub={`equivalente en ${moneda === 'ARS' ? 'USD' : 'ARS'}`}
-          accentColor="var(--primary)"
         />
         <KPICard
           label="Último mes"
@@ -264,16 +262,15 @@ export default function IngresosSection({ resp, loading, error, serie, hideValue
             ? formatMoney(kpis!.ultimoMesPrincipal, { currency: moneda === 'ARS' ? 'ARS' : 'USD', hidden: hideValues })
             : 's/d'}
           sub={kpis!.ultimoMes?.fecha ?? ''}
-          accentColor="var(--up)"
         />
       </div>
 
       <div style={{
-        background: 'var(--card)', border: '1px solid var(--border)',
+        background: 'var(--card)', border: '1px solid var(--border-subtle)',
         borderRadius: 12, padding: '16px 20px', flex: 1, minHeight: 340,
         display: 'flex', flexDirection: 'column',
       }}>
-        <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--muted)', margin: '0 0 12px', flexShrink: 0 }}>
+        <p style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', margin: '0 0 12px', flexShrink: 0 }}>
           Ingresos por mes y empleador ({moneda})
         </p>
         <ResponsiveContainer width="100%" height={280} minHeight={280}>
@@ -304,12 +301,12 @@ export default function IngresosSection({ resp, loading, error, serie, hideValue
       </div>
 
       <div style={{
-        background: 'var(--card)', border: '1px solid var(--border)',
+        background: 'var(--card)', border: '1px solid var(--border-subtle)',
         borderRadius: 12, padding: '16px 20px',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, margin: '0 0 12px' }}>
           <span className="g-etiqueta">
-            <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--muted)', margin: 0 }}>
+            <p style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', margin: 0 }}>
               Ratio de inversión sobre ingresos, por mes ({moneda})
             </p>
             <InfoTip label="este gráfico">
@@ -382,10 +379,10 @@ export default function IngresosSection({ resp, loading, error, serie, hideValue
       </div>
 
       <div style={{
-        background: 'var(--card)', border: '1px solid var(--border)',
+        background: 'var(--card)', border: '1px solid var(--border-subtle)',
         borderRadius: 12, padding: '16px 20px',
       }}>
-        <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--muted)', margin: '0 0 12px' }}>
+        <p style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', margin: '0 0 12px' }}>
           Detalle de acreditaciones
         </p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>

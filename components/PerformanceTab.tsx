@@ -17,10 +17,11 @@ interface Props {
 
 type SubTab = 'fija' | 'variable' | 'carry' | 'fci' | 'ratios';
 
-const SUB_TABS: { id: SubTab; label: string }[] = [
-  { id: 'fija',     label: 'Renta Fija' },
-  { id: 'variable', label: 'Renta Variable' },
-  { id: 'carry',    label: 'Carry Trade' },
+// `corto`: en mobile las cinco no entran en 360px con el nombre completo.
+const SUB_TABS: { id: SubTab; label: string; corto?: string }[] = [
+  { id: 'fija',     label: 'Renta fija',     corto: 'Fija' },
+  { id: 'variable', label: 'Renta variable', corto: 'Variable' },
+  { id: 'carry',    label: 'Carry trade',    corto: 'Carry' },
   { id: 'fci',      label: 'FCI' },
   { id: 'ratios',   label: 'Ratios' },
 ];

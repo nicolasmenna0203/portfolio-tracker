@@ -12,6 +12,7 @@ import { formatMoney, formatPercent, formatNumber, CURRENCY_PREFIX } from '@/lib
 import { PALETA_TIPO } from '@/lib/constants';
 import KPICard from './KPICard';
 import SectoresMercado from './SectoresMercado';
+import Segmented from './Segmented';
 
 interface Props {
   tickersUsa: string[];
@@ -72,7 +73,7 @@ function ChartTooltip({ active, payload }: { active?: boolean; payload?: ChartTo
   const p = payload[0].payload;
   return (
     <div style={{
-      background: 'var(--card)', border: '1px solid var(--border)',
+      background: 'var(--card)', border: '1px solid var(--border-subtle)',
       borderRadius: 8, padding: '8px 12px', fontSize: 12,
       boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
     }}>
@@ -143,7 +144,7 @@ export default function RentaVariableSection({ tickersUsa, tenencias, tickersFci
       title={title}
       style={{
         cursor: title ? 'help' : 'pointer', textAlign: 'right', padding: '8px 10px',
-        fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase',
+        fontSize: 11, fontWeight: 600,
         color: sortKey === key ? 'var(--primary)' : 'var(--muted)', whiteSpace: 'nowrap',
       }}
     >
@@ -162,8 +163,8 @@ export default function RentaVariableSection({ tickersUsa, tenencias, tickersFci
   if (error) {
     return (
       <div style={{
-        background: 'var(--card)', border: '1px solid #ef553b', borderRadius: 10,
-        padding: '10px 14px', fontSize: 12, color: '#ef553b',
+        background: 'var(--card)', border: '1px solid var(--down)', borderRadius: 10,
+        padding: '10px 14px', fontSize: 12, color: 'var(--down)',
       }}>
         Error cargando performance: {error}
       </div>
@@ -173,7 +174,7 @@ export default function RentaVariableSection({ tickersUsa, tenencias, tickersFci
   if (acciones.length === 0) {
     return (
       <div style={{
-        background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 12,
+        background: 'var(--card)', border: '1px solid var(--border-subtle)', borderRadius: 12,
         padding: '24px', fontSize: 13, color: 'var(--muted)', textAlign: 'center',
       }}>
         No hay acciones, CEDEARs ni ETFs en tu cartera actual.
@@ -190,13 +191,12 @@ export default function RentaVariableSection({ tickersUsa, tenencias, tickersFci
           label="Valor en cartera"
           value={formatMoney(valorTotalCartera, { currency: 'USD', hidden: hideValues })}
           sub={`${acciones.filter((a) => a.tenenciaUsd).length} de ${acciones.length} posiciones${hayFci ? ' · incluye fondos (VCP de CAFCI)' : ''}`}
-          accentColor="var(--primary)"
         />
       </div>
 
       {/* ── Gráfico histórico de precio ──────────────────────────────────── */}
       <div style={{
-        background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 12,
+        background: 'var(--card)', border: '1px solid var(--border-subtle)', borderRadius: 12,
         padding: '14px 16px 8px', minHeight: 320, display: 'flex', flexDirection: 'column', flexShrink: 0,
       }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10, marginBottom: 10, flexShrink: 0 }}>
@@ -208,26 +208,7 @@ export default function RentaVariableSection({ tickersUsa, tenencias, tickersFci
               Precio de cierre · elegí un ticker en la tabla
             </span>
           </div>
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-            {RANGOS.map((r) => {
-              const activo = rango === r.id;
-              return (
-                <button
-                  key={r.id}
-                  onClick={() => setRango(r.id)}
-                  className="pill-touch"
-                  aria-pressed={activo}
-                  style={{
-                    padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600,
-                    cursor: 'pointer', border: '1px solid',
-                    borderColor: activo ? 'var(--primary)' : 'var(--border)',
-                    background: activo ? 'var(--primary-dim)' : 'transparent',
-                    color: activo ? 'var(--primary)' : 'var(--muted)',
-                  }}
-                >{r.label}</button>
-              );
-            })}
-          </div>
+          <Segmented opciones={RANGOS} activa={rango} onChange={setRango} chico etiqueta="Rango" />
         </div>
         <div style={{ height: 280, position: 'relative' }}>
           {loadingHist && (
@@ -269,23 +250,23 @@ export default function RentaVariableSection({ tickersUsa, tenencias, tickersFci
 
       {/* ── Tabla de fundamentals ────────────────────────────────────────── */}
       <div className="tabla-wrap" style={{
-        background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 12,
+        background: 'var(--card)', border: '1px solid var(--border-subtle)', borderRadius: 12,
         overflowX: 'auto',
       }}>
         <table className="tabla-datos" style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
           <thead style={{ position: 'sticky', top: 0, background: 'var(--card)', zIndex: 1 }}>
             <tr style={{ borderBottom: '1px solid var(--border)' }}>
-              <th onClick={() => toggleSort('ticker')} style={{ cursor: 'pointer', textAlign: 'left', padding: '8px 10px', fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: sortKey === 'ticker' ? 'var(--primary)' : 'var(--muted)' }}>
+              <th onClick={() => toggleSort('ticker')} style={{ cursor: 'pointer', textAlign: 'left', padding: '8px 10px', fontSize: 11, fontWeight: 600, color: sortKey === 'ticker' ? 'var(--primary)' : 'var(--muted)' }}>
                 Ticker{sortKey === 'ticker' ? (sortDesc ? ' ▼' : ' ▲') : ''}
               </th>
-              <th style={{ textAlign: 'right', padding: '8px 10px', fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--muted)' }}>Precio</th>
+              <th style={{ textAlign: 'right', padding: '8px 10px', fontSize: 11, fontWeight: 600, color: 'var(--muted)' }}>Precio</th>
               {cabecera('variacion1d', 'Var. 1D')}
-              <th style={{ textAlign: 'right', padding: '8px 10px', fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--muted)' }}>Var. 1M</th>
+              <th style={{ textAlign: 'right', padding: '8px 10px', fontSize: 11, fontWeight: 600, color: 'var(--muted)' }}>Var. 1M</th>
               {cabecera('variacionYtd', 'Var. YTD')}
-              <th style={{ textAlign: 'right', padding: '8px 10px', fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--muted)' }}>Var. 1A</th>
+              <th style={{ textAlign: 'right', padding: '8px 10px', fontSize: 11, fontWeight: 600, color: 'var(--muted)' }}>Var. 1A</th>
               {cabecera('peRatio', 'P/E')}
               {cabecera('marketCap', 'Market Cap')}
-              <th style={{ textAlign: 'right', padding: '8px 10px', fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--muted)' }}>Rango 52s</th>
+              <th style={{ textAlign: 'right', padding: '8px 10px', fontSize: 11, fontWeight: 600, color: 'var(--muted)' }}>Rango 52s</th>
               {cabecera('dividendYield', 'Yield')}
             </tr>
           </thead>

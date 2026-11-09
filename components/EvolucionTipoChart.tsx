@@ -16,6 +16,7 @@ import type { TenenciaActual } from '@/types';
 import { PALETA_TIPO, RIESGO_COLOR, RIESGO_LABEL, RENTA_LABEL, GEO_LABEL, MONEDA_LABEL, MONEDA_COLOR, RENTA_COLOR, GEO_COLOR, colorPorCategoria } from '@/lib/constants';
 import { useIsMobile } from '@/lib/useIsMobile';
 import { formatMoney, formatPercent, type Moneda } from '@/lib/format';
+import Segmented from './Segmented';
 
 interface Props {
   tenenciasPorMes: Record<string, TenenciaActual[]>;
@@ -93,7 +94,7 @@ function TooltipContent({ active, payload, label, mode, hideValues, moneda }: an
   return (
     <div style={{
       background: 'var(--card)',
-      border: '1px solid var(--border)',
+      border: '1px solid var(--border-subtle)',
       borderRadius: 10,
       padding: '10px 14px',
       fontSize: 12,
@@ -147,7 +148,7 @@ export default function EvolucionTipoChart({ tenenciasPorMes, mesesDisponibles, 
   return (
     <div style={{
       background: 'var(--card)',
-      border: '1px solid var(--border)',
+      border: '1px solid var(--border-subtle)',
       borderRadius: 12,
       padding: '14px 16px 8px',
       display: 'flex',
@@ -160,35 +161,13 @@ export default function EvolucionTipoChart({ tenenciasPorMes, mesesDisponibles, 
         </p>
 
         {/* Toggle moneda / % */}
-        <div style={{
-          display: 'flex',
-          borderRadius: 8,
-          overflow: 'hidden',
-          border: '1px solid var(--border)',
-          flexShrink: 0,
-        }}>
-          {(['nominal', 'pct'] as Mode[]).map((m) => (
-            <button
-              key={m}
-              onClick={() => setMode(m)}
-              className="modo-toggle-btn"
-              aria-pressed={mode === m}
-              style={{
-                padding: '3px 12px',
-                fontSize: 11,
-                fontWeight: 500,
-                cursor: 'pointer',
-                border: 'none',
-                outline: 'none',
-                background: mode === m ? 'var(--primary)' : 'transparent',
-                color: mode === m ? 'var(--chip-active-text)' : 'var(--muted)',
-                transition: 'background 0.12s, color 0.12s',
-              }}
-            >
-              {m === 'nominal' ? moneda : '%'}
-            </button>
-          ))}
-        </div>
+        <Segmented
+          opciones={[{ id: 'nominal' as Mode, label: moneda }, { id: 'pct' as Mode, label: '%' }]}
+          activa={mode}
+          onChange={setMode}
+          chico
+          etiqueta="Unidad"
+        />
       </div>
 
       <div style={{ flex: 1, minHeight: 220 }}>

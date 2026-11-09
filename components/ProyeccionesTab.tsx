@@ -71,7 +71,7 @@ function SliderRow({
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-        <span style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+        <span style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 600 }}>
           {label}
         </span>
         <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--primary)', fontVariantNumeric: 'tabular-nums' }}>
@@ -102,7 +102,7 @@ function CustomTooltip({ active, payload, label }: { active?: boolean; payload?:
   if (!active || !payload?.length) return null;
   return (
     <div style={{
-      background: 'var(--card)', border: '1px solid var(--border)',
+      background: 'var(--card)', border: '1px solid var(--border-subtle)',
       borderRadius: 8, padding: '10px 14px', fontSize: 12,
     }}>
       <p style={{ margin: '0 0 6px', color: 'var(--muted)', fontWeight: 600 }}>{label}</p>
@@ -250,7 +250,7 @@ export default function ProyeccionesTab({ data, hideValues, flujo }: Props) {
         {/* Panel de controles */}
         <div className="proy-controles" style={{
           background: 'var(--card)',
-          border: '1px solid var(--border)',
+          border: '1px solid var(--border-subtle)',
           borderRadius: 12,
           padding: '18px 20px',
           display: 'flex',
@@ -259,7 +259,7 @@ export default function ProyeccionesTab({ data, hideValues, flujo }: Props) {
           minWidth: 240,
           flex: '0 0 260px',
         }}>
-          <p style={{ margin: 0, fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--primary)' }}>
+          <p style={{ margin: 0, fontSize: 11, fontWeight: 600, color: 'var(--primary)' }}>
             Parámetros
           </p>
           {/* Solo en el celular: los resultados quedan una pantalla más abajo, y mover
@@ -306,7 +306,7 @@ export default function ProyeccionesTab({ data, hideValues, flujo }: Props) {
 
           {/* Tasa: manual o la observada de la propia cartera. */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            <span style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+            <span style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 600 }}>
               Tasa anual estimada
             </span>
             <div role="group" aria-label="Origen de la tasa" style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
@@ -383,8 +383,8 @@ export default function ProyeccionesTab({ data, hideValues, flujo }: Props) {
         <div className="proy-kpis" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, flex: 1 }}>
 
           {/* Capital proyectado */}
-          <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 12, padding: '14px 18px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-            <p style={{ margin: '0 0 4px', fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--muted)' }}>
+          <div style={{ background: 'var(--card)', border: '1px solid var(--border-subtle)', borderRadius: 12, padding: '14px 18px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+            <p style={{ margin: '0 0 4px', fontSize: 11, fontWeight: 600, color: 'var(--muted)' }}>
               Capital proyectado
             </p>
             <p style={{ margin: 0, fontSize: 22, fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.03em', fontVariantNumeric: 'tabular-nums' }}>
@@ -396,8 +396,8 @@ export default function ProyeccionesTab({ data, hideValues, flujo }: Props) {
           </div>
 
           {/* Ganancia total */}
-          <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 12, padding: '14px 18px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-            <p style={{ margin: '0 0 4px', fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--muted)' }}>
+          <div style={{ background: 'var(--card)', border: '1px solid var(--border-subtle)', borderRadius: 12, padding: '14px 18px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+            <p style={{ margin: '0 0 4px', fontSize: 11, fontWeight: 600, color: 'var(--muted)' }}>
               Ganancia total
             </p>
             <p style={{ margin: 0, fontSize: 22, fontWeight: 700, color: interesGenerado >= 0 ? 'var(--up)' : 'var(--down)', letterSpacing: '-0.03em', fontVariantNumeric: 'tabular-nums' }}>
@@ -417,7 +417,7 @@ export default function ProyeccionesTab({ data, hideValues, flujo }: Props) {
             borderRadius: 12, padding: '14px 18px',
             display: 'flex', flexDirection: 'column', justifyContent: 'center',
           }}>
-            <p style={{ margin: '0 0 4px', fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--muted)', fontVariantNumeric: 'tabular-nums' }}>
+            <p style={{ margin: '0 0 4px', fontSize: 11, fontWeight: 600, color: 'var(--muted)', fontVariantNumeric: 'tabular-nums' }}>
               Objetivo {hideValues ? '' : formatMoney(objetivo, { currency: 'USD' })}
             </p>
             {objetivo <= totalActual ? (
@@ -437,8 +437,8 @@ export default function ProyeccionesTab({ data, hideValues, flujo }: Props) {
           </div>
 
           {/* Hoy */}
-          <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 12, padding: '14px 18px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-            <p style={{ margin: '0 0 4px', fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--muted)' }}>
+          <div style={{ background: 'var(--card)', border: '1px solid var(--border-subtle)', borderRadius: 12, padding: '14px 18px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+            <p style={{ margin: '0 0 4px', fontSize: 11, fontWeight: 600, color: 'var(--muted)' }}>
               Cartera hoy
             </p>
             <p style={{ margin: 0, fontSize: 22, fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.03em', fontVariantNumeric: 'tabular-nums' }}>
@@ -454,17 +454,17 @@ export default function ProyeccionesTab({ data, hideValues, flujo }: Props) {
       {/* ── Gráfico histórico + proyección ────────────────────────────────── */}
       <div style={{
         background: 'var(--card)',
-        border: '1px solid var(--border)',
+        border: '1px solid var(--border-subtle)',
         borderRadius: 12,
         padding: '18px 20px 10px',
       }}>
         <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '4px 12px', marginBottom: 4 }}>
-          <p style={{ margin: 0, fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--primary)' }}>
+          <p style={{ margin: 0, fontSize: 11, fontWeight: 600, color: 'var(--primary)' }}>
             Evolución histórica + Proyección
           </p>
           <div style={{ display: 'flex', gap: 14, fontSize: 11, color: 'var(--muted)' }}>
             <span style={{ whiteSpace: 'nowrap' }}><span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: 'var(--primary)', marginRight: 5 }} />Cartera real</span>
-            <span style={{ whiteSpace: 'nowrap' }}><span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: '#6a9bab', marginRight: 5 }} />Proyección</span>
+            <span style={{ whiteSpace: 'nowrap' }}><span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: '#5e5ce6', marginRight: 5 }} />Proyección</span>
           </div>
         </div>
 
@@ -506,10 +506,10 @@ export default function ProyeccionesTab({ data, hideValues, flujo }: Props) {
               type="monotone"
               dataKey="proyectado"
               name="Proyección"
-              stroke="#6a9bab"
+              stroke="#5e5ce6"
               strokeWidth={2}
               strokeDasharray="5 4"
-              fill="#6a9bab18"
+              fill="#5e5ce618"
               dot={false}
               connectNulls={false}
               isAnimationActive={false}

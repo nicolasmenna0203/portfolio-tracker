@@ -22,6 +22,7 @@ import type { RatioGuardado } from '@/lib/ratiosGuardados';
 import { tickersDeCartera } from '@/lib/tickersElegibles';
 import { sma, ema, bollinger, retornos, correlacionMovil } from '@/lib/ratios';
 import { formatNumber, formatPercent } from '@/lib/format';
+import Segmented from './Segmented';
 
 // Referencias de mercado que no están en la cartera pero son el denominador
 // natural de casi cualquier análisis: medir una posición contra el mercado, el
@@ -54,11 +55,11 @@ const RANGOS: { id: RangoHistorico; label: string }[] = [
 const PERIODOS = [0, 20, 50, 200];
 
 const COLOR = {
-  ratio:     '#cfab6e',
-  sma1:      '#5fb896',
-  sma2:      '#8d7fc7',
-  banda:     '#c15c4a',
-  correl:    '#d9824e',
+  ratio:     '#0a84ff',
+  sma1:      '#1e9ab0',
+  sma2:      '#b455e8',
+  banda:     '#f2385a',
+  correl:    '#d96f00',
 } as const;
 
 type TipoMedia = 'sma' | 'ema';
@@ -80,7 +81,7 @@ function CustomTooltip({ active, payload, label }: { active?: boolean; payload?:
   if (!active || !payload?.length) return null;
   return (
     <div style={{
-      background: 'var(--card)', border: '1px solid var(--border)',
+      background: 'var(--card)', border: '1px solid var(--border-subtle)',
       borderRadius: 8, padding: '10px 14px', fontSize: 12,
       boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
     }}>
@@ -102,12 +103,12 @@ function CustomTooltip({ active, payload, label }: { active?: boolean; payload?:
 function Metrica({ label, valor, color, hint }: { label: string; valor: string; color?: string; hint?: string }) {
   return (
     <div style={{
-      background: 'var(--card)', border: '1px solid var(--border)',
+      background: 'var(--card)', border: '1px solid var(--border-subtle)',
       borderRadius: 10, padding: '10px 14px', minWidth: 0,
     }}>
       <p style={{
         display: 'flex', alignItems: 'center', gap: 4,
-        fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase',
+        fontSize: 11, fontWeight: 600,
         color: 'var(--muted)', margin: 0,
       }}>
         {label}
@@ -144,7 +145,7 @@ function InfoHint({ texto }: { texto: string }) {
       {visible && (
         <span style={{
           position: 'absolute', bottom: 'calc(100% + 6px)', left: '50%', transform: 'translateX(-50%)',
-          background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 8,
+          background: 'var(--card)', border: '1px solid var(--border-subtle)', borderRadius: 8,
           padding: '8px 10px', fontSize: 11, fontWeight: 400, letterSpacing: 'normal', textTransform: 'none',
           color: 'var(--text-sec)', width: 200, maxWidth: 'min(200px, calc(100vw - 48px))',
           boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
@@ -169,7 +170,7 @@ function SelectorActivo({
 }) {
   return (
     <label style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 150 }}>
-      <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--muted)' }}>
+      <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)' }}>
         {label}
       </span>
       <select
@@ -384,24 +385,7 @@ export default function RatiosTab({ data }: Props) {
         <div style={{ width: 1, height: 32, background: 'var(--border)' }} />
 
         {/* Rango */}
-        <div className="scroll-x" style={{ display: 'flex', gap: 3 }}>
-          {RANGOS.map((r) => (
-            <button
-              key={r.id}
-              className="pill-touch"
-              onClick={() => setRango(r.id)}
-              aria-pressed={rango === r.id}
-              style={{
-                padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600,
-                cursor: 'pointer', border: '1px solid',
-                borderColor: rango === r.id ? 'var(--primary)' : 'var(--border)',
-                background: rango === r.id ? 'var(--primary-dim)' : 'transparent',
-                color: rango === r.id ? 'var(--primary)' : 'var(--muted)',
-                transition: 'all 0.12s',
-              }}
-            >{r.label}</button>
-          ))}
-        </div>
+        <Segmented opciones={RANGOS} activa={rango} onChange={setRango} chico etiqueta="Rango" />
       </div>
 
       {/* ── Indicadores ───────────────────────────────────────────────────── */}
@@ -409,23 +393,13 @@ export default function RatiosTab({ data }: Props) {
         display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
         flexShrink: 0, fontSize: 11, color: 'var(--muted)',
       }}>
-        <div style={{ display: 'flex', gap: 3 }}>
-          {(['sma', 'ema'] as TipoMedia[]).map((t) => (
-            <button
-              key={t}
-              className="pill-touch"
-              onClick={() => setTipoMedia(t)}
-              aria-pressed={tipoMedia === t}
-              style={{
-                padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600,
-                cursor: 'pointer', border: '1px solid',
-                borderColor: tipoMedia === t ? 'var(--primary)' : 'var(--border)',
-                background: tipoMedia === t ? 'var(--primary-dim)' : 'transparent',
-                color: tipoMedia === t ? 'var(--primary)' : 'var(--muted)',
-              }}
-            >{t.toUpperCase()}</button>
-          ))}
-        </div>
+        <Segmented
+          opciones={[{ id: 'sma' as TipoMedia, label: 'SMA' }, { id: 'ema' as TipoMedia, label: 'EMA' }]}
+          activa={tipoMedia}
+          onChange={setTipoMedia}
+          chico
+          etiqueta="Tipo de media"
+        />
 
         <label style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
           <span style={{ color: COLOR.sma1, fontWeight: 700 }}>▬</span> Media 1
@@ -512,7 +486,7 @@ export default function RatiosTab({ data }: Props) {
       {/* ── Gráfico ───────────────────────────────────────────────────────── */}
       <div style={{
         flex: 1, minHeight: 280,
-        background: 'var(--card)', border: '1px solid var(--border)',
+        background: 'var(--card)', border: '1px solid var(--border-subtle)',
         borderRadius: 12, padding: '14px 10px 6px',
         display: 'flex', flexDirection: 'column',
       }}>
@@ -647,7 +621,7 @@ export default function RatiosTab({ data }: Props) {
       {/* ── Pares guardados ───────────────────────────────────────────────── */}
       {guardados.length > 0 && (
         <div style={{ flexShrink: 0 }}>
-          <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--muted)', margin: '0 0 6px' }}>
+          <p style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', margin: '0 0 6px' }}>
             Pares guardados
           </p>
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>

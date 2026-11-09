@@ -32,6 +32,7 @@ import {
 import type { ResumenRow, TenenciaActual } from '@/types';
 import { useIsMobile } from '@/lib/useIsMobile';
 import { formatMoney, type Moneda } from '@/lib/format';
+import Segmented from './Segmented';
 
 interface Props {
   data: ResumenRow[];
@@ -47,8 +48,10 @@ const VISTAS: { id: Vista; label: string }[] = [
   { id: 'rendimientos', label: 'Rendimientos' },
 ];
 
-const COLOR_CARTERA = '#cfab6e';
-const COLOR_APORTES = '#6a9bab';
+// Cartera en el azul de la paleta categórica y aportes en el naranja: el par
+// de mayor separación, también con daltonismo (ver lib/constants.ts).
+const COLOR_CARTERA = '#0a84ff';
+const COLOR_APORTES = '#d96f00';
 const COLOR_ACTIVOS = 'var(--text-sec)';
 const COLOR_ACUMULADA = 'var(--text-sec)';
 
@@ -152,12 +155,12 @@ const GUIA: Record<Vista, { marca: React.ReactNode; titulo: string; texto: strin
   capital: [
     {
       marca: <span style={{ width: 14, height: 0, borderTop: `2px solid ${COLOR_CARTERA}` }} />,
-      titulo: 'Área dorada',
+      titulo: 'Área azul',
       texto: 'Total de la cartera al cierre de cada mes.',
     },
     {
       marca: <span style={{ width: 14, height: 0, borderTop: `2px solid ${COLOR_APORTES}` }} />,
-      titulo: 'Área azul',
+      titulo: 'Área naranja',
       texto: 'Aportes acumulados. La distancia entre las dos áreas es la ganancia acumulada.',
     },
     {
@@ -202,7 +205,7 @@ function TooltipContent({ active, payload, label, hideValues, moneda }: any) {
   return (
     <div style={{
       background: 'var(--card)',
-      border: '1px solid var(--border)',
+      border: '1px solid var(--border-subtle)',
       borderRadius: 10,
       padding: '10px 14px',
       fontSize: 12,
@@ -304,7 +307,7 @@ export default function EvolucionChart({ data, tenenciasPorMes, hideValues, mone
   return (
     <div style={{
       background: 'var(--card)',
-      border: '1px solid var(--border)',
+      border: '1px solid var(--border-subtle)',
       borderRadius: 12,
       padding: '14px 16px 8px',
       display: 'flex',
@@ -336,7 +339,7 @@ export default function EvolucionChart({ data, tenenciasPorMes, hideValues, mone
             <div style={{
               position: 'absolute', top: 22, left: 0, zIndex: 10,
               width: 300, maxWidth: 'calc(100vw - 48px)',
-              background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 8,
+              background: 'var(--card)', border: '1px solid var(--border-subtle)', borderRadius: 8,
               padding: '10px 12px', fontSize: 11, lineHeight: 1.45, color: 'var(--text-sec)',
               boxShadow: '0 8px 32px rgba(0,0,0,0.5)', fontWeight: 400,
               display: 'flex', flexDirection: 'column', gap: 8,
@@ -355,26 +358,7 @@ export default function EvolucionChart({ data, tenenciasPorMes, hideValues, mone
           )}
         </div>
 
-        <div role="group" aria-label="Vista del gráfico" style={{ display: 'flex', gap: 6 }}>
-          {VISTAS.map((v) => (
-            <button
-              key={v.id}
-              onClick={() => setVista(v.id)}
-              className="pill-touch"
-              aria-pressed={vista === v.id}
-              style={{
-                padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600,
-                cursor: 'pointer', border: '1px solid',
-                borderColor: vista === v.id ? 'var(--primary)' : 'var(--border)',
-                background: vista === v.id ? 'var(--primary-dim)' : 'transparent',
-                color: vista === v.id ? 'var(--primary)' : 'var(--muted)',
-                transition: 'all 0.12s',
-              }}
-            >
-              {v.label}
-            </button>
-          ))}
-        </div>
+        <Segmented opciones={VISTAS} activa={vista} onChange={setVista} chico etiqueta="Vista del gráfico" />
 
         <div style={{
           display: 'flex', flexWrap: 'wrap', gap: '4px 14px', marginLeft: isMobile ? 0 : 'auto',

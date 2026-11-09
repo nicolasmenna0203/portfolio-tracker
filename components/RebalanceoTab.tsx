@@ -106,7 +106,7 @@ function DimChips({ rows, moneda, hideValues, hayAnterior, objetivos, editando, 
         const tieneObjetivo = objetivos != null && pctObj > 0;
         const diffObj = r.pctAct - pctObj;
         const enRango = Math.abs(diffObj) <= 3;
-        const diffColor = enRango ? 'var(--up)' : Math.abs(diffObj) <= 8 ? '#ffa15a' : 'var(--down)';
+        const diffColor = enRango ? 'var(--up)' : Math.abs(diffObj) <= 8 ? 'var(--warn)' : 'var(--down)';
 
         return (
           <div key={r.label} style={{
@@ -118,7 +118,7 @@ function DimChips({ rows, moneda, hideValues, hayAnterior, objetivos, editando, 
             {/* header: categoría y variación a la izquierda, objetivo a la derecha */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 7, rowGap: 4, flexWrap: 'wrap', marginBottom: 8 }}>
               <div style={{ width: 7, height: 7, borderRadius: '50%', background: r.color, flexShrink: 0 }} />
-              <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-sec)', letterSpacing: '0.05em', textTransform: 'uppercase' }}>{r.label}</span>
+              <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-sec)' }}>{r.label}</span>
               <span style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>{fmt(r.actual)}</span>
               <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-sec)', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>{formatPercent(r.pctAct, { sign: false })}</span>
               {hayAnterior && r.anterior > 0 && (

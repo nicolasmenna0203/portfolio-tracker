@@ -61,10 +61,11 @@ interface Props {
 // Color fijo por categoría: si dependiera del orden, una categoría cambiaría de color
 // al aparecer o desaparecer otra.
 const COLOR_CATEGORIA: Record<string, string> = {
-  'Súper y comida': '#d9824e',
-  Transporte: '#6fa8d6',
-  Hogar: '#cfab6e',
-  'Ocio y personal': '#5fb896',
+  // Slots 1-2-3-4 de lib/constants.ts (SLOTS), en el orden de la barra apilada.
+  'Súper y comida': '#0a84ff',
+  Transporte: '#d96f00',
+  Hogar: '#1e9ab0',
+  'Ocio y personal': '#b455e8',
 };
 const COLOR_FUERA_DE_LISTA = 'var(--muted)';
 const colorDe = (categoria: string) => COLOR_CATEGORIA[categoria] ?? COLOR_FUERA_DE_LISTA;
@@ -392,7 +393,7 @@ export default function GastosSection({
         background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.3)',
         borderRadius: 8, padding: '14px 18px',
       }}>
-        <p style={{ fontSize: 12, fontWeight: 700, color: '#ef4444', margin: '0 0 4px' }}>No se pudieron leer los gastos</p>
+        <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--down)', margin: '0 0 4px' }}>No se pudieron leer los gastos</p>
         <p style={{ fontSize: 13, color: 'var(--text)', margin: '0 0 10px' }}>
           La edición queda desactivada para no pisar lo que hay en el Sheet. {loadError}
         </p>
@@ -408,7 +409,7 @@ export default function GastosSection({
           background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.3)',
           borderRadius: 8, padding: '14px 18px',
         }}>
-          <p style={{ fontSize: 12, fontWeight: 700, color: '#ef4444', margin: '0 0 4px' }}>Error</p>
+          <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--down)', margin: '0 0 4px' }}>Error</p>
           <p style={{ fontSize: 13, color: 'var(--text)', margin: 0 }}>{saveError}</p>
         </div>
       )}
@@ -526,7 +527,7 @@ export default function GastosSection({
                   />
                 ) : (
                   <>
-                    <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)', textTransform: 'uppercase', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{categoria}</span>
+                    <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{categoria}</span>
                     {descripcionCategoria(categoria) && (
                       <InfoTip label={categoria}>{descripcionCategoria(categoria)}</InfoTip>
                     )}

@@ -50,21 +50,12 @@ export default function LoginPage() {
 
   return (
     <div className="login-root">
-      <div className="login-grid" aria-hidden />
-
       <div className="login-card">
-        <div className="login-logo-row">
-          <div className="login-logo-icon">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="22 7 13.5 15.5 8.5 10.5 2 17" />
-              <polyline points="16 7 22 7 22 13" />
-            </svg>
-          </div>
-          <span className="login-logo-text">Portfolio</span>
-        </div>
+        {/* El ícono de la app (app/icon.svg), como en el inicio de sesión de iOS. */}
+        <img className="login-logo" src="/icon.svg" alt="" width={64} height={64} />
 
-        <h1 className="login-title">Bienvenido</h1>
-        <p className="login-subtitle">Ingresá tus credenciales para acceder al dashboard</p>
+        <h1 className="login-title">Portfolio</h1>
+        <p className="login-subtitle">Ingresá para ver tu cartera.</p>
 
         <form onSubmit={handleSubmit} className="login-form" autoComplete="off">
           <div className="login-field-group">

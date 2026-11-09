@@ -16,18 +16,20 @@ export default function DemoPage() {
 
   return (
     <>
+      {/* Una línea discreta, no una franja: avisa sin competir con el contenido. */}
       <div
+        role="note"
         style={{
+          flexShrink: 0,
+          padding: 'calc(6px + env(safe-area-inset-top)) 16px 6px',
           background: 'var(--primary-dim)',
-          borderBottom: '1px solid var(--primary)',
           color: 'var(--primary)',
-          fontSize: 13,
+          fontSize: 12,
           fontWeight: 600,
           textAlign: 'center',
-          padding: '8px 16px',
         }}
       >
-        Estás viendo datos de demostración, con los montos ocultos
+        Demo con datos ficticios y montos ocultos
       </div>
       <Dashboard data={data} valoresSiempreOcultos />
     </>

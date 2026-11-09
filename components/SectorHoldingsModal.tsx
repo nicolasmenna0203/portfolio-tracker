@@ -38,7 +38,7 @@ export default function SectorHoldingsModal({ ticker, label, onClose }: Props) {
       <div
         onClick={(e) => e.stopPropagation()}
         style={{
-          background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 12,
+          background: 'var(--card)', border: '1px solid var(--border-subtle)', borderRadius: 12,
           padding: '16px 18px', maxWidth: 420, width: '100%', maxHeight: '80vh', overflowY: 'auto',
         }}
       >
@@ -61,7 +61,7 @@ export default function SectorHoldingsModal({ ticker, label, onClose }: Props) {
           <p style={{ margin: 0, fontSize: 12, color: 'var(--muted)' }}>Cargando composición…</p>
         )}
         {error && (
-          <p style={{ margin: 0, fontSize: 12, color: '#ef553b' }}>Error cargando composición: {error}</p>
+          <p style={{ margin: 0, fontSize: 12, color: 'var(--down)' }}>Error cargando composición: {error}</p>
         )}
 
         {!loading && !error && data && (
@@ -74,8 +74,8 @@ export default function SectorHoldingsModal({ ticker, label, onClose }: Props) {
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                  <th style={{ textAlign: 'left', padding: '4px 6px', fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--muted)' }}>Holding</th>
-                  <th style={{ textAlign: 'right', padding: '4px 6px', fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--muted)' }}>Peso</th>
+                  <th style={{ textAlign: 'left', padding: '4px 6px', fontSize: 11, fontWeight: 600, color: 'var(--muted)' }}>Holding</th>
+                  <th style={{ textAlign: 'right', padding: '4px 6px', fontSize: 11, fontWeight: 600, color: 'var(--muted)' }}>Peso</th>
                 </tr>
               </thead>
               <tbody>

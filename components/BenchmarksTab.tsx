@@ -16,18 +16,18 @@ interface Props {
 
 type SeriesId = 'cartera' | BenchmarkId;
 
-// Colores asignados por lo que cada serie representa, no arbitrarios:
-// azul profundo para la cartera propia (contraste frío contra el resto de
-// series, que son cálidas: destaca como la serie de referencia), verde salvia
-// para el mercado USD (S&P 500), terracota para inflación (costo/alerta a
-// superar), lavanda para el MEP, naranja para Bitcoin, ámbar para oro.
+// Colores de la paleta categórica (SLOTS en lib/constants.ts): la cartera
+// propia va en el azul del acento, la serie de referencia; rosa para la
+// inflación (costo/alerta a superar), turquesa para el S&P 500, violeta para
+// el MEP, naranja para Bitcoin y amarillo para oro. Naranja y amarillo se
+// parecen entre sí: por eso la leyenda y los toggles nombran cada serie.
 const SERIES_META: Record<SeriesId, { label: string; shortLabel: string; tooltip?: string; color: string; dashed?: boolean }> = {
-  cartera:   { label: 'Mi Cartera',              shortLabel: 'Mi Cartera',  color: '#4a6fa5' },
-  sp500:     { label: 'S&P 500',                 shortLabel: 'S&P 500',    color: '#5fb896' },
-  inflacion: { label: 'Inflación (IPC INDEC)',   shortLabel: 'Inflación',  tooltip: 'IPC INDEC', color: '#c15c4a' },
-  mep:       { label: 'Dólar MEP',               shortLabel: 'Dólar MEP', color: '#8d7fc7' },
-  btc:       { label: 'Bitcoin',                 shortLabel: 'Bitcoin',    color: '#d9824e' },
-  oro:       { label: 'Oro',                     shortLabel: 'Oro',        color: '#e8cf8a' },
+  cartera:   { label: 'Mi Cartera',              shortLabel: 'Mi Cartera',  color: '#0a84ff' },
+  sp500:     { label: 'S&P 500',                 shortLabel: 'S&P 500',    color: '#1e9ab0' },
+  inflacion: { label: 'Inflación (IPC INDEC)',   shortLabel: 'Inflación',  tooltip: 'IPC INDEC', color: '#f2385a' },
+  mep:       { label: 'Dólar MEP',               shortLabel: 'Dólar MEP', color: '#b455e8' },
+  btc:       { label: 'Bitcoin',                 shortLabel: 'Bitcoin',    color: '#d96f00' },
+  oro:       { label: 'Oro',                     shortLabel: 'Oro',        color: '#b98a00' },
 };
 
 const SERIES_ORDER: SeriesId[] = ['cartera', 'sp500', 'inflacion', 'mep', 'btc', 'oro'];
@@ -63,7 +63,7 @@ function CustomTooltip({ active, payload, label }: { active?: boolean; payload?:
   if (!active || !payload?.length) return null;
   return (
     <div style={{
-      background: 'var(--card)', border: '1px solid var(--border)',
+      background: 'var(--card)', border: '1px solid var(--border-subtle)',
       borderRadius: 8, padding: '10px 14px', fontSize: 12,
       boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
     }}>
@@ -320,8 +320,8 @@ export default function BenchmarksTab({ data }: Props) {
       )}
       {error && (
         <div style={{
-          background: 'var(--card)', border: '1px solid #ef553b', borderRadius: 10,
-          padding: '10px 14px', fontSize: 12, color: '#ef553b',
+          background: 'var(--card)', border: '1px solid var(--down)', borderRadius: 10,
+          padding: '10px 14px', fontSize: 12, color: 'var(--down)',
         }}>
           Error cargando benchmarks: {error}
         </div>
@@ -331,7 +331,7 @@ export default function BenchmarksTab({ data }: Props) {
       {!loading && (
         <div className="bench-chart-card" style={{
           background: 'var(--card)',
-          border: '1px solid var(--border)',
+          border: '1px solid var(--border-subtle)',
           borderRadius: 12,
           padding: '12px 14px 6px',
           flex: 1,
@@ -362,7 +362,7 @@ export default function BenchmarksTab({ data }: Props) {
               {infoAbierto && (
                 <div style={{
                   position: 'absolute', top: 24, right: 0, zIndex: 10, width: 260,
-                  background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 8,
+                  background: 'var(--card)', border: '1px solid var(--border-subtle)', borderRadius: 8,
                   padding: '10px 12px', fontSize: 11, lineHeight: 1.5, color: 'var(--text-sec)',
                   boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
                 }}>
