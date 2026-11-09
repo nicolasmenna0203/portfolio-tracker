@@ -17,7 +17,38 @@ import type { NextConfig } from 'next';
 // renombra por detrás; sin ese cache en disco, desaparece la fuente de ENOENT.
 // (Levemente más lento en recompilaciones, pero estable.) En Vercel no aplica.
 // Si aun así reaparece: pausar la sincronización de OneDrive o mover el repo fuera.
+
+// Headers de seguridad para todas las rutas.
+//
+// El dashboard tiene acciones que escriben en el Sheet (gastos, objetivos,
+// uploads): si otro sitio pudiera embeberlo en un iframe, podría inducir clics
+// sobre esas acciones (clickjacking). `frame-ancestors 'none'` es la defensa
+// moderna; `X-Frame-Options` queda por browsers viejos.
+//
+// La CSP es mínima a propósito: no restringe `script-src` ni `style-src`
+// porque Next inyecta scripts inline de hidratación y Recharts usa estilos
+// inline. Una CSP estricta exige nonces generados en el middleware por request,
+// y eso queda para cuando haga falta. Lo que sí se fija no rompe nada:
+// quién puede embeber la página, a dónde se pueden mandar formularios, y que no
+// se carguen plugins (`object-src`) ni se cambie la URL base de los recursos.
+const SECURITY_HEADERS = [
+  {
+    key: 'Content-Security-Policy',
+    value: "frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'",
+  },
+  { key: 'X-Frame-Options', value: 'DENY' },
+  { key: 'X-Content-Type-Options', value: 'nosniff' },
+  { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+  { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(), browsing-topics=()' },
+  // Vercel ya manda HSTS en sus dominios; explícito acá para que valga igual
+  // en un dominio propio. Sin `preload`: eso es un compromiso difícil de revertir.
+  { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains' },
+];
+
 const nextConfig: NextConfig = {
+  async headers() {
+    return [{ source: '/:path*', headers: SECURITY_HEADERS }];
+  },
   webpack(config) {
     if (!process.env.VERCEL && process.env.NODE_ENV === 'development') {
       config.cache = { type: 'memory' };
