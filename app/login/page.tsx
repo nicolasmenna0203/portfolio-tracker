@@ -32,6 +32,11 @@ export default function LoginPage() {
       if (res.ok) {
         router.push('/');
         router.refresh();
+      } else if (res.status === 403 || res.status === 429) {
+        // El firewall de Vercel limita los intentos por IP y responde 403 con
+        // una página propia (no JSON): sin este caso, res.json() falla y se
+        // mostraría "Error de conexión".
+        setError('Demasiados intentos. Esperá un minuto y volvé a probar.');
       } else {
         const data = await res.json();
         setError(data.error ?? 'Error al iniciar sesión');
