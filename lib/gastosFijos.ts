@@ -18,7 +18,7 @@
 // reemplaza todo el contenido (overwrite completo, no merge).
 
 import { google } from 'googleapis';
-import { readSheet, esHojaInexistente } from './sheets';
+import { readSheet, esHojaInexistente, getAuthWrite } from './sheets';
 import { parseArgNum } from './parser';
 import type { GastoFijo, FrecuenciaGasto } from '@/types';
 import { esMesKey } from './finanzasPersonales';
@@ -113,15 +113,6 @@ export async function leerGastosFijos(): Promise<GastoFijo[]> {
 }
 
 // ── Escritura ────────────────────────────────────────────────────────────────
-
-function getAuthWrite() {
-  const raw = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
-  if (!raw) throw new Error('Falta env var GOOGLE_SERVICE_ACCOUNT_JSON');
-  return new google.auth.GoogleAuth({
-    credentials: JSON.parse(raw),
-    scopes: ['https://www.googleapis.com/auth/spreadsheets'],
-  });
-}
 
 type SheetsApi = ReturnType<typeof google.sheets>;
 

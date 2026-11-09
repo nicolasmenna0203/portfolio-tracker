@@ -16,6 +16,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { google } from 'googleapis';
+import { getAuthWrite } from '../lib/sheets';
 import { parseArgNum, parseFechaDia } from '../lib/parser';
 import { fetchMepPorFecha } from '../lib/benchmarks';
 
@@ -41,16 +42,6 @@ function loadEnvFile() {
 loadEnvFile();
 
 const DRY_RUN = process.argv.includes('--dry-run');
-
-function getAuth() {
-  const raw = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
-  if (!raw) throw new Error('Falta env var GOOGLE_SERVICE_ACCOUNT_JSON');
-  const credentials = JSON.parse(raw);
-  return new google.auth.GoogleAuth({
-    credentials,
-    scopes: ['https://www.googleapis.com/auth/spreadsheets'],
-  });
-}
 
 function formatArgentino(n: number): string {
   const [int, dec] = n.toFixed(2).split('.');
@@ -231,7 +222,7 @@ async function main() {
   const id = process.env.SPREADSHEET_ID;
   if (!id) throw new Error('Falta env var SPREADSHEET_ID');
 
-  const auth = getAuth();
+  const auth = getAuthWrite();
   const sheets = google.sheets({ version: 'v4', auth });
 
   if (DRY_RUN) console.log('=== DRY RUN — no se escribirá nada en el Sheet ===');

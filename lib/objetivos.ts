@@ -34,7 +34,7 @@
 // migran al layout nuevo en el primer guardado.
 
 import { google } from 'googleapis';
-import { getAuth, esHojaInexistente } from './sheets';
+import { getAuth, getAuthWrite, esHojaInexistente } from './sheets';
 
 export const HOJA = 'Objetivos';
 
@@ -148,15 +148,6 @@ export async function leerObjetivos(): Promise<ObjetivosPorDimension> {
 }
 
 // ── Escritura ────────────────────────────────────────────────────────────────
-
-function getAuthWrite() {
-  const raw = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
-  if (!raw) throw new Error('Falta env var GOOGLE_SERVICE_ACCOUNT_JSON');
-  return new google.auth.GoogleAuth({
-    credentials: JSON.parse(raw),
-    scopes: ['https://www.googleapis.com/auth/spreadsheets'],
-  });
-}
 
 type SheetsApi = ReturnType<typeof google.sheets>;
 

@@ -2,21 +2,10 @@ export const runtime = 'nodejs';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { google } from 'googleapis';
+import { getAuthWrite } from '@/lib/sheets';
 import { parseResumenBroker, ultimoDiaDelMes, type ParsedPDF, type ParsedRow } from '@/lib/tenenciasPdf';
 import { mesEnCurso, proximoMesACargar } from '@/lib/estadoCargas';
 import { esMesKey } from '@/lib/finanzasPersonales';
-
-// ── Auth Sheets (write) ───────────────────────────────────────────────────────
-
-function getAuthWrite() {
-  const raw = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
-  if (!raw) throw new Error('Falta env var GOOGLE_SERVICE_ACCOUNT_JSON');
-  const credentials = JSON.parse(raw);
-  return new google.auth.GoogleAuth({
-    credentials,
-    scopes: ['https://www.googleapis.com/auth/spreadsheets'],
-  });
-}
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 

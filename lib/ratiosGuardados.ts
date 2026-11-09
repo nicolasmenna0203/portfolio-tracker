@@ -23,7 +23,7 @@
 // lista entera y un merge dejaría colgados los pares eliminados.
 
 import { google } from 'googleapis';
-import { getAuth, esHojaInexistente } from './sheets';
+import { getAuth, getAuthWrite, esHojaInexistente } from './sheets';
 import type { RangoHistorico } from '@/types';
 
 export const HOJA = 'Ratios';
@@ -159,15 +159,6 @@ export async function leerRatios(): Promise<RatioGuardado[]> {
 }
 
 // ── Escritura ────────────────────────────────────────────────────────────────
-
-function getAuthWrite() {
-  const raw = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
-  if (!raw) throw new Error('Falta env var GOOGLE_SERVICE_ACCOUNT_JSON');
-  return new google.auth.GoogleAuth({
-    credentials: JSON.parse(raw),
-    scopes: ['https://www.googleapis.com/auth/spreadsheets'],
-  });
-}
 
 type SheetsApi = ReturnType<typeof google.sheets>;
 

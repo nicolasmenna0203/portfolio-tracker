@@ -2,20 +2,9 @@ export const runtime = 'nodejs';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { google } from 'googleapis';
+import { getAuthWrite } from '@/lib/sheets';
 import { parseHaberesText, type HaberRow } from '@/lib/haberes';
 import { fetchMepPorFecha } from '@/lib/benchmarks';
-
-// ── Auth ──────────────────────────────────────────────────────────────────────
-
-function getAuthWrite() {
-  const raw = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
-  if (!raw) throw new Error('Falta env var GOOGLE_SERVICE_ACCOUNT_JSON');
-  const credentials = JSON.parse(raw);
-  return new google.auth.GoogleAuth({
-    credentials,
-    scopes: ['https://www.googleapis.com/auth/spreadsheets'],
-  });
-}
 
 function formatArgentino(n: number): string {
   const [int, dec] = n.toFixed(2).split('.');

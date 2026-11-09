@@ -55,15 +55,37 @@ function esMovimientoInterno(fechaTs: number, monto_usd: number): boolean {
 }
 
 // ── Auth ─────────────────────────────────────────────────────────────────────
+// Único lugar del repo que arma credenciales de Google: todo lo que lee o
+// escribe el Sheet importa getAuth / getAuthWrite de acá.
+//
+// Se usa `JWT` con email + clave de la service account y no
+// `GoogleAuth({ credentials })`: desde google-auth-library 11 esa opción está
+// deprecada y loguea un aviso en cada construcción (en Vercel, cada request).
+//
+// Las lecturas piden el scope de solo lectura a propósito: si un bug en una
+// ruta de lectura intentara escribir, Google lo rechaza.
 
-export function getAuth() {
+const SCOPE_LECTURA = 'https://www.googleapis.com/auth/spreadsheets.readonly';
+const SCOPE_ESCRITURA = 'https://www.googleapis.com/auth/spreadsheets';
+
+function authServiceAccount(scope: string) {
   const raw = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
   if (!raw) throw new Error('Falta env var GOOGLE_SERVICE_ACCOUNT_JSON');
-  const credentials = JSON.parse(raw);
-  return new google.auth.GoogleAuth({
-    credentials,
-    scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'],
-  });
+  const { client_email, private_key } = JSON.parse(raw) as { client_email?: string; private_key?: string };
+  if (!client_email || !private_key) {
+    throw new Error('GOOGLE_SERVICE_ACCOUNT_JSON no tiene client_email o private_key');
+  }
+  return new google.auth.JWT({ email: client_email, key: private_key, scopes: [scope] });
+}
+
+/** Auth de solo lectura sobre el Sheet. */
+export function getAuth() {
+  return authServiceAccount(SCOPE_LECTURA);
+}
+
+/** Auth con permiso de escritura sobre el Sheet. Solo para las rutas que escriben. */
+export function getAuthWrite() {
+  return authServiceAccount(SCOPE_ESCRITURA);
 }
 
 // ── Raw sheet reader ──────────────────────────────────────────────────────────

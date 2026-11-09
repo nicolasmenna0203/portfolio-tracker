@@ -38,7 +38,11 @@ const OTROS_ERRORES = ['Quota exceeded for quota metric', 'socket hang up', 'The
 beforeEach(() => {
   vi.clearAllMocks();
   process.env.SPREADSHEET_ID = 'sheet-de-prueba';
-  process.env.GOOGLE_SERVICE_ACCOUNT_JSON = '{}';
+  // Credencial ficticia: getAuth exige los dos campos, el JWT simulado no los usa.
+  process.env.GOOGLE_SERVICE_ACCOUNT_JSON = JSON.stringify({
+    client_email: 'service-account@example.com',
+    private_key: 'clave-ficticia',
+  });
   api.meta.mockResolvedValue({ data: { sheets: [{ properties: { title: 'GastosFijos' } }, { properties: { title: 'Objetivos' } }, { properties: { title: 'Ratios' } }] } });
   api.update.mockResolvedValue({});
   api.clear.mockResolvedValue({});
