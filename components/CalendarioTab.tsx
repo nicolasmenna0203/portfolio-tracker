@@ -469,7 +469,8 @@ export default function CalendarioTab({ data, hideValues = false }: Props) {
                       title="Tenencia actual × yield de los últimos 12 meses, ya neto de retenciones. Asume que se repiten igual el año próximo — no son pagos confirmados."
                       style={{ margin: 0, fontSize: 19, fontWeight: 700, color: 'var(--up)', fontVariantNumeric: 'tabular-nums' }}
                     >
-                      +{fmtMonto(cobroAnualTotal, 'USD', hideValues)}<span style={{ fontSize: 12, fontWeight: 500, color: 'var(--muted)' }}>/año</span>
+                      {/* "≈ +USD 120", no "+≈ USD": el signo va pegado al monto. */}
+                      ≈ {formatMoney(cobroAnualTotal, { currency: 'USD', sign: true, hidden: hideValues })}<span style={{ fontSize: 12, fontWeight: 500, color: 'var(--muted)' }}>/año</span>
                     </p>
                     <span style={{ fontSize: 11, color: 'var(--muted)' }}>
                       {formatPercent(yieldCartera * 100, { sign: false, decimals: 2 })} de la cartera
