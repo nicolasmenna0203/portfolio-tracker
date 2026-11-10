@@ -11,7 +11,7 @@ código.
 Los ADRs **no se editan** cuando cambia la decisión: se escribe uno nuevo y el
 viejo pasa a "Reemplazadas". Ver [PLANTILLA.md](PLANTILLA.md) para el flujo completo.
 
-**Próximo número: 0035**
+**Próximo número: 0036**
 
 ## Renta fija
 
@@ -72,6 +72,7 @@ viejo pasa a "Reemplazadas". Ver [PLANTILLA.md](PLANTILLA.md) para el flujo comp
 | [0014](0014-hmac-webcrypto-por-edge-runtime.md) | Firmar la sesión con WebCrypto, no con `node:crypto` | `lib/session.ts` |
 | [0033](0033-alerta-semanal-con-disparo-de-respaldo-el-domingo.md) | Disparar la alerta semanal dos veces el domingo y mandar un solo mail | `.github/workflows/alerta-semanal.yml`, `app/api/alertas/semanal/route.ts`, `lib/alertas.ts` |
 | [0034](0034-espejo-con-historia-curada.md) | Publicar en el espejo la historia del repo privado desde la limpieza, commit por commit | `scripts/publicar-espejo.ts` |
+| [0035](0035-bloqueo-con-passkey-en-cada-apertura.md) | Bloquear la app con una passkey en cada apertura, con un desbloqueo corto que renueva un latido | `lib/webauthn.ts`, `lib/session.ts`, `middleware.ts`, `components/BloqueoFaceId.tsx` |
 
 ## Reemplazadas
 

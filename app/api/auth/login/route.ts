@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { crearToken, SESSION_MAX_AGE } from '@/lib/session';
+import { leerSesion } from '@/lib/session';
+import { COOKIE_SESION, emitirSesion } from '@/lib/cookiesAuth';
 import { equalsSeguro } from '@/lib/timingSafe';
 
 export async function POST(req: NextRequest) {
@@ -35,13 +36,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Credenciales incorrectas' }, { status: 401 });
   }
 
+  // Si el dispositivo tenía el bloqueo con Face ID, entrar con contraseña no lo
+  // apaga: se mira la sesión anterior aunque haya vencido (firma válida). Si no,
+  // la contraseña sería una forma silenciosa de sacar el bloqueo.
+  // Ver docs/decisiones/0035-bloqueo-con-passkey-en-cada-apertura.md
+  const anterior = req.cookies.get(COOKIE_SESION)?.value;
+  const bloqueo = anterior
+    ? (await leerSesion(anterior, secret, { ignorarExpiracion: true }))?.bloqueo === true
+    : false;
+
   const res = NextResponse.json({ ok: true });
-  res.cookies.set('session', await crearToken(validUser, secret), {
-    httpOnly: true,
-    sameSite: 'lax',
-    path: '/',
-    maxAge: SESSION_MAX_AGE,
-    secure: process.env.NODE_ENV === 'production',
-  });
+  await emitirSesion(res, validUser, secret, bloqueo);
   return res;
 }

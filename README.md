@@ -57,7 +57,7 @@ lib/                 lógica de negocio y acceso a datos (+ tests .test.ts)
   agentTools.ts      las 16 tools del MCP + SYSTEM_PROMPT
   use*.ts            hooks de datos del cliente
 mcp/server.ts        servidor MCP por stdio (delega en lib/agentTools.ts)
-middleware.ts        auth por cookie de sesión firmada (Edge runtime)
+middleware.ts        auth por cookie de sesión firmada y bloqueo con Face ID (Edge runtime)
 scripts/             utilidades puntuales (backfill de ARS)
 types/index.ts       tipos compartidos
 ```
@@ -130,6 +130,7 @@ La alerta semanal se dispara desde GitHub Actions (`.github/workflows/alerta-sem
 | `PagosBonos` | TICKER, FECHA, MONEDA, RENTA_100, AMORT_100, COBRO_RENTA, COBRO_AMORT, REGISTRADO | Rentas y amortizaciones de los bonos de la cartera, para que el calendario las siga mostrando cuando bonistas deja de publicarlas (ADR 0031). La crea y completa el job semanal, que solo agrega filas: no hace falta editarla. `_100` es por 100 nominales; `COBRO_*` es el cobro estimado el día `REGISTRADO` |
 | `TickersEspeciales` | TICKER, REGLA, NOTA | `COTIZA`: tiene símbolo en Yahoo aunque su TIPO no pase el filtro (ej. un ETF cargado como ALTS). `EXCLUIR_BONO`: no se muestra en la curva de renta fija. Se edita a mano |
 | `GastosFijos` | Nombre, Monto, Moneda, Frecuencia, Categoria, Desde, Hasta | Gastos mensuales (recurrentes y estimados). Catálogo con vigencia: `Desde` / `Hasta` son el primer y último mes que cuenta (`YYYY-MM`, opcionales; `Desde` vacío = cuenta desde siempre). `Categoria` es una de: Súper y comida, Transporte, Hogar, Ocio y personal; otro valor se muestra igual y la tab sugiere a cuál moverlo. Se edita desde la tab o a mano; el dashboard reescribe toda la hoja en cada guardado. Las filas existentes sin las dos columnas nuevas siguen funcionando |
+| `Passkeys` | ID, CLAVE_PUBLICA, DISPOSITIVO, CREADA | Passkeys con las que se entra o se desbloquea la app con Face ID (ADR 0035). La crea y completa el botón "Activar Face ID" del panel de carga; para revocar una, borrar la fila. No hay nada secreto: la clave privada nunca sale del dispositivo |
 
 ### Cálculo de métricas
 

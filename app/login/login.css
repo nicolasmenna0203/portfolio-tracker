@@ -221,3 +221,41 @@
     min-height: 50px;
   }
 }
+
+/* ── Face ID ──
+   El botón prominente arriba del formulario; en el modo bloqueado es lo único
+   a la vista, con la contraseña detrás de un enlace. */
+.login-faceid {
+  width: 100%;
+  margin-top: 0;
+}
+
+.login-link {
+  margin-top: 14px;
+  min-height: 44px;
+  padding: 0 12px;
+  background: none;
+  border: none;
+  color: var(--primary);
+  font-size: 15px;
+  font-family: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.login-separador {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 18px 0 14px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.login-separador::before,
+.login-separador::after {
+  content: '';
+  flex: 1;
+  height: 0.5px;
+  background-color: var(--material-borde);
+}

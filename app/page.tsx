@@ -1,5 +1,6 @@
 import { fetchDashboardData } from '@/lib/sheets';
 import Dashboard from '@/components/Dashboard';
+import BloqueoFaceId from '@/components/BloqueoFaceId';
 
 // Revalidar datos cada 60 segundos. Nota: este cache es por-URL, no por-sesión;
 // como el dashboard es de un solo usuario (auth compartida) no filtra datos
@@ -30,5 +31,10 @@ export default async function Home() {
     );
   }
 
-  return <Dashboard data={data} />;
+  return (
+    <>
+      <Dashboard data={data} />
+      <BloqueoFaceId />
+    </>
+  );
 }

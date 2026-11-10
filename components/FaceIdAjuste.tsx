@@ -1,0 +1,99 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { hayFaceId, registrarPasskey, esCancelacion } from '@/lib/passkeyCliente';
+
+// Activa el bloqueo con Face ID en este dispositivo: registra una passkey y,
+// desde ahí, la app pide Face ID cada vez que se abre.
+// Ver docs/decisiones/0035-bloqueo-con-passkey-en-cada-apertura.md
+//
+// No se muestra donde no hay autenticador del dispositivo, ni en /demo (el
+// panel que lo contiene decide eso).
+
+type Estado = 'cargando' | 'no-disponible' | 'inactivo' | 'registrando' | 'activo';
+
+export default function FaceIdAjuste() {
+  const [estado, setEstado] = useState<Estado>('cargando');
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let vivo = true;
+    (async () => {
+      if (!(await hayFaceId())) {
+        if (vivo) setEstado('no-disponible');
+        return;
+      }
+      try {
+        const res = await fetch('/api/auth/sesion', { cache: 'no-store' });
+        const data = res.ok ? ((await res.json()) as { bloqueo?: boolean }) : {};
+        if (vivo) setEstado(data.bloqueo ? 'activo' : 'inactivo');
+      } catch {
+        if (vivo) setEstado('inactivo');
+      }
+    })();
+    return () => { vivo = false; };
+  }, []);
+
+  if (estado === 'cargando' || estado === 'no-disponible') return null;
+
+  async function activar() {
+    setError('');
+    setEstado('registrando');
+    try {
+      await registrarPasskey();
+      setEstado('activo');
+      window.dispatchEvent(new Event('faceid-activado'));
+    } catch (err) {
+      setEstado('inactivo');
+      if (err instanceof DOMException && err.name === 'InvalidStateError') {
+        setError('Este dispositivo ya tiene una passkey registrada. Entrá con Face ID desde el inicio de sesión para activar el bloqueo.');
+      } else if (!esCancelacion(err)) {
+        setError(err instanceof Error ? err.message : 'No se pudo activar Face ID');
+      }
+    }
+  }
+
+  return (
+    <div style={{
+      background: 'var(--card)', border: '1px solid var(--border-subtle)',
+      borderRadius: 12, padding: '20px 24px',
+      display: 'flex', flexDirection: 'column', gap: 12,
+    }}>
+      <div>
+        <p style={{ fontSize: 11, fontWeight: 600, color: 'var(--primary)', marginBottom: 3 }}>
+          Seguridad
+        </p>
+        <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)', margin: 0 }}>
+          Bloqueo con Face ID
+        </p>
+        <p style={{ fontSize: 11, color: 'var(--muted)', margin: '4px 0 0' }}>
+          {estado === 'activo'
+            ? 'Activo en este dispositivo: la app pide Face ID cada vez que se abre, o al volver después de un par de minutos.'
+            : 'Pide Face ID (o Touch ID) cada vez que abrís la app en este dispositivo. La contraseña sigue sirviendo como alternativa.'}
+        </p>
+      </div>
+
+      {estado === 'activo' ? (
+        <p style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 600, color: 'var(--up)', margin: 0 }}>
+          <span aria-hidden="true">✓</span> Activado
+        </p>
+      ) : (
+        <button
+          onClick={activar}
+          disabled={estado === 'registrando'}
+          style={{
+            alignSelf: 'flex-start',
+            minHeight: 44, padding: '9px 20px', borderRadius: 10, border: 'none',
+            background: 'var(--primary)', color: '#fff',
+            fontWeight: 600, fontSize: 14, cursor: 'pointer',
+            opacity: estado === 'registrando' ? 0.5 : 1,
+          }}
+        >
+          {estado === 'registrando' ? 'Esperando Face ID…' : 'Activar Face ID'}
+        </button>
+      )}
+
+      {error && <p style={{ fontSize: 12, color: 'var(--down)', margin: 0 }}>{error}</p>}
+    </div>
+  );
+}

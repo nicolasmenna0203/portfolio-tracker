@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { verificarToken } from '@/lib/session';
+import { leerSesion, verificarDesbloqueo } from '@/lib/session';
+import { COOKIE_SESION, COOKIE_DESBLOQUEO } from '@/lib/cookiesAuth';
 
 // Corre en el Edge runtime: sin node:crypto. Por eso la sesión se firma con
 // WebCrypto → docs/decisiones/0014-hmac-webcrypto-por-edge-runtime.md
@@ -7,10 +8,16 @@ import { verificarToken } from '@/lib/session';
 // /api/alertas/semanal es pública acá porque la llama un cron externo sin
 // cookie de sesión — se autentica sola con CRON_SECRET (ver su route.ts).
 //
+// /api/auth/passkey/acceso es pública porque es el ingreso con Face ID: se
+// autentica con la firma de la passkey. El alta (/api/auth/passkey/registro)
+// no lo es: pide sesión.
+//
 // /demo y /api/demo son públicas a propósito: sirven el dashboard con datos
 // 100% sintéticos (lib/demo/) para que cualquiera que lea el repo público
 // pueda ver la app funcionando sin login ni acceso a la cartera real.
-const PUBLIC_PATHS = ['/login', '/api/auth/login', '/api/alertas/semanal', '/demo', '/api/demo'];
+const PUBLIC_PATHS = [
+  '/login', '/api/auth/login', '/api/auth/passkey/acceso', '/api/alertas/semanal', '/demo', '/api/demo',
+];
 
 // DEMO_ONLY marca el deploy de Vercel separado que solo sirve /demo (dominio
 // propio, sin relación con el sitio real, sin BASIC_AUTH_USER/PASS ni
@@ -49,16 +56,36 @@ export async function middleware(req: NextRequest) {
 
   if (isPublic) return NextResponse.next();
 
-  const session = req.cookies.get('session')?.value;
+  const token = req.cookies.get(COOKIE_SESION)?.value;
   const secret = process.env.SESSION_SECRET;
-
-  if (session && secret && (await verificarToken(session, secret))) {
-    return NextResponse.next();
-  }
+  const sesion = token && secret ? await leerSesion(token, secret) : null;
 
   const loginUrl = req.nextUrl.clone();
   loginUrl.pathname = '/login';
-  return NextResponse.redirect(loginUrl);
+  loginUrl.search = '';
+
+  if (!sesion) return NextResponse.redirect(loginUrl);
+
+  // Dispositivo con bloqueo (entró o se registró con Face ID): además de la
+  // sesión hace falta un desbloqueo vigente, que dura minutos y solo renueva el
+  // latido del dashboard mientras está a la vista. Al volver a abrir la app ya
+  // venció, y se pide Face ID de nuevo.
+  // Ver docs/decisiones/0035-bloqueo-con-passkey-en-cada-apertura.md
+  if (sesion.bloqueo) {
+    const desbloqueo = req.cookies.get(COOKIE_DESBLOQUEO)?.value;
+    const desbloqueado = desbloqueo ? await verificarDesbloqueo(desbloqueo, secret!) : null;
+    if (desbloqueado !== sesion.sub) {
+      // Una API no redirige: el fetch seguiría la redirección y recibiría el
+      // HTML del login con status 200, que el cliente no distingue de un dato.
+      if (pathname.startsWith('/api/')) {
+        return NextResponse.json({ error: 'bloqueado' }, { status: 401 });
+      }
+      loginUrl.searchParams.set('bloqueado', '1');
+      return NextResponse.redirect(loginUrl);
+    }
+  }
+
+  return NextResponse.next();
 }
 
 export const config = {

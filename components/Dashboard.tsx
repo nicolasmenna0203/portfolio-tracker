@@ -10,6 +10,7 @@ import { precargarCalendario } from '@/lib/useCalendario';
 import { tickersDeCartera } from '@/lib/tickersElegibles';
 import { usePathname } from 'next/navigation';
 import UploadTenencias from './UploadTenencias';
+import FaceIdAjuste from './FaceIdAjuste';
 import { EstadoCargasIconos, EstadoCargasDetalle, describirEstadoCargas } from './EstadoCargasIconos';
 import ResumenTab from './ResumenTab';
 import TenenciasTab from './TenenciasTab';
@@ -353,6 +354,10 @@ export default function Dashboard({ data, valoresSiempreOcultos = false }: Props
             {/* Cuerpo scrolleable */}
             <div className="scroll-y upload-panel-body">
               <UploadTenencias onCargado={recargarEstadoCargas} />
+              {/* La demo no tiene sesión: no hay bloqueo que activar. */}
+              {!pathname.startsWith('/demo') && (
+                <div style={{ marginTop: 14 }}><FaceIdAjuste /></div>
+              )}
             </div>
           </div>
         </>

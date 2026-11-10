@@ -1595,3 +1595,22 @@ input[type="range"]::-moz-range-track {
   .g-btn { min-height: 40px; }
   .g-btn.chico { min-height: 36px; }
 }
+
+/* ── Tapa del bloqueo con Face ID (components/BloqueoFaceId.tsx) ──
+   Cubre el dashboard mientras la app está oculta, para que la captura del
+   selector de apps de iOS no muestre montos. Va por encima de todo, sheets
+   incluidos. */
+.bloqueo-tapa {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--bg);
+}
+
+.bloqueo-tapa img {
+  border-radius: 14px;
+  box-shadow: 0 6px 16px rgba(0, 96, 223, 0.3);
+}

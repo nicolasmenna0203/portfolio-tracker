@@ -1,11 +1,23 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { hayFaceId, accederConPasskey, esCancelacion } from '@/lib/passkeyCliente';
 import './login.css';
 
+// El glifo de Face ID de iOS: cuatro esquinas, ojos, nariz y sonrisa.
+function IconFaceId({ size = 22 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M3 8V6a3 3 0 0 1 3-3h2M16 3h2a3 3 0 0 1 3 3v2M21 16v2a3 3 0 0 1-3 3h-2M8 21H6a3 3 0 0 1-3-3v-2" />
+      <line x1="9" y1="9" x2="9" y2="10.5" />
+      <line x1="15" y1="9" x2="15" y2="10.5" />
+      <path d="M12 9v4h-1" />
+      <path d="M9.5 16a3.5 3.5 0 0 0 5 0" />
+    </svg>
+  );
+}
+
 export default function LoginPage() {
-  const router = useRouter();
   const [user, setUser] = useState('');
   const [pass, setPass] = useState('');
   const [error, setError] = useState('');
@@ -13,9 +25,54 @@ export default function LoginPage() {
   const [showPass, setShowPass] = useState(false);
   const userRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    userRef.current?.focus();
+  // Face ID: `faceId` dice si el dispositivo lo tiene; `bloqueado` si se llegó
+  // acá porque venció el desbloqueo (middleware.ts), y entonces Face ID es la
+  // vía principal y la contraseña queda detrás de un botón.
+  // Ver docs/decisiones/0035-bloqueo-con-passkey-en-cada-apertura.md
+  const [faceId, setFaceId] = useState(false);
+  const [bloqueado, setBloqueado] = useState(false);
+  const [conPassword, setConPassword] = useState(true);
+  const [esperandoFaceId, setEsperandoFaceId] = useState(false);
+
+  const entrar = useCallback(() => {
+    // Navegación completa y no router.push: así el middleware ve las cookies
+    // nuevas en el primer pedido y no queda nada del estado anterior.
+    window.location.replace('/');
   }, []);
+
+  const ingresarConFaceId = useCallback(async () => {
+    setError('');
+    setEsperandoFaceId(true);
+    try {
+      await accederConPasskey();
+      entrar();
+    } catch (err) {
+      if (!esCancelacion(err)) setError(err instanceof Error ? err.message : 'No se pudo usar Face ID');
+      setEsperandoFaceId(false);
+    }
+  }, [entrar]);
+
+  useEffect(() => {
+    // Leído del window y no con useSearchParams, que obligaría a envolver la
+    // página en un Suspense solo por este flag.
+    const esBloqueo = new URLSearchParams(window.location.search).get('bloqueado') === '1';
+    let vivo = true;
+    (async () => {
+      const disponible = await hayFaceId();
+      if (!vivo) return;
+      setFaceId(disponible);
+      if (esBloqueo && disponible) {
+        setBloqueado(true);
+        setConPassword(false);
+        // Safari puede negarse a abrir Face ID sin un toque: si lo hace, queda
+        // el botón, que sí es un toque.
+        void ingresarConFaceId();
+      } else {
+        userRef.current?.focus();
+      }
+    })();
+    return () => { vivo = false; };
+  }, [ingresarConFaceId]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -30,8 +87,7 @@ export default function LoginPage() {
       });
 
       if (res.ok) {
-        router.push('/');
-        router.refresh();
+        entrar();
       } else if (res.status === 403 || res.status === 429) {
         // El firewall de Vercel limita los intentos por IP y responde 403 con
         // una página propia (no JSON): sin este caso, res.json() falla y se
@@ -55,10 +111,34 @@ export default function LoginPage() {
         {/* eslint-disable-next-line @next/next/no-img-element -- SVG estático: next/image no lo optimiza */}
         <img className="login-logo" src="/icon.svg" alt="" width={64} height={64} />
 
-        <h1 className="login-title">Portfolio</h1>
-        <p className="login-subtitle">Ingresá para ver tu cartera.</p>
+        <h1 className="login-title">{bloqueado ? 'Portfolio bloqueado' : 'Portfolio'}</h1>
+        <p className="login-subtitle">
+          {bloqueado ? 'Desbloqueá con Face ID para seguir.' : 'Ingresá para ver tu cartera.'}
+        </p>
 
-        <form onSubmit={handleSubmit} className="login-form" autoComplete="off">
+        {faceId && (
+          <button
+            type="button"
+            onClick={ingresarConFaceId}
+            disabled={esperandoFaceId}
+            className={`login-submit login-faceid${esperandoFaceId ? ' login-submit--disabled' : ''}`}
+          >
+            {esperandoFaceId ? <span className="login-spinner" /> : <><IconFaceId /> {bloqueado ? 'Desbloquear con Face ID' : 'Ingresar con Face ID'}</>}
+          </button>
+        )}
+
+        {faceId && !conPassword && (
+          <button type="button" className="login-link" onClick={() => setConPassword(true)}>
+            Usar contraseña
+          </button>
+        )}
+
+        {faceId && conPassword && <div className="login-separador"><span>o con contraseña</span></div>}
+
+        {/* El error del Face ID se muestra acá cuando el formulario está oculto. */}
+        {!conPassword && error && <div className="login-error" style={{ marginTop: 14, textAlign: 'left' }}>{error}</div>}
+
+        {conPassword && <form onSubmit={handleSubmit} className="login-form" autoComplete="off">
           <div className="login-field-group">
             <label className="login-label" htmlFor="user">Usuario</label>
             <div className="login-input-wrapper">
@@ -151,7 +231,7 @@ export default function LoginPage() {
               </>
             )}
           </button>
-        </form>
+        </form>}
 
         <p className="login-footer">Dashboard personal de inversiones</p>
       </div>
