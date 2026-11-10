@@ -34,6 +34,7 @@ import Segmented from './Segmented';
 // una contra otra muestra cuál le está ganando.
 const BENCHMARKS: { ticker: string; label: string }[] = [
   { ticker: 'SPY',     label: 'S&P 500 (SPY)' },
+  { ticker: 'ACWI',    label: 'Mundo (ACWI)' },
   { ticker: 'QQQ',     label: 'Nasdaq 100 (QQQ)' },
   { ticker: 'GLD',     label: 'Oro (GLD)' },
   { ticker: 'TLT',     label: 'Bonos largos USA (TLT)' },
