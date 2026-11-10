@@ -880,13 +880,16 @@ input, select, textarea { font-size: 16px; }
   .kpi-grid > :first-child .kpi-value,
   .kpi-grid-resumen > :first-child .kpi-value { font-size: 34px; }
 
+  /* Hasta dos líneas, no una: con una sola, el corte se comía datos (en la
+     media card de TIR CER, "Duration ponderada: 4,…" perdía el número). */
   .kpi-sub {
     font-size: 11px;
     margin-top: 3px;
     line-height: 1.25;
-    white-space: nowrap;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
     overflow: hidden;
-    text-overflow: ellipsis;
   }
 
   /* ── Tenencias: gráficos apilados con alto propio (ya no comprimidos) ── */

@@ -300,6 +300,8 @@ export default function RentaFijaSection({ tenencias }: Props) {
     const padding = (max - min) * 0.12;
     return [min - padding, max + padding];
   }, [bonosFiltrados]);
+  // Paso aproximado entre ticks (recharts arma ~5 sobre el dominio), en puntos porcentuales.
+  const decimalesEjeTir = ((dominioTir[1] - dominioTir[0]) * 100) / 4 < 1 ? 1 : 0;
 
   // Línea de tendencia (regresión cuadrática TIR ~ duration, con fallback
   // lineal si hay pocos puntos) sobre los bonos dentro del rango de duration
@@ -452,7 +454,9 @@ export default function RentaFijaSection({ tenencias }: Props) {
               <YAxis
                 type="number" dataKey="tir" name="TIR"
                 domain={dominioTir} allowDataOverflow
-                tickFormatter={(v) => formatPercent(v * 100, { sign: false, decimals: 0 })}
+                // Con un rango de TIR de pocos puntos, los ticks caen cada medio
+                // punto: sin decimales se leían repetidos (12%, 11%, 11%, 10%).
+                tickFormatter={(v) => formatPercent(v * 100, { sign: false, decimals: decimalesEjeTir })}
                 tick={{ fill: 'var(--muted)', fontSize: 11 }}
                 tickLine={false} axisLine={false} width={44}
               />

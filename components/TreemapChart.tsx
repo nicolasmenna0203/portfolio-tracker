@@ -135,8 +135,12 @@ function CustomCell({ x = 0, y = 0, width, height, name = '', value = 0, depth, 
     );
   }
 
-  // Ticker
-  const fontSize = Math.max(8, Math.min(12, width / (name.length * 0.65)));
+  // Ticker. 0,72 em por carácter es el ancho de una mayúscula en seminegrita;
+  // con 0,65 y sin margen, en celdas angostas (celular) el texto se recortaba
+  // ("VWO" se leía "VWC"). Si ni a 8 px entra, no se dibuja: el tooltip lo nombra.
+  const ANCHO_CARACTER = 0.72;
+  const fontSize = Math.max(8, Math.min(12, (width - 6) / (name.length * ANCHO_CARACTER)));
+  const entra = name.length * fontSize * ANCHO_CARACTER <= width - 4 && height > fontSize + 4;
   return (
     <g style={{ cursor: 'pointer' }}>
       <rect
@@ -145,7 +149,7 @@ function CustomCell({ x = 0, y = 0, width, height, name = '', value = 0, depth, 
         stroke="var(--card)" strokeWidth={1.5}
         rx={4}
       />
-      {width > 26 && height > 16 && (
+      {entra && (
         <text
           x={x + width / 2} y={y + height / 2}
           textAnchor="middle" dominantBaseline="central"
