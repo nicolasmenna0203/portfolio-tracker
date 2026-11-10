@@ -62,7 +62,6 @@ export function useCalendario(
       })
       .catch((e) => setErrorEventos(e instanceof Error ? e.message : String(e)))
       .finally(() => setLoadingEventos(false));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tickersKey, tickersArgKey, tenenciasKey, year, apiBase]);
 
   return { eventos, yields, loadingEventos, errorEventos };

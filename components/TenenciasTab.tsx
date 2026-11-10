@@ -58,7 +58,8 @@ export default function TenenciasTab({ data, hideValues, moneda }: Props) {
     return sorted[idx] ?? sorted[sorted.length - 1] ?? '';
   })();
 
-  const tenenciasMesRaw: TenenciaActual[] = tenenciasPorMes[mesKey] ?? [];
+  // Memo: `?? []` daría un array nuevo en cada render y rompería los memos que dependen de esto.
+  const tenenciasMesRaw: TenenciaActual[] = useMemo(() => tenenciasPorMes[mesKey] ?? [], [tenenciasPorMes, mesKey]);
 
   const tenenciasMes = useMemo(
     () => (filtroTipo ? tenenciasMesRaw.filter(t => t.TIPO === filtroTipo) : tenenciasMesRaw),

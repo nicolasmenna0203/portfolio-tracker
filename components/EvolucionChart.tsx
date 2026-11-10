@@ -29,6 +29,7 @@ import {
   ReferenceLine,
   Tooltip,
 } from 'recharts';
+import type { TooltipProps } from 'recharts';
 import type { ResumenRow, TenenciaActual } from '@/types';
 import { useIsMobile } from '@/lib/useIsMobile';
 import { formatMoney, type Moneda } from '@/lib/format';
@@ -183,13 +184,15 @@ const GUIA: Record<Vista, { marca: React.ReactNode; titulo: string; texto: strin
   ],
 };
 
-function TooltipContent({ active, payload, label, hideValues, moneda }: any) {
+type PropsTooltip = TooltipProps<number, string> & { hideValues?: boolean; moneda?: Moneda };
+
+function TooltipContent({ active, payload, label, hideValues, moneda }: PropsTooltip) {
   if (!active || !payload?.length) return null;
 
   const currency: Moneda = moneda === 'ARS' ? 'ARS' : 'USD';
   const ORDER = ['total_cartera', 'acumulado', 'activos', 'ganancia', 'ganancia_acumulada'];
   const sorted = [...payload].sort(
-    (a, b) => ORDER.indexOf(a.dataKey) - ORDER.indexOf(b.dataKey)
+    (a, b) => ORDER.indexOf(String(a.dataKey)) - ORDER.indexOf(String(b.dataKey))
   );
 
   const Fila = ({ nombre, marca, valor, color }: { nombre: string; marca?: string; valor: string; color?: string }) => (
@@ -213,14 +216,14 @@ function TooltipContent({ active, payload, label, hideValues, moneda }: any) {
       minWidth: 160,
     }}>
       <p style={{ fontWeight: 600, color: 'var(--text-sec)', marginBottom: 8, fontSize: 11 }}>{label}</p>
-      {sorted.map((p: any) => {
+      {sorted.map((p) => {
         if (p.value === null || p.value === undefined) return null;
         const esGanancia = p.dataKey === 'ganancia' || p.dataKey === 'ganancia_acumulada';
         const polaridad = p.value >= 0 ? 'var(--up)' : 'var(--down)';
         return (
           <Fila
             key={p.dataKey}
-            nombre={p.name}
+            nombre={p.name ?? ''}
             marca={p.dataKey === 'ganancia' ? polaridad : p.color}
             color={esGanancia ? polaridad : undefined}
             valor={p.dataKey === 'activos'

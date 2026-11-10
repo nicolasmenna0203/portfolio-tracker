@@ -12,6 +12,7 @@ import {
   Legend,
   ReferenceLine,
 } from 'recharts';
+import type { TooltipProps } from 'recharts';
 import type { TenenciaActual } from '@/types';
 import { PALETA_TIPO, RIESGO_COLOR, RIESGO_LABEL, RENTA_LABEL, GEO_LABEL, MONEDA_LABEL, MONEDA_COLOR, RENTA_COLOR, GEO_COLOR, colorPorCategoria } from '@/lib/constants';
 import { useIsMobile } from '@/lib/useIsMobile';
@@ -74,7 +75,7 @@ function buildData(
     const rows = dim === 'SECTOR_GEO'
       ? allRows.filter(r => r.RENTA === 'VAR' || r.RENTA === 'VARIABLE')
       : allRows;
-    const entry: Record<string, any> = { fecha: mesesDisponibles[i] ?? key };
+    const entry: Record<string, string | number> = { fecha: mesesDisponibles[i] ?? key };
     for (const g of groups) {
       entry[g] = rows
         .filter((r) => getGroupLabel(r, dim) === g)
@@ -84,12 +85,14 @@ function buildData(
   });
 }
 
-function TooltipContent({ active, payload, label, mode, hideValues, moneda }: any) {
+type PropsTooltip = TooltipProps<number, string> & { mode?: Mode; hideValues?: boolean; moneda?: Moneda };
+
+function TooltipContent({ active, payload, label, mode, hideValues, moneda }: PropsTooltip) {
   if (!active || !payload?.length) return null;
 
   const currency: Moneda = moneda === 'ARS' ? 'ARS' : 'USD';
-  const nominalTotal = payload.reduce((s: number, p: any) => s + (p.value ?? 0), 0);
-  const rows = [...payload].reverse().filter((p: any) => (p.value ?? 0) > 0);
+  const nominalTotal = payload.reduce((s, p) => s + (p.value ?? 0), 0);
+  const rows = [...payload].reverse().filter((p) => (p.value ?? 0) > 0);
 
   return (
     <div style={{
@@ -107,8 +110,8 @@ function TooltipContent({ active, payload, label, mode, hideValues, moneda }: an
           Total: {formatMoney(nominalTotal, { currency, hidden: hideValues })}
         </p>
       )}
-      {rows.map((p: any) => {
-        const pct = nominalTotal > 0 ? (p.value / nominalTotal) * 100 : 0;
+      {rows.map((p) => {
+        const pct = nominalTotal > 0 ? ((p.value ?? 0) / nominalTotal) * 100 : 0;
         const display = (mode === 'pct' || hideValues)
           ? formatPercent(pct, { sign: false })
           : `${formatMoney(p.value, { currency })} · ${formatPercent(pct, { sign: false })}`;
@@ -203,7 +206,7 @@ export default function EvolucionTipoChart({ tenenciasPorMes, mesesDisponibles, 
             width={isMobile ? 40 : 52}
             domain={mode === 'pct' ? [0, 1] : undefined}
           />
-          <Tooltip content={(props) => <TooltipContent {...props} mode={mode} hideValues={hideValues} moneda={moneda} />} />
+          <Tooltip content={<TooltipContent mode={mode} hideValues={hideValues} moneda={moneda} />} />
           {mesSel && (
             <ReferenceLine
               x={mesSel}

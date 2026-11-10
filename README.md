@@ -101,6 +101,8 @@ En Google Sheets → Compartir → pegar el `client_email` del JSON → rol **Ed
 ```bash
 npm run dev     # dashboard en http://localhost:3000
 npm test        # tests (vitest)
+npm run lint    # ESLint (también corre en CI)
+npm run typecheck # tsc --noEmit
 npm run mcp     # servidor MCP por stdio
 npm run build   # build de producción
 ```

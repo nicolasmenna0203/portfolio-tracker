@@ -92,7 +92,8 @@ export default function RentaVariableSection({ tickersUsa, tenencias, tickersFci
   const [rango, setRango] = useState<RangoHistorico>('1a');
   const preseleccionado = useRef(false);
 
-  const acciones = perf?.acciones ?? [];
+  // Memo: `?? []` daría un array nuevo en cada render y dispararía el efecto y los memos que dependen de esto.
+  const acciones = useMemo(() => perf?.acciones ?? [], [perf]);
 
   // Al cargar, preseleccionar el ticker con mayor tenencia (el más relevante de la
   // cartera) para no dejar el gráfico en blanco al entrar al tab.

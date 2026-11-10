@@ -177,7 +177,8 @@ function regresionCurva(puntos: { x: number; y: number }[]): ((x: number) => num
   if (n < 2) return null;
 
   if (n >= 6) {
-    let s0 = n, s1 = 0, s2 = 0, s3 = 0, s4 = 0, t0 = 0, t1 = 0, t2 = 0;
+    const s0 = n;
+    let s1 = 0, s2 = 0, s3 = 0, s4 = 0, t0 = 0, t1 = 0, t2 = 0;
     for (const { x, y } of puntos) {
       const x2 = x * x;
       s1 += x; s2 += x2; s3 += x2 * x; s4 += x2 * x2;
@@ -247,7 +248,8 @@ export default function RentaFijaSection({ tenencias }: Props) {
   const [sortKey, setSortKey] = useState<SortKey>('tir');
   const [sortDesc, setSortDesc] = useState(true);
 
-  const bonos = perf?.bonos ?? [];
+  // Memo: `?? []` daría un array nuevo en cada render y rompería los memos que dependen de esto.
+  const bonos = useMemo(() => perf?.bonos ?? [], [perf]);
 
   const bonosDelGrupo = useMemo(
     () => bonos.filter((b) => b.grupo === filtroGrupo),

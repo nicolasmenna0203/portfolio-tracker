@@ -1,6 +1,6 @@
 'use client';
 
-import { Treemap, ResponsiveContainer, Tooltip } from 'recharts';
+import { Treemap, ResponsiveContainer, Tooltip, type TooltipProps } from 'recharts';
 import type { TenenciaActual } from '@/types';
 import { PALETA_TIPO, RIESGO_COLOR, RIESGO_LABEL, RENTA_LABEL, GEO_LABEL, MONEDA_LABEL, MONEDA_COLOR, RENTA_COLOR, GEO_COLOR, colorPorCategoria } from '@/lib/constants';
 import { formatMoney, type Moneda } from '@/lib/format';
@@ -73,7 +73,16 @@ function buildData(tenencias: TenenciaActual[], dim: Dim, moneda: Moneda) {
   });
 }
 
-function CustomCell({ x, y, width, height, name, value, depth, root, group, color, fillOpacity: fo, filtroActivo }: any) {
+/** Lo que recharts le inyecta a cada celda del Treemap, más el filtro propio. */
+interface PropsCelda {
+  x?: number; y?: number; width?: number; height?: number;
+  name?: string; value?: number; depth?: number;
+  root?: { value?: number };
+  group?: string; color?: string; fillOpacity?: number;
+  filtroActivo?: string | null;
+}
+
+function CustomCell({ x = 0, y = 0, width, height, name = '', value = 0, depth, root, group, color, fillOpacity: fo, filtroActivo }: PropsCelda) {
   if (depth === 0 || !width || !height || width < 4 || height < 4) return <g />;
 
   const groupName  = depth === 1 ? name : group;
@@ -150,7 +159,9 @@ function CustomCell({ x, y, width, height, name, value, depth, root, group, colo
   );
 }
 
-function TooltipContent({ active, payload, hideValues, moneda }: any) {
+type PropsTooltip = TooltipProps<number, string> & { hideValues?: boolean; moneda?: Moneda };
+
+function TooltipContent({ active, payload, hideValues, moneda }: PropsTooltip) {
   if (!active || !payload?.length) return null;
   const d = payload[0].payload;
   const currency: Moneda = moneda === 'ARS' ? 'ARS' : 'USD';
@@ -180,7 +191,7 @@ export default function TreemapChart({ tenencias, dim, filtroTipo, onFiltroTipo,
   // o null para otras dims (los filtros cross-chart siguen siendo solo por TIPO por ahora)
   const filtroActivo = dim === 'TIPO' ? filtroTipo : null;
 
-  function handleClick(node: any) {
+  function handleClick(node: { group?: string; name?: string }) {
     if (!onFiltroTipo || dim !== 'TIPO') return;
     const tipo = node?.group ?? node?.name;
     if (tipo) onFiltroTipo(tipo);

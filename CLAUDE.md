@@ -71,6 +71,7 @@ antes de cerrar el tema — es el momento con la mejor información.
 |---|---|
 | `npm run dev` | dashboard en :3000 |
 | `npm test` | vitest (suites en `lib/*.test.ts`) |
+| `npm run lint` / `npm run typecheck` | ESLint y `tsc`; los corre el CI junto con los tests |
 | `npm run mcp` | servidor MCP por stdio |
 | `npm run build` | build de producción |
 | `npm run publicar` | exporta `HEAD` al espejo público (`--push` para subirlo; solo en el repo privado) |

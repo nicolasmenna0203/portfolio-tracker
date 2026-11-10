@@ -11,6 +11,8 @@
     "start": "next start",
     "test": "vitest run",
     "test:watch": "vitest",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
     "mcp": "tsx mcp/server.ts",
     "publicar": "tsx scripts/publicar-espejo.ts"
   },
@@ -25,14 +27,20 @@
     "unpdf": "^1.6.0"
   },
   "devDependencies": {
+    "@eslint/eslintrc": "^3.3.7",
     "@tailwindcss/postcss": "^4.1.4",
     "@types/node": "^22.15.2",
     "@types/react": "^19.1.2",
     "@types/react-dom": "^19.1.2",
-    "postcss": "^8.5.3",
+    "eslint": "^9.39.5",
+    "eslint-config-next": "^15.5.29",
+    "postcss": "^8.5.32",
     "tailwindcss": "^4.1.4",
     "tsx": "^4.23.9",
     "typescript": "^5.8.3",
-    "vitest": "^3.2.7"
+    "vitest": "^5.1.0"
+  },
+  "overrides": {
+    "postcss": "$postcss"
   }
 }

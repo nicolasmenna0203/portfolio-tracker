@@ -52,6 +52,7 @@ export default function LoginPage() {
     <div className="login-root">
       <div className="login-card">
         {/* El ícono de la app (app/icon.svg), como en el inicio de sesión de iOS. */}
+        {/* eslint-disable-next-line @next/next/no-img-element -- SVG estático: next/image no lo optimiza */}
         <img className="login-logo" src="/icon.svg" alt="" width={64} height={64} />
 
         <h1 className="login-title">Portfolio</h1>

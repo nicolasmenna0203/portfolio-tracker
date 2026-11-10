@@ -225,6 +225,7 @@ export default function Dashboard({ data, valoresSiempreOcultos = false }: Props
       <header className="app-bar">
         <div className="app-bar-marca">
           {/* El ícono de la webapp (app/icon.svg), servido por Next: una sola fuente. */}
+          {/* eslint-disable-next-line @next/next/no-img-element -- SVG estático: next/image no lo optimiza */}
           <img className="app-bar-logo" src="/icon.svg" alt="" width={30} height={30} />
           <div style={{ minWidth: 0 }}>
             <h1 className="app-bar-titulo">

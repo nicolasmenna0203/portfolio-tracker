@@ -36,7 +36,8 @@ export default function FciSection({ tenencias, hideValues = false }: Props) {
   const [sortKey, setSortKey] = useState<SortKey>('rendimiento12Meses');
   const [sortDesc, setSortDesc] = useState(true);
 
-  const fondos = data?.fondos ?? [];
+  // Memo: `?? []` daría un array nuevo en cada render y rompería los memos que dependen de esto.
+  const fondos = useMemo(() => data?.fondos ?? [], [data]);
 
   const totalEnCartera = useMemo(
     () => fondos.reduce((s, f) => s + (f.tenenciaUsd ?? 0), 0),

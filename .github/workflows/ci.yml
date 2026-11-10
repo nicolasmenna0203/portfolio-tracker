@@ -1,0 +1,23 @@
+name: CI
+
+# Lint, tipos y tests en cada push y PR. No necesita secrets: los tests usan
+# fixtures sintéticos y simulan Google y las fuentes externas.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
