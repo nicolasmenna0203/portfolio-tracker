@@ -12,13 +12,13 @@
 import type { EventoCalendario, CalendarioResponse, YieldTicker } from '@/types';
 import { fetchBonosArg, type PagoRegistrado } from './bonosArg';
 import { leerPagosRegistrados } from './pagosBonos';
-import { fetchDividendosFuturos } from './dividendosFuturos';
+import { fetchDividendosFuturos, DIAS_ATRAS_EX } from './dividendosFuturos';
 import { fetchEarningsUsa } from './yahooEarnings';
 import { datosAcciones, preciosBonos, preciosBonosArs, mepSpot } from './precios';
 import { netoDividendo } from './retenciones';
 import { aliasYahoo } from './tickersElegibles';
 
-/** Dividendos ya pagados (histórico real de Yahoo Finance chart). */
+/** Dividendos ya pagados (histórico real de Yahoo Finance chart), ubicados en su fecha EX-dividendo. */
 async function fetchDividendos(
   ticker: string,
   desde: string,
@@ -33,6 +33,9 @@ async function fetchDividendos(
   const res = await fetch(url, {
     headers: { 'User-Agent': 'Mozilla/5.0' },
     signal: AbortSignal.timeout(8000), // Yahoo a veces cuelga; no arrastrar toda la request
+    // La ruta del calendario es POST y no cachea sola: el Data Cache de Next sí,
+    // y se comparte entre instancias.
+    next: { revalidate: 6 * 60 * 60 },
   });
   if (!res.ok) throw new Error(`Yahoo dividendos (${ticker}): HTTP ${res.status}`);
   const json = await res.json();
@@ -94,11 +97,26 @@ export async function fetchCalendarioFinanciero(
   const pxAcciones: Record<string, number> = {};
   for (const [t, d] of Object.entries(datosUsa)) pxAcciones[t] = d.px;
 
-  // Acciones/ETF USA: dividendos históricos (Yahoo chart) + futuros confirmados (Nasdaq) + balances (Yahoo calendarEvents).
-  const tareas: Promise<EventoCalendario[]>[] = tickersUsa.map((t) =>
+  // Acciones/ETF USA: dividendos históricos (Yahoo chart) + confirmados (Nasdaq) + balances (Yahoo calendarEvents).
+  //
+  // Yahoo fecha cada dividendo en su fecha ex; Nasdaq, en la de pago. Un mismo
+  // dividendo puede venir de los dos: gana Nasdaq, que lo muestra cuando se
+  // cobra. Nasdaq se pide con el rango de pago extendido DIAS_ATRAS_EX días
+  // para reconocer también los de fecha ex dentro del rango y pago después
+  // (ex en diciembre, pago en enero): esos salen del histórico de este año y
+  // aparecen en la consulta del año siguiente, en su fecha de pago.
+  const hastaExtendido = new Date(Date.parse(hasta + 'T00:00:00Z') + DIAS_ATRAS_EX * 86_400_000)
+    .toISOString().slice(0, 10);
+  const nasdaq = fetchDividendosFuturos(tickersUsa, desde, hastaExtendido, tenencias, pxAcciones);
+  const yahoo = tickersUsa.map((t) =>
     fetchDividendos(t, desde, hasta, tenencias[t.toUpperCase()], pxAcciones[t.toUpperCase()]),
   );
-  tareas.push(fetchDividendosFuturos(tickersUsa, desde, hasta, tenencias, pxAcciones));
+  const exDeNasdaq = nasdaq.then((evs) => new Set(evs.map((e) => `${e.ticker}|${e.fechaEx}`))).catch(() => new Set<string>());
+
+  const tareas: Promise<EventoCalendario[]>[] = yahoo.map((p) =>
+    Promise.all([p, exDeNasdaq]).then(([evs, ex]) => evs.filter((e) => !ex.has(`${e.ticker}|${e.fecha}`))),
+  );
+  tareas.push(nasdaq.then((evs) => evs.filter((e) => e.fecha <= hasta)));
   tareas.push(fetchEarningsUsa(tickersUsa, desde, hasta));
   // Bonos ARG: renta + amortización (bonistas + Sheet), con cobro estimado por tenencia/precio.
   tareas.push(

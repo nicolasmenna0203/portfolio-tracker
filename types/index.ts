@@ -151,6 +151,8 @@ export interface EventoCalendario {
   monedaMonto?: string;   // moneda del montoEstimado (ej. "USD", "ARS")
   /** "YYYY-MM-DD" si el monto se estimó ese día (pago registrado en la hoja PagosBonos) y no con la tenencia de hoy. */
   estimadoAl?: string;
+  /** Fecha ex-dividendo, cuando `fecha` es la de pago (dividendos de Nasdaq). */
+  fechaEx?: string;
 }
 
 /** Dividend yield trailing 12 meses de una posición, para mostrar como dato. */
