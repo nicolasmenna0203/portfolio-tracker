@@ -8,9 +8,10 @@ cobros la dispara GitHub Actions.
 
 ## El código se publica
 
-Se desarrolla en un repo privado, pero `HEAD` se publica como espejo sin
-historia (`npm run publicar`, ADR 0030; el script vive solo en el repo privado):
-todo archivo versionado es público.
+Se desarrolla en un repo privado y se publica un espejo con la historia desde
+la limpieza del ADR 0030, commit por commit (`npm run publicar`, ADR 0034; el
+script vive solo en el repo privado): todo archivo versionado y todo mensaje de
+commit es público.
 No escribas en ningún archivo versionado:
 
 - Tickers de posiciones reales, montos, cantidades, pesos de cartera.
@@ -30,8 +31,10 @@ Tampoco va nada que lo delate sin decirlo:
   real da ~7 puntos", "caso real (TICKER, fecha)").
 - Tickers de la cartera como ejemplo en comentarios, tests o la demo: usá otros.
 
-`npm run publicar` escanea contra los tickers del Sheet y un archivo local de
-términos, y no publica si encuentra algo; pero no entiende prosa.
+`npm run publicar` escanea el árbol y el mensaje de cada commit contra los
+tickers del Sheet y un archivo local de términos, y no publica si encuentra
+algo; pero no entiende prosa: los cuerpos de commit con cifras de la serie real
+o con referencias `#N` a PRs del privado son los que se escapan.
 
 Sí va, porque es ingeniería: fuentes de datos públicas y sus limitaciones
 técnicas, fórmulas, convenciones de cálculo, constantes impositivas de régimen
@@ -74,7 +77,7 @@ antes de cerrar el tema — es el momento con la mejor información.
 | `npm run lint` / `npm run typecheck` | ESLint y `tsc`; los corre el CI junto con los tests |
 | `npm run mcp` | servidor MCP por stdio |
 | `npm run build` | build de producción |
-| `npm run publicar` | exporta `HEAD` al espejo público (`--push` para subirlo; solo en el repo privado) |
+| `npm run publicar` | reproduce en el espejo público los commits nuevos del privado (`--push` para subirlos; solo en el repo privado) |
 
 ## Convenciones
 

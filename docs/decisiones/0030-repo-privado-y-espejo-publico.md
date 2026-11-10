@@ -1,7 +1,7 @@
 ---
 numero: 0030
 titulo: Desarrollar en un repo privado y publicar un espejo sin historia, con lo que delata la cartera en el Sheet
-estado: Aceptada
+estado: Reemplazada por 0034
 fecha: 2026-11-03
 codigo: scripts/publicar-espejo.ts, lib/bonosProvinciales.ts, lib/tickersEspeciales.ts, lib/bonosArg.ts, lib/bondMetrics.ts, lib/tickersElegibles.ts, lib/demo/universo.ts, components/Dashboard.tsx, .github/workflows/alerta-semanal.yml
 ---

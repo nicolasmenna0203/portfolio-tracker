@@ -55,6 +55,8 @@ PROYECTO-CLAUDE.md
 # Términos que el script de publicación del espejo público bloquea (broker,
 # banco, nombres): nombrarlos en el repo sería publicarlos.
 .publicar-prohibidos
+.publicar-sustituciones
+.publicar-mensajes.json
 
 # Perfil de inversor: objetivos, criterios de decisión y log de decisiones.
 # Personal por definición → local.
