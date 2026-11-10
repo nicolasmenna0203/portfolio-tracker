@@ -46,10 +46,24 @@ function fmtFecha(d: Date): string {
 }
 
 /**
+ * Primer día de la ventana de la alerta. El cron corre el domingo (hora
+ * argentina) y el mail es la agenda de la semana que arranca: si corre en
+ * domingo, la ventana empieza el lunes; si no (disparo manual), hoy. Se mira
+ * la hora argentina porque el disparo de la tarde del domingo ya es lunes en UTC.
+ */
+export function inicioVentana(ahora: Date): Date {
+  const tz = 'America/Argentina/Buenos_Aires';
+  const fecha = new Intl.DateTimeFormat('en-CA', { timeZone: tz }).format(ahora);
+  const dia = new Intl.DateTimeFormat('en-US', { timeZone: tz, weekday: 'short' }).format(ahora);
+  const inicio = new Date(fecha + 'T00:00:00Z');
+  if (dia === 'Sun') inicio.setUTCDate(inicio.getUTCDate() + 1);
+  return inicio;
+}
+
+/**
  * Calcula los eventos de calendario financiero de la cartera actual que caen
- * en los próximos `dias` días (por defecto 7, desde hoy inclusive). El cron
- * dispara domingo 21hs ART (lunes 00:00 UTC), así que `hoy` cae en el lunes y
- * el rango por defecto queda lunes→domingo de la semana que arranca.
+ * en los `dias` días (por defecto 7) desde `inicioVentana`: lunes→domingo de
+ * la semana que arranca. El horario del cron: docs/decisiones/0033-alerta-semanal-con-disparo-de-respaldo-el-domingo.md
  */
 export async function calcularAlertaSemanal(
   data: DashboardData,
@@ -60,7 +74,7 @@ export async function calcularAlertaSemanal(
   const items = data.tenenciasPorMes[ultimoMes] ?? [];
   const { tickersUsa, tickersArg, tenencias } = tickersDeCartera(items);
 
-  const hoy = new Date();
+  const hoy = inicioVentana(new Date());
   const desde = fmtFecha(hoy);
   const hastaDate = new Date(hoy);
   hastaDate.setUTCDate(hastaDate.getUTCDate() + dias - 1);

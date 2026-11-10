@@ -16,7 +16,7 @@ vi.mock('./variacionSemanal', () => ({
 }));
 
 // Import dinámico después del mock para que vitest lo intercepte correctamente.
-const { calcularAlertaSemanal, armarContenidoMail, enviarAlertaSemanal } = await import('./alertas');
+const { calcularAlertaSemanal, armarContenidoMail, enviarAlertaSemanal, inicioVentana } = await import('./alertas');
 
 function dataConTenencia(ticker: string, tenenciaUsd: number, extra: Partial<DashboardData['tenenciasPorMes'][string][number]> = {}): DashboardData {
   return {
@@ -278,5 +278,21 @@ describe('enviarAlertaSemanal', () => {
     });
 
     await expect(enviarAlertaSemanal('x@example.com', alertaVacia)).rejects.toThrow(/Resend: HTTP 422/);
+  });
+});
+
+describe('inicioVentana (ADR 0033)', () => {
+  const iso = (d: Date) => d.toISOString().slice(0, 10);
+
+  it('un disparo del domingo al mediodía arranca la semana el lunes', () => {
+    expect(iso(inicioVentana(new Date('2026-11-15T15:23:00Z')))).toBe('2026-11-16');
+  });
+
+  it('el domingo a la noche ya es lunes en UTC, pero se mira la hora argentina', () => {
+    expect(iso(inicioVentana(new Date('2026-11-16T01:30:00Z')))).toBe('2026-11-16');
+  });
+
+  it('un disparo manual en otro día arranca hoy', () => {
+    expect(iso(inicioVentana(new Date('2026-11-10T15:00:00Z')))).toBe('2026-11-10');
   });
 });

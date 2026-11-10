@@ -3,7 +3,7 @@
  *
  * Contexto de por qué existe (auth de sesión y del cron):
  * docs/decisiones/0014-hmac-webcrypto-por-edge-runtime.md
- * docs/decisiones/0015-cron-semanal-en-github-actions.md
+ * docs/decisiones/0033-alerta-semanal-con-disparo-de-respaldo-el-domingo.md (reemplaza al 0015)
  *
  * `a === b` corta en el primer byte distinto, así que el tiempo de respuesta
  * filtra cuántos caracteres del prefijo son correctos. Con suficientes intentos

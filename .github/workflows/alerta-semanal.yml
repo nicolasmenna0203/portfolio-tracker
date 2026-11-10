@@ -1,13 +1,20 @@
 name: Alerta semanal de cobros
 
-# Por qué GitHub Actions y no Vercel Cron:
-# docs/decisiones/0015-cron-semanal-en-github-actions.md
+# Por qué GitHub Actions, por qué dos disparos el domingo y cómo se evita el
+# mail repetido: docs/decisiones/0033-alerta-semanal-con-disparo-de-respaldo-el-domingo.md
 
 on:
   schedule:
-    # Domingo 21:00 ART = lunes 00:00 UTC (Argentina no tiene horario de verano).
-    - cron: '0 0 * * 1'
-  workflow_dispatch: {} # permite disparar manualmente desde la pestaña Actions
+    # GitHub demora los schedule, a veces horas (con el cron a las 00:00 UTC el
+    # mail llegaba el lunes de madrugada). Minuto impar, fuera del pico de la
+    # hora en punto, y un segundo disparo de respaldo. Argentina es UTC-3 fijo.
+    - cron: '23 15 * * 0' # domingo 12:23 ART
+    - cron: '23 20 * * 0' # domingo 17:23 ART, respaldo: no reenvía si ya salió
+  workflow_dispatch: {} # disparo manual desde la pestaña Actions: siempre manda el mail
+
+permissions:
+  actions: read # para ver si el mail ya salió hoy
+  contents: read
 
 jobs:
   disparar-alerta:
@@ -17,11 +24,39 @@ jobs:
     if: ${{ vars.DASHBOARD_URL != '' }}
     runs-on: ubuntu-latest
     steps:
-      - name: Llamar a /api/alertas/semanal
+      - name: Decidir si sale el mail
+        id: decidir
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
+          if [ "${{ github.event_name }}" != "schedule" ]; then
+            echo "accion=enviar" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          export TZ=America/Argentina/Buenos_Aires
+          # El mail es el de los domingos: si el disparo llegó tan tarde que ya
+          # es lunes, no sale, pero los pagos de bonos se registran igual.
+          if [ "$(date +%u)" != 7 ]; then
+            echo "El disparo llegó el $(date +%F) (no es domingo en Argentina): solo registro de pagos."
+            echo "accion=registrar" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          desde=$(date -u -d "$(date +%F) 00:00 -03:00" +%FT%TZ)
+          previas=$(gh run list -R "$GITHUB_REPOSITORY" --workflow alerta-semanal.yml \
+            --event schedule --status success --created ">=$desde" --json databaseId --jq length)
+          if [ "$previas" -gt 0 ]; then
+            echo "El mail de hoy ya salió en otra corrida."
+            echo "accion=nada" >> "$GITHUB_OUTPUT"
+          else
+            echo "accion=enviar" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Llamar a /api/alertas/semanal
+        if: steps.decidir.outputs.accion != 'nada'
+        run: |
+          query=""
+          if [ "${{ steps.decidir.outputs.accion }}" = "registrar" ]; then query="?mail=0"; fi
           status=$(curl -s -o /tmp/respuesta.json -w "%{http_code}" \
             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
-            "${{ vars.DASHBOARD_URL }}/api/alertas/semanal")
+            "${{ vars.DASHBOARD_URL }}/api/alertas/semanal$query")
           echo "HTTP $status"
           cat /tmp/respuesta.json; echo
           if [ "$status" -ne 200 ]; then

@@ -112,7 +112,7 @@ npm run build   # build de producción
 1. Conectar el repositorio en [vercel.com](https://vercel.com)
 2. Agregar todas las variables de la tabla anterior en **Settings → Environment Variables**
 
-La alerta semanal se dispara desde GitHub Actions (`.github/workflows/alerta-semanal.yml`), no desde Vercel Cron — requiere el secret `CRON_SECRET` y la variable `DASHBOARD_URL` en el repo de GitHub. El motivo de esa elección está en [docs/decisiones/](docs/decisiones/README.md).
+La alerta semanal se dispara desde GitHub Actions (`.github/workflows/alerta-semanal.yml`) el domingo al mediodía, con un disparo de respaldo a la tarde que no reenvía — requiere el secret `CRON_SECRET` y la variable `DASHBOARD_URL` en el repo de GitHub. El motivo de esa elección está en [docs/decisiones/](docs/decisiones/README.md).
 
 ## Estructura del Google Sheet
 

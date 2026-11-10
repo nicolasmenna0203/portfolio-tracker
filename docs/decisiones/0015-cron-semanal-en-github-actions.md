@@ -1,7 +1,7 @@
 ---
 numero: 0015
 titulo: Disparar la alerta semanal desde GitHub Actions, no desde Vercel Cron
-estado: Aceptada
+estado: Reemplazada por 0033
 fecha: 2026-08-06
 codigo: .github/workflows/alerta-semanal.yml, app/api/alertas/semanal/route.ts
 ---

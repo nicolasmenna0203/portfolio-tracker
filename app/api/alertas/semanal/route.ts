@@ -14,9 +14,9 @@ export const runtime = 'nodejs';
  * no usa la cookie de sesión sino un secret propio (CRON_SECRET) pasado como
  * `Authorization: Bearer <secret>`.
  *
- * El trigger es el workflow `.github/workflows/alerta-semanal.yml` (domingo
- * 21:00 ART = lunes 00:00 UTC). Se eligió GitHub Actions en vez de Vercel Cron
- * por el horario exacto: ver docs/decisiones/0015-cron-semanal-en-github-actions.md
+ * El trigger es el workflow `.github/workflows/alerta-semanal.yml`, dos veces
+ * el domingo (la segunda es respaldo y no reenvía): GitHub Actions demora los
+ * schedule varias horas, ver docs/decisiones/0033-alerta-semanal-con-disparo-de-respaldo-el-domingo.md
  *
  * Envío por Resend (RESEND_API_KEY) al destinatario de ALERTA_EMAIL.
  *
@@ -57,14 +57,22 @@ export async function GET(req: NextRequest) {
       registro = { error: err instanceof Error ? err.message : String(err) };
     }
 
-    const alerta = await calcularAlertaSemanal(data, 7);
-    await enviarAlertaSemanal(destinatario, alerta);
+    // `?mail=0`: solo el registro. Lo usa el workflow cuando el disparo llega
+    // tarde (ya es lunes): el mail no sale, pero los pagos de bonos de esa
+    // semana se anotan igual. Ver docs/decisiones/0033-alerta-semanal-con-disparo-de-respaldo-el-domingo.md
+    const conMail = req.nextUrl.searchParams.get('mail') !== '0';
+    let eventos: number | null = null;
+    if (conMail) {
+      const alerta = await calcularAlertaSemanal(data, 7);
+      await enviarAlertaSemanal(destinatario, alerta);
+      eventos = alerta.eventos.length;
+    }
 
     const registroOk = !('error' in registro);
     return NextResponse.json(
       // Solo un resumen: la respuesta queda en el log de GitHub Actions, y el
       // mail completo (con montos) no tiene por qué quedar ahí.
-      { ok: registroOk, eventos: alerta.eventos.length, pagosBonos: registro },
+      { ok: registroOk, mail: conMail ? 'enviado' : 'omitido', eventos, pagosBonos: registro },
       { status: registroOk ? 200 : 500 },
     );
   } catch (err) {

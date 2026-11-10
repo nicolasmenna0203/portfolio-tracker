@@ -11,7 +11,7 @@ código.
 Los ADRs **no se editan** cuando cambia la decisión: se escribe uno nuevo y el
 viejo pasa a "Reemplazadas". Ver [PLANTILLA.md](PLANTILLA.md) para el flujo completo.
 
-**Próximo número: 0033**
+**Próximo número: 0034**
 
 ## Renta fija
 
@@ -70,7 +70,7 @@ viejo pasa a "Reemplazadas". Ver [PLANTILLA.md](PLANTILLA.md) para el flujo comp
 | [0009](0009-dotenv-quiet-en-stdio-mcp.md) | `dotenv` en modo silencioso: stdout es del protocolo MCP | `mcp/server.ts` |
 | [0010](0010-webpack-cache-en-memoria-por-onedrive.md) | Cache de webpack en memoria en dev, por OneDrive | `next.config.ts` |
 | [0014](0014-hmac-webcrypto-por-edge-runtime.md) | Firmar la sesión con WebCrypto, no con `node:crypto` | `lib/session.ts` |
-| [0015](0015-cron-semanal-en-github-actions.md) | Disparar la alerta semanal desde GitHub Actions, no Vercel Cron | `.github/workflows/alerta-semanal.yml` |
+| [0033](0033-alerta-semanal-con-disparo-de-respaldo-el-domingo.md) | Disparar la alerta semanal dos veces el domingo y mandar un solo mail | `.github/workflows/alerta-semanal.yml`, `app/api/alertas/semanal/route.ts`, `lib/alertas.ts` |
 | [0030](0030-repo-privado-y-espejo-publico.md) | Desarrollar en un repo privado y publicar un espejo sin historia, con lo que delata la cartera en el Sheet | `scripts/publicar-espejo.ts`, `lib/bonosProvinciales.ts`, `lib/tickersEspeciales.ts`, `lib/bonosArg.ts`, `lib/bondMetrics.ts`, `lib/demo/universo.ts` |
 
 ## Reemplazadas
@@ -78,4 +78,5 @@ viejo pasa a "Reemplazadas". Ver [PLANTILLA.md](PLANTILLA.md) para el flujo comp
 | # | Decisión | Reemplazada por |
 |---|---|---|
 | [0013](0013-benchmarks-incluyen-aportes.md) | La serie de la cartera en benchmarks incluye aportes | [0022](0022-twr-modified-dietz-encadenado.md) |
+| [0015](0015-cron-semanal-en-github-actions.md) | Disparar la alerta semanal desde GitHub Actions, no Vercel Cron | [0033](0033-alerta-semanal-con-disparo-de-respaldo-el-domingo.md) |
 | [0026](0026-lista-cerrada-de-cinco-categorias-de-gastos.md) | Agrupar los gastos en una lista cerrada de cinco categorías, por el fin del gasto | [0028](0028-cuatro-categorias-de-gastos-por-el-fin-del-gasto.md) |
