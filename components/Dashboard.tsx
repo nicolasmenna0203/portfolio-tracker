@@ -6,6 +6,9 @@ import { toMesKey } from '@/lib/parser';
 import { formatFx, type Moneda } from '@/lib/format';
 import { useFx } from '@/lib/useFx';
 import { useEstadoCargas } from '@/lib/useEstadoCargas';
+import { precargarCalendario } from '@/lib/useCalendario';
+import { tickersDeCartera } from '@/lib/tickersElegibles';
+import { usePathname } from 'next/navigation';
 import UploadTenencias from './UploadTenencias';
 import { EstadoCargasIconos, EstadoCargasDetalle, describirEstadoCargas } from './EstadoCargasIconos';
 import ResumenTab from './ResumenTab';
@@ -107,6 +110,19 @@ export default function Dashboard({ data, valoresSiempreOcultos = false }: Props
   const [hideValuesElegido, setHideValuesElegido] = useState(false);
   const hideValues = valoresSiempreOcultos || hideValuesElegido;
   const [moneda, setMoneda]         = useState<Moneda>('USD');
+
+  // El calendario es la pestaña más lenta (cruza Yahoo, Nasdaq, bonistas y el
+  // Sheet): se precarga en segundo plano un rato después de abrir el dashboard,
+  // con los mismos parámetros que usa CalendarioTab, para que abra ya listo.
+  const pathname = usePathname();
+  useEffect(() => {
+    const t = setTimeout(() => {
+      const meses = Object.keys(data.tenenciasPorMes).sort();
+      const { tickersUsa, tickersArg, tenencias } = tickersDeCartera(data.tenenciasPorMes[meses[meses.length - 1]] ?? []);
+      precargarCalendario(pathname, tickersUsa, tickersArg, tenencias);
+    }, 1500);
+    return () => clearTimeout(t);
+  }, [data, pathname]);
 
   // scrollTop por pestaña (en memoria) — ver TabScroll
   const scrollPorTab = useRef<Partial<Record<Tab, number>>>({});
