@@ -66,6 +66,8 @@ describe('calcularMetricasPeriodo', () => {
   const movimientos: MovimientoRow[] = [
     mov(2024, 3, 10, 100, 'ingreso'),
   ];
+  /** Último milisegundo de enero 2025: a esa fecha corresponde la última valuación. */
+  const CIERRE_ENE_2025 = Date.UTC(2025, 1, 1) - 1;
 
   it('período "max" arranca en el primer mes de la serie', () => {
     const m = calcularMetricasPeriodo(resumenSeries, movimientos, 'max');
@@ -160,9 +162,34 @@ describe('calcularMetricasPeriodo', () => {
     const fin = resumenSeries[resumenSeries.length - 1];
     const xirrDirecta = xirr([
       ...movimientos.map((mv) => ({ date: mv.fecha, amount: -mv.monto_neto })),
-      { date: Date.now(), amount: fin.total_cartera },
+      { date: CIERRE_ENE_2025, amount: fin.total_cartera },
     ]);
     expect(m!.tirAnualPct).toBeCloseTo(xirrDirecta! * 100, 1);
+  });
+
+  it('el valor final se fecha al cierre de su mes, no hoy (ADR 0032)', () => {
+    // Bug real: fechar el valor de ene-2025 "hoy" estiraba el plazo años y
+    // aplastaba la TIR anualizada de cualquier serie que no fuera del mes en curso.
+    const m = calcularMetricasPeriodo(resumenSeries, movimientos, 'max');
+    const conHoy = xirr([
+      ...movimientos.map((mv) => ({ date: mv.fecha, amount: -mv.monto_neto })),
+      { date: Date.now(), amount: 1500 },
+    ]);
+    expect(m!.tirAnualPct! - conHoy! * 100).toBeGreaterThan(100);
+  });
+
+  it('un movimiento posterior al último cierre no entra en la TIR ni en la ganancia', () => {
+    const conPosterior = [...movimientos, mov(2025, 2, 5, 400, 'ingreso')];
+    const sin = calcularMetricasPeriodo(resumenSeries, movimientos, 'max');
+    const con = calcularMetricasPeriodo(resumenSeries, conPosterior, 'max');
+    expect(con!.tirAnualPct).toBeCloseTo(sin!.tirAnualPct!, 6);
+    expect(con!.gananciaUsd).toBeCloseTo(sin!.gananciaUsd, 6);
+  });
+
+  it('la TIR cuenta los movimientos internos como flujo, igual que el TWR (ADR 0022)', () => {
+    const interno = calcularMetricasPeriodo(resumenSeries, [mov(2024, 3, 10, 100, 'ingreso', 'interno')], 'max');
+    const externo = calcularMetricasPeriodo(resumenSeries, [mov(2024, 3, 10, 100, 'ingreso', 'externo')], 'max');
+    expect(interno!.tirAnualPct).toBeCloseTo(externo!.tirAnualPct!, 6);
   });
 
   it('en un período acotado (no "max"), la TIR usa el valor de la base como flujo implícito y solo los flujos posteriores', () => {
@@ -175,10 +202,11 @@ describe('calcularMetricasPeriodo', () => {
     const d0 = new Date(base.fechaTs);
     const desdeTs = Date.UTC(d0.getUTCFullYear(), d0.getUTCMonth() + 1, 1);
     const movDelTramo = movimientos.filter((mv) => mv.fecha >= desdeTs);
+    // Base y final fechados al cierre de su mes (ADR 0032).
     const xirrConImplicito = xirr([
-      { date: base.fechaTs, amount: -base.total_cartera },
+      { date: Date.UTC(2024, 3, 1) - 1, amount: -base.total_cartera },
       ...movDelTramo.map((mv) => ({ date: mv.fecha, amount: -mv.monto_neto })),
-      { date: Date.now(), amount: resumenSeries[resumenSeries.length - 1].total_cartera },
+      { date: CIERRE_ENE_2025, amount: resumenSeries[resumenSeries.length - 1].total_cartera },
     ]);
     expect(m!.tirAnualPct).toBeCloseTo(xirrConImplicito! * 100, 1);
   });

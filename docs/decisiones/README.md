@@ -11,7 +11,7 @@ código.
 Los ADRs **no se editan** cuando cambia la decisión: se escribe uno nuevo y el
 viejo pasa a "Reemplazadas". Ver [PLANTILLA.md](PLANTILLA.md) para el flujo completo.
 
-**Próximo número: 0032**
+**Próximo número: 0033**
 
 ## Renta fija
 
@@ -41,6 +41,7 @@ viejo pasa a "Reemplazadas". Ver [PLANTILLA.md](PLANTILLA.md) para el flujo comp
 | [0012](0012-criterio-unico-de-tickers-elegibles.md) | Un solo criterio de tickers elegibles para todos los consumidores | `lib/tickersElegibles.ts` |
 | [0020](0020-fuente-de-precio-por-naturaleza-del-instrumento.md) | La fuente de precio se elige por naturaleza del instrumento, sin tocar la clasificación del usuario | `lib/tickersElegibles.ts`, `lib/performanceVariable.ts` |
 | [0022](0022-twr-modified-dietz-encadenado.md) | TWR por Modified Dietz encadenado, unificado entre UI y MCP | `lib/twr.ts`, `lib/periodo.ts`, `lib/sheets.ts` |
+| [0032](0032-valuacion-fechada-al-cierre-del-mes.md) | Fechar cada valuación al cierre de su mes en la TIR y en el TWR anualizado | `lib/twr.ts`, `lib/sheets.ts`, `lib/periodo.ts`, `lib/demo/dashboardData.ts` |
 | [0018](0018-ratios-alineados-por-fecha-e-indicadores-en-el-cliente.md) | Alinear el ratio por fecha y calcular los indicadores en el cliente | `lib/ratios.ts`, `components/RatiosTab.tsx` |
 | [0023](0023-tasa-de-cartera-para-proyecciones.md) | Proyectar con el TWR anualizado de la cartera, y medir la inversión como aportes sobre ingresos | `lib/finanzasPersonales.ts`, `components/ProyeccionesTab.tsx` |
 | [0025](0025-gastos-con-vigencia-por-mes.md) | Dar a cada gasto una vigencia en meses (desde / hasta) en vez de un catálogo sin fecha | `lib/finanzasPersonales.ts`, `lib/gastosFijos.ts`, `lib/gastosEdicion.ts`, `lib/gastosCategorias.ts` |

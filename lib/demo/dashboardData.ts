@@ -7,7 +7,7 @@
 // reciban datos consistentes entre sí.
 
 import { xirr, type Cashflow } from '@/lib/finance';
-import { construirTWR, twrAcumuladoPct, twrAnualizadoPct } from '@/lib/twr';
+import { construirTWR, twrAcumuladoPct, twrAnualizadoPct, instanteValuacion } from '@/lib/twr';
 import { formatMesLabel, toMesKey } from '@/lib/parser';
 import { TODOS_ACTIVOS } from './universo';
 import type {
@@ -166,14 +166,21 @@ export function buildDemoDashboardData(): DashboardData {
   const ultimo = resumenSeries[resumenSeries.length - 1];
   const penultimo = resumenSeries[resumenSeries.length - 2];
 
-  const tirFlows: Cashflow[] = [...cashflows, { date: hoy, amount: ultimo.total_cartera }];
+  // Mismo criterio que lib/sheets.ts: valor terminal al cierre del último mes (ADR 0032).
+  const fechaTerminal = instanteValuacion(ultimo.fechaTs, hoy);
+  const tirFlows: Cashflow[] = [
+    ...cashflows.filter((c) => c.date <= fechaTerminal),
+    { date: fechaTerminal, amount: ultimo.total_cartera },
+  ];
   const tirRaw = xirr(tirFlows);
 
-  const cashflowsArs: Cashflow[] = movimientos.map((mv) => ({ date: mv.fecha, amount: -mv.monto_neto_ars }));
-  const tirFlowsArs: Cashflow[] = [...cashflowsArs, { date: hoy, amount: ultimo.total_cartera_ars }];
+  const cashflowsArs: Cashflow[] = movimientos
+    .filter((mv) => mv.fecha <= fechaTerminal)
+    .map((mv) => ({ date: mv.fecha, amount: -mv.monto_neto_ars }));
+  const tirFlowsArs: Cashflow[] = [...cashflowsArs, { date: fechaTerminal, amount: ultimo.total_cartera_ars }];
   const tirRawArs = xirr(tirFlowsArs);
 
-  const diasTranscurridos = (hoy - resumenSeries[0].fechaTs) / 86_400_000;
+  const diasTranscurridos = (fechaTerminal - instanteValuacion(resumenSeries[0].fechaTs, hoy)) / 86_400_000;
 
   const kpis: KPIData = {
     totalCartera: ultimo.total_cartera,

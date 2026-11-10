@@ -30,6 +30,19 @@ export interface MesValuacion {
   total: number;
 }
 
+/**
+ * Instante al que corresponde la valuación de un mes: su cierre (último
+ * milisegundo del mes, UTC), o `ahora` si el mes todavía no terminó.
+ *
+ * Las filas de la serie se fechan el día 1 (`fechaTs`), pero el valor es el del
+ * cierre. Usar el día 1 como fecha del valor agrega un mes de más a cualquier
+ * TIR o anualización: ver docs/decisiones/0032-valuacion-fechada-al-cierre-del-mes.md
+ */
+export function instanteValuacion(fechaTsMes: number, ahora: number): number {
+  const d = new Date(fechaTsMes);
+  return Math.min(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1) - 1, ahora);
+}
+
 export interface PuntoTWR {
   /** Índice encadenado, base 100 en el primer mes de la serie. */
   indice: number;

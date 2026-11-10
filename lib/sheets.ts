@@ -4,6 +4,8 @@
 // docs/decisiones/0007-mep-mensual-no-mep-unico.md
 // Decisión sobre el TWR encadenado (lib/twr.ts) que se pega a cada ResumenRow:
 // docs/decisiones/0022-twr-modified-dietz-encadenado.md
+// Por qué la TIR y el TWR anualizado fechan cada valuación a su cierre de mes:
+// docs/decisiones/0032-valuacion-fechada-al-cierre-del-mes.md
 
 import { google } from 'googleapis';
 import {
@@ -15,7 +17,7 @@ import {
 import { xirr, Cashflow } from './finance';
 import { parsearFondos, RANGO_FONDOS_CAFCI } from './fondosCafci';
 import { parsearTickersEspeciales, RANGO_TICKERS_ESPECIALES } from './tickersEspeciales';
-import { construirTWR, twrAcumuladoPct, twrAnualizadoPct } from './twr';
+import { construirTWR, twrAcumuladoPct, twrAnualizadoPct, instanteValuacion } from './twr';
 import type {
   DashboardData,
   ResumenRow,
@@ -164,14 +166,21 @@ export async function fetchDashboardData(): Promise<DashboardData> {
   // monto_ars viene de la columna Monto (ARS), calculada al MEP del día exacto de
   // cada movimiento (no un MEP de cierre de mes) — más preciso para agregar aportes.
   const movimientos: MovimientoRow[] = rawMovimientos
-    .map((r) => {
+    .map((r, i) => {
       const ts = parseFechaDia(r['Fecha'] ?? r['FECHA'] ?? '');
       const monto = parseArgNum(r['Monto (USD)'] ?? r['MONTO (USD)']);
       const montoArs = parseArgNum(r['Monto (ARS)'] ?? r['MONTO (ARS)']) ?? 0;
       const tipo = (r['Ingreso/Salida'] ?? r['INGRESO/SALIDA'] ?? '')
         .trim()
-        .toLowerCase() as 'ingreso' | 'salida';
+        .toLowerCase();
       if (!ts || monto == null) return null;
+      // Un tipo mal escrito no se adivina: tomarlo como salida (lo que pasaba
+      // antes) da vuelta el signo de un aporte sin que se note en ningún lado.
+      if (tipo !== 'ingreso' && tipo !== 'salida') {
+        throw new Error(
+          `Movimientos, fila ${i + 2}: "Ingreso/Salida" tiene que ser ingreso o salida, no "${tipo || '(vacío)'}"`,
+        );
+      }
       const monto_neto = tipo === 'ingreso' ? monto : -Math.abs(monto);
       const monto_neto_ars = tipo === 'ingreso' ? montoArs : -Math.abs(montoArs);
       const clasificacion = esMovimientoInterno(ts, monto) ? 'interno' : 'externo';
@@ -312,12 +321,19 @@ export async function fetchDashboardData(): Promise<DashboardData> {
   const ultimo = resumenSeries[resumenSeries.length - 1];
   const penultimo = resumenSeries[resumenSeries.length - 2];
 
+  // El valor terminal es la valuación del último mes, fechada a su cierre (no
+  // hoy), y solo entran los flujos hasta ese cierre: uno posterior todavía no
+  // está en ninguna valuación. Ver docs/decisiones/0032-valuacion-fechada-al-cierre-del-mes.md
+  const ahora = Date.now();
+  const fechaTerminal = instanteValuacion(ultimo.fechaTs, ahora);
+  const movHastaTerminal = movimientos.filter((mv) => mv.fecha <= fechaTerminal);
+
   const tirFlows: Cashflow[] = [
-    ...movimientos.map((mv) => ({
+    ...movHastaTerminal.map((mv) => ({
       date: mv.fecha,
       amount: -mv.monto_neto,
     })),
-    { date: Date.now(), amount: ultimo.total_cartera },
+    { date: fechaTerminal, amount: ultimo.total_cartera },
   ];
   const tirRaw = xirr(tirFlows);
 
@@ -325,11 +341,11 @@ export async function fetchDashboardData(): Promise<DashboardData> {
   // Nominal, no ajustada por inflación — igual que el resto de los valores en
   // pesos del dashboard (ver docs/decisiones/0007-mep-mensual-no-mep-unico.md).
   const tirFlowsArs: Cashflow[] = [
-    ...movimientos.map((mv) => ({
+    ...movHastaTerminal.map((mv) => ({
       date: mv.fecha,
       amount: -mv.monto_neto_ars,
     })),
-    { date: Date.now(), amount: ultimo.total_cartera_ars },
+    { date: fechaTerminal, amount: ultimo.total_cartera_ars },
   ];
   const tirRawArs = xirr(tirFlowsArs);
 
@@ -340,7 +356,8 @@ export async function fetchDashboardData(): Promise<DashboardData> {
     .filter((mv) => mv.clasificacion === 'externo')
     .reduce((sum, mv) => sum + mv.monto_neto, 0);
 
-  const diasTranscurridos = (Date.now() - resumenSeries[0].fechaTs) / 86_400_000;
+  // El índice TWR arranca en el cierre del primer mes y termina en el del último.
+  const diasTranscurridos = (fechaTerminal - instanteValuacion(resumenSeries[0].fechaTs, ahora)) / 86_400_000;
   const twrAcumUsd = twrAcumuladoPct(twrUsd);
   const twrAnualUsd = twrAnualizadoPct(twrUsd, diasTranscurridos);
   const twrAcumArs = twrAcumuladoPct(twrArs);
@@ -356,7 +373,7 @@ export async function fetchDashboardData(): Promise<DashboardData> {
       ultimo.acumulado > 0
         ? (ultimo.rendimiento / ultimo.acumulado) * 100
         : 0,
-    deltaCartera: ultimo.total_cartera - penultimo.total_cartera,
+    deltaCartera: penultimo != null ? ultimo.total_cartera - penultimo.total_cartera : 0,
     tirAnual: tirRaw != null ? tirRaw * 100 : null,
     tirAnualArs: tirRawArs != null ? tirRawArs * 100 : null,
     twrAcumuladoUsd: twrAcumUsd,

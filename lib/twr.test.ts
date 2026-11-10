@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { construirTWR, twrAcumuladoPct, twrAnualizadoPct, type MesValuacion, type FlujoDelMes } from './twr';
+import { construirTWR, twrAcumuladoPct, twrAnualizadoPct, instanteValuacion, type MesValuacion, type FlujoDelMes } from './twr';
 
 describe('construirTWR', () => {
   it('sin flujos, el TWR acumulado coincide con el retorno simple', () => {
@@ -154,5 +154,18 @@ describe('twrAnualizadoPct', () => {
     const puntos = construirTWR(valuaciones, []);
     const anual = twrAnualizadoPct(puntos, 2 * 365.25);
     expect(anual!).toBeCloseTo(10, 0);
+  });
+});
+
+describe('instanteValuacion', () => {
+  it('es el último milisegundo del mes de la fila', () => {
+    const ahora = Date.UTC(2026, 10, 9);
+    expect(new Date(instanteValuacion(Date.UTC(2026, 9, 1), ahora)).toISOString()).toBe('2026-10-31T23:59:59.999Z');
+    expect(new Date(instanteValuacion(Date.UTC(2024, 1, 1), ahora)).toISOString()).toBe('2024-02-29T23:59:59.999Z');
+  });
+
+  it('si el mes todavía no terminó, es ahora', () => {
+    const ahora = Date.UTC(2026, 10, 9, 15);
+    expect(instanteValuacion(Date.UTC(2026, 10, 1), ahora)).toBe(ahora);
   });
 });

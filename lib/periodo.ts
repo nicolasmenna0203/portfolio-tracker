@@ -8,9 +8,11 @@
  *
  * Decisión y alternativas descartadas:
  * docs/decisiones/0022-twr-modified-dietz-encadenado.md
+ * Cada valuación se fecha a su cierre de mes, no al día 1 de la fila:
+ * docs/decisiones/0032-valuacion-fechada-al-cierre-del-mes.md
  */
 import { xirr, type Cashflow } from './finance';
-import { construirTWR, twrAcumuladoPct, twrAnualizadoPct } from './twr';
+import { construirTWR, twrAcumuladoPct, twrAnualizadoPct, instanteValuacion } from './twr';
 import type { ResumenRow, MovimientoRow } from '@/types';
 
 export type PeriodoId = '1m' | 'ytd' | '12m' | 'max';
@@ -120,7 +122,12 @@ export function calcularMetricasPeriodo(
     ? inicio.fechaTs
     : Date.UTC(d0.getUTCFullYear(), d0.getUTCMonth() + 1, 1);
 
-  const movTramo = movimientos.filter((mv) => mv.fecha >= desdeTs);
+  // Hasta el cierre del último mes: un movimiento posterior todavía no está en
+  // ninguna valuación, y restarlo de la ganancia la achicaría de más.
+  const ahora = Date.now();
+  const fechaBase = instanteValuacion(inicio.fechaTs, ahora);
+  const fechaFin = instanteValuacion(fin.fechaTs, ahora);
+  const movTramo = movimientos.filter((mv) => mv.fecha >= desdeTs && mv.fecha <= fechaFin);
   const movExternos = movTramo.filter((mv) => mv.clasificacion === 'externo');
 
   const aportesNetosUsd = movExternos.reduce((s, mv) => s + mv.monto_neto, 0);
@@ -158,7 +165,7 @@ export function calcularMetricasPeriodo(
     tramo.map((r) => ({ fechaTs: r.fechaTs, total: r.total_cartera_ars })),
     movTramo.map((mv) => ({ fecha: mv.fecha, monto: mv.monto_neto_ars })),
   );
-  const diasTramo = (fin.fechaTs - inicio.fechaTs) / 86_400_000;
+  const diasTramo = (fechaFin - fechaBase) / 86_400_000;
   const twrAcum = twrAcumuladoPct(twrUsdTramo);
   const twrAnual = diasTramo > 0 ? twrAnualizadoPct(twrUsdTramo, diasTramo) : twrAcum;
   const twrAcumArs = twrAcumuladoPct(twrArsTramo);
@@ -172,28 +179,20 @@ export function calcularMetricasPeriodo(
   // SÍ representa capital que no está en los movimientos del tramo — entra
   // como un flujo negativo (aporte implícito), la forma estándar de acotar
   // una XIRR a una ventana sin reconstruir el historial previo.
-  const tirFlows: Cashflow[] = esSerieCompleta
-    ? [
-        ...movExternos.map((mv) => ({ date: mv.fecha, amount: -mv.monto_neto })),
-        { date: Date.now(), amount: fin.total_cartera },
-      ]
-    : [
-        { date: inicio.fechaTs, amount: -inicio.total_cartera },
-        ...movExternos.map((mv) => ({ date: mv.fecha, amount: -mv.monto_neto })),
-        { date: Date.now(), amount: fin.total_cartera },
-      ];
+  //
+  // Los dos valores se fechan al cierre de su mes (ADR 0032) y solo entran los
+  // flujos hasta el cierre del último (movTramo ya viene acotado). Entran
+  // todos, internos incluidos, igual que en el TWR y en kpis.tirAnual: la
+  // clasificación solo cambia la ganancia (ADR 0022).
+  const flujosTir = (monto: (mv: MovimientoRow) => number, base: number, final: number): Cashflow[] => [
+    ...(esSerieCompleta ? [] : [{ date: fechaBase, amount: -base }]),
+    ...movTramo.map((mv) => ({ date: mv.fecha, amount: -monto(mv) })),
+    { date: fechaFin, amount: final },
+  ];
+  const tirFlows = flujosTir((mv) => mv.monto_neto, inicio.total_cartera, fin.total_cartera);
   const tirRaw = tirFlows.length >= 2 ? xirr(tirFlows) : null;
 
-  const tirFlowsArs: Cashflow[] = esSerieCompleta
-    ? [
-        ...movExternos.map((mv) => ({ date: mv.fecha, amount: -mv.monto_neto_ars })),
-        { date: Date.now(), amount: fin.total_cartera_ars },
-      ]
-    : [
-        { date: inicio.fechaTs, amount: -inicio.total_cartera_ars },
-        ...movExternos.map((mv) => ({ date: mv.fecha, amount: -mv.monto_neto_ars })),
-        { date: Date.now(), amount: fin.total_cartera_ars },
-      ];
+  const tirFlowsArs = flujosTir((mv) => mv.monto_neto_ars, inicio.total_cartera_ars, fin.total_cartera_ars);
   const tirRawArs = tirFlowsArs.length >= 2 ? xirr(tirFlowsArs) : null;
 
   return {
