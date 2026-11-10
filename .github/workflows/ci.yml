@@ -1,7 +1,12 @@
 name: CI
 
-# Lint, tipos y tests en cada push y PR. No necesita secrets: los tests usan
-# fixtures sintéticos y simulan Google y las fuentes externas.
+# Lint, tipos, tests y build en cada push y PR. No necesita secrets: los tests
+# usan fixtures sintéticos y simulan Google y las fuentes externas, y el build
+# compila sin el Sheet (la página principal muestra su error de carga).
+#
+# El build está acá porque las ramas de Dependabot no generan preview en
+# Vercel (vercel.json): una versión mayor que rompe el build se ve en este
+# check del PR, sin mandar mails de deploy fallido.
 
 on:
   push:
@@ -21,3 +26,4 @@ jobs:
       - run: npm run lint
       - run: npm run typecheck
       - run: npm test
+      - run: npm run build

@@ -1,6 +1,6 @@
 'use client';
 
-import { Treemap, ResponsiveContainer, Tooltip, type TooltipProps } from 'recharts';
+import { Treemap, ResponsiveContainer, Tooltip, type TooltipContentProps } from 'recharts';
 import type { TenenciaActual } from '@/types';
 import { PALETA_TIPO, RIESGO_COLOR, RIESGO_LABEL, RENTA_LABEL, GEO_LABEL, MONEDA_LABEL, MONEDA_COLOR, RENTA_COLOR, GEO_COLOR, colorPorCategoria } from '@/lib/constants';
 import { formatMoney, type Moneda } from '@/lib/format';
@@ -159,7 +159,9 @@ function CustomCell({ x = 0, y = 0, width, height, name = '', value = 0, depth, 
   );
 }
 
-type PropsTooltip = TooltipProps<number, string> & { hideValues?: boolean; moneda?: Moneda };
+// recharts 3: el `content` del Tooltip recibe TooltipContentProps; Partial porque el
+// elemento se crea sin esas props y recharts las inyecta al clonarlo.
+type PropsTooltip = Partial<TooltipContentProps<number, string>> & { hideValues?: boolean; moneda?: Moneda };
 
 function TooltipContent({ active, payload, hideValues, moneda }: PropsTooltip) {
   if (!active || !payload?.length) return null;

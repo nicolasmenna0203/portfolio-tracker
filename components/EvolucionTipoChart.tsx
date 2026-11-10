@@ -12,7 +12,8 @@ import {
   Legend,
   ReferenceLine,
 } from 'recharts';
-import type { TooltipProps } from 'recharts';
+import type { TooltipContentProps } from 'recharts';
+import { filasTooltip } from '@/lib/tooltipRecharts';
 import type { TenenciaActual } from '@/types';
 import { PALETA_TIPO, RIESGO_COLOR, RIESGO_LABEL, RENTA_LABEL, GEO_LABEL, MONEDA_LABEL, MONEDA_COLOR, RENTA_COLOR, GEO_COLOR, colorPorCategoria } from '@/lib/constants';
 import { useIsMobile } from '@/lib/useIsMobile';
@@ -85,14 +86,17 @@ function buildData(
   });
 }
 
-type PropsTooltip = TooltipProps<number, string> & { mode?: Mode; hideValues?: boolean; moneda?: Moneda };
+// recharts 3: el `content` del Tooltip recibe TooltipContentProps; Partial porque el
+// elemento se crea sin esas props y recharts las inyecta al clonarlo.
+type PropsTooltip = Partial<TooltipContentProps<number, string>> & { mode?: Mode; hideValues?: boolean; moneda?: Moneda };
 
 function TooltipContent({ active, payload, label, mode, hideValues, moneda }: PropsTooltip) {
   if (!active || !payload?.length) return null;
 
   const currency: Moneda = moneda === 'ARS' ? 'ARS' : 'USD';
-  const nominalTotal = payload.reduce((s, p) => s + (p.value ?? 0), 0);
-  const rows = [...payload].reverse().filter((p) => (p.value ?? 0) > 0);
+  const filas = filasTooltip(payload);
+  const nominalTotal = filas.reduce((s, p) => s + (p.value ?? 0), 0);
+  const rows = [...filas].reverse().filter((p) => (p.value ?? 0) > 0);
 
   return (
     <div style={{
@@ -179,7 +183,7 @@ export default function EvolucionTipoChart({ tenenciasPorMes, mesesDisponibles, 
           data={data}
           stackOffset={mode === 'pct' ? 'expand' : 'none'}
           margin={{ top: 4, right: 10, left: 10, bottom: 0 }}
-          onClick={onMesClick ? (e) => { if (e?.activeLabel) onMesClick(e.activeLabel); } : undefined}
+          onClick={onMesClick ? (e) => { if (e?.activeLabel != null) onMesClick(String(e.activeLabel)); } : undefined}
           style={{ cursor: onMesClick ? 'pointer' : 'default' }}
         >
           <defs>

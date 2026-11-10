@@ -114,6 +114,8 @@ npm run build   # build de producción
 
 La alerta semanal se dispara desde GitHub Actions (`.github/workflows/alerta-semanal.yml`) el domingo al mediodía, con un disparo de respaldo a la tarde que no reenvía — requiere el secret `CRON_SECRET` y la variable `DASHBOARD_URL` en el repo de GitHub. El motivo de esa elección está en [docs/decisiones/](docs/decisiones/README.md).
 
+`vercel.json` desactiva los deploys de preview de las ramas de Dependabot (`dependabot/**`): una actualización mayor que rompe el build se ve en el check de CI del PR, que también corre `npm run build`, en vez de en mails de deploy fallido.
+
 ## Estructura del Google Sheet
 
 | Hoja | Columnas | Descripción |
