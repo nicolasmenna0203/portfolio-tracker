@@ -11,7 +11,7 @@ código.
 Los ADRs **no se editan** cuando cambia la decisión: se escribe uno nuevo y el
 viejo pasa a "Reemplazadas". Ver [PLANTILLA.md](PLANTILLA.md) para el flujo completo.
 
-**Próximo número: 0031**
+**Próximo número: 0032**
 
 ## Renta fija
 
@@ -60,6 +60,7 @@ viejo pasa a "Reemplazadas". Ver [PLANTILLA.md](PLANTILLA.md) para el flujo comp
 | # | Decisión | Código |
 |---|---|---|
 | [0008](0008-yahoo-cookie-crumb-y-yield-desde-chart.md) | Cookie+crumb para Yahoo; el yield se deriva del chart | `lib/yahooCrumb.ts`, `lib/calendario.ts` |
+| [0031](0031-pagos-de-bonos-pasados-desde-la-ficha-y-el-sheet.md) | Mostrar los pagos de bonos ya ocurridos con la ficha de bonistas y un registro propio en el Sheet | `lib/bonosArg.ts`, `lib/pagosBonos.ts`, `lib/calendario.ts`, `app/api/alertas/semanal/route.ts` |
 
 ## Infraestructura
 

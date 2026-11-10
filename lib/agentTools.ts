@@ -561,6 +561,8 @@ async function calendarioCobros({ meses }: { meses: number }) {
       detalle: e.detalle ?? null,
       monto_neto_estimado: e.montoEstimado == null ? null : round(e.montoEstimado),
       moneda: e.monedaMonto ?? null,
+      // Fecha con cuya tenencia se estimó el monto, si no es la de hoy (pago de bono registrado).
+      monto_estimado_al: e.estimadoAl ?? null,
     })),
     yields: res.yields.map((y) => ({
       ticker: y.ticker,

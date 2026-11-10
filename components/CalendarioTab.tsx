@@ -52,7 +52,10 @@ function esDividendo(tipo: EventoTipo): boolean {
 }
 
 /** Explica de dónde sale el monto mostrado, según lleve retención o no. */
-function tooltipMonto(tipo: EventoTipo): string {
+function tooltipMonto(tipo: EventoTipo, estimadoAl?: string): string {
+  if (estimadoAl) {
+    return `Cobro estimado con la tenencia y el precio del ${fmtFechaEvento(estimadoAl)}, cuando se registró el pago.\nSin retención de origen: los bonos ARG se acreditan completos.`;
+  }
   if (esDividendo(tipo)) {
     return `Neto estimado a acreditar, según tu tenencia y el precio de mercado actual.\n`
       + `Ya descontado: ${formatPercent(RETENCION_USA * 100, { sign: false, decimals: 0 })} de retención de EE.UU. + ${formatPercent(IMPUESTO_CHEQUE * 100, { sign: false })} de débitos y créditos `
@@ -542,7 +545,7 @@ export default function CalendarioTab({ data, hideValues = false }: Props) {
                       {e.montoEstimado != null && e.montoEstimado > 0 && (
                         <span
                           className="cal-evento-monto"
-                          title={tooltipMonto(e.tipo)}
+                          title={tooltipMonto(e.tipo, e.estimadoAl)}
                           style={{ marginLeft: 'auto', fontWeight: 700, color: meta.color, whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}
                         >
                           {fmtMonto(e.montoEstimado, e.monedaMonto, hideValues)}

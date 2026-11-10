@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { fetchDashboardData } from '@/lib/sheets';
 import { calcularAlertaSemanal, armarContenidoMail, enviarAlertaSemanal } from '@/lib/alertas';
 import { equalsSeguro } from '@/lib/timingSafe';
+import { registrarPagosBonos, type ResultadoRegistro } from '@/lib/pagosBonos';
 
 export const runtime = 'nodejs';
 
@@ -18,6 +19,11 @@ export const runtime = 'nodejs';
  * por el horario exacto: ver docs/decisiones/0015-cron-semanal-en-github-actions.md
  *
  * Envío por Resend (RESEND_API_KEY) al destinatario de ALERTA_EMAIL.
+ *
+ * De paso anota en la hoja PagosBonos los pagos de bonos de la cartera de esas
+ * semanas (lib/pagosBonos.ts), para que no desaparezcan del calendario cuando
+ * bonistas deja de publicarlos. Va acá y no en una ruta propia porque necesita
+ * el mismo cron semanal y evita abrir otra ruta pública en el middleware.
  */
 export async function GET(req: NextRequest) {
   const secret = process.env.CRON_SECRET;
@@ -40,12 +46,27 @@ export async function GET(req: NextRequest) {
 
   try {
     const data = await fetchDashboardData();
+
+    // Registrar los pagos de bonos no depende del mail ni al revés: si falla,
+    // el mail sale igual y la respuesta no es 200, para que el workflow lo
+    // marque. Volver a correrlo reenvía el mail, pero no duplica filas.
+    let registro: ResultadoRegistro | { error: string };
+    try {
+      registro = await registrarPagosBonos(data);
+    } catch (err) {
+      registro = { error: err instanceof Error ? err.message : String(err) };
+    }
+
     const alerta = await calcularAlertaSemanal(data, 7);
     const contenido = armarContenidoMail(alerta);
 
     await enviarAlertaSemanal(destinatario, alerta);
 
-    return NextResponse.json({ ok: true, ...contenido, eventos: alerta.eventos.length });
+    const registroOk = !('error' in registro);
+    return NextResponse.json(
+      { ok: registroOk, ...contenido, eventos: alerta.eventos.length, pagosBonos: registro },
+      { status: registroOk ? 200 : 500 },
+    );
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     return NextResponse.json({ error: msg }, { status: 500 });

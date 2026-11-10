@@ -147,8 +147,10 @@ export interface EventoCalendario {
   tipo: EventoTipo;
   fecha: string;        // "YYYY-MM-DD"
   detalle?: string;      // ej. "EPS est. 1.52" o "0.24 USD/acción"
-  montoEstimado?: number; // cobro estimado según tenencia actual (USD)
+  montoEstimado?: number; // cobro estimado según tenencia actual, en monedaMonto
   monedaMonto?: string;   // moneda del montoEstimado (ej. "USD", "ARS")
+  /** "YYYY-MM-DD" si el monto se estimó ese día (pago registrado en la hoja PagosBonos) y no con la tenencia de hoy. */
+  estimadoAl?: string;
 }
 
 /** Dividend yield trailing 12 meses de una posición, para mostrar como dato. */

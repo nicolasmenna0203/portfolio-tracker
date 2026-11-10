@@ -1,13 +1,17 @@
 // Calendario de cobros: dividendos, renta y amortización de bonos, balances.
 //
-// Dos decisiones que definen los montos que se muestran acá:
+// Decisiones que definen lo que se muestra acá:
 // - el yield se deriva del endpoint chart, sin request extra ni crumb:
 //   docs/decisiones/0008-yahoo-cookie-crumb-y-yield-desde-chart.md
 // - los dividendos van netos, y qué excluye ese neto:
 //   docs/decisiones/0002-retenciones-excluir-comision-depositario.md
+// - la renta y amortización ya pagadas salen de la ficha de cada bono y de la
+//   hoja PagosBonos, porque bonistas/proximos-pagos solo publica lo futuro:
+//   docs/decisiones/0031-pagos-de-bonos-pasados-desde-la-ficha-y-el-sheet.md
 
 import type { EventoCalendario, CalendarioResponse, YieldTicker } from '@/types';
-import { fetchBonosArg } from './bonosArg';
+import { fetchBonosArg, type PagoRegistrado } from './bonosArg';
+import { leerPagosRegistrados } from './pagosBonos';
 import { fetchDividendosFuturos } from './dividendosFuturos';
 import { fetchEarningsUsa } from './yahooEarnings';
 import { datosAcciones, preciosBonos, preciosBonosArs, mepSpot } from './precios';
@@ -66,11 +70,26 @@ export async function fetchCalendarioFinanciero(
 ): Promise<CalendarioResponse> {
   // Precios de mercado para estimar unidades a partir del valor de cada posición.
   // De acciones/ETFs se trae además el yield trailing 12m (sale de la misma llamada).
-  const [datosUsa, pxBonos, pxBonosArs, mep] = await Promise.all([
+  const errores: string[] = [];
+
+  // Pagos de bonos ya registrados (lib/pagosBonos.ts). Si la hoja no se puede
+  // leer, el calendario sale igual con lo de bonistas y el error a la vista.
+  const leerRegistrados = async (): Promise<PagoRegistrado[]> => {
+    if (!process.env.SPREADSHEET_ID) return [];
+    try {
+      return await leerPagosRegistrados();
+    } catch (e) {
+      errores.push(`Hoja PagosBonos: ${e instanceof Error ? e.message : String(e)}`);
+      return [];
+    }
+  };
+
+  const [datosUsa, pxBonos, pxBonosArs, mep, registrados] = await Promise.all([
     datosAcciones(tickersUsa),
     preciosBonos(tickersArg),
     preciosBonosArs(tickersArg),
     mepSpot(),
+    leerRegistrados(),
   ]);
   const pxAcciones: Record<string, number> = {};
   for (const [t, d] of Object.entries(datosUsa)) pxAcciones[t] = d.px;
@@ -81,13 +100,15 @@ export async function fetchCalendarioFinanciero(
   );
   tareas.push(fetchDividendosFuturos(tickersUsa, desde, hasta, tenencias, pxAcciones));
   tareas.push(fetchEarningsUsa(tickersUsa, desde, hasta));
-  // Bonos/ONs ARG: renta + amortización (bonistas), con cobro estimado por tenencia/precio.
-  tareas.push(fetchBonosArg(tickersArg, desde, hasta, tenencias, pxBonos, pxBonosArs, mep));
+  // Bonos ARG: renta + amortización (bonistas + Sheet), con cobro estimado por tenencia/precio.
+  tareas.push(
+    fetchBonosArg(tickersArg, desde, hasta, tenencias, pxBonos, pxBonosArs, mep, registrados)
+      .then((r) => { errores.push(...r.errores); return r.eventos; }),
+  );
 
   const settled = await Promise.allSettled(tareas);
 
   const eventos: EventoCalendario[] = [];
-  const errores: string[] = [];
 
   for (const r of settled) {
     if (r.status === 'fulfilled') {
