@@ -27,3 +27,7 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
+        env:
+          # El chequeo de tipos interno de `next build` pasa el tope de heap por
+          # defecto del runner (~2 GB) y muere por falta de memoria.
+          NODE_OPTIONS: --max-old-space-size=6144
