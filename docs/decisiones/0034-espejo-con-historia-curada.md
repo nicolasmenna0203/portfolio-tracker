@@ -55,7 +55,7 @@ solo si todos pasan el escaneo.
 - **Punto de partida (`BASE`)**: el commit del privado donde el código quedó
   limpio. Es el primer commit del espejo, como "versión inicial pública"; lo
   anterior no se publica.
-- **Estado**: el tag local `espejo-publicado` marca el último commit del privado
+- **Estado**: el tag `espejo-publicado` marca el último commit del privado
   ya publicado; sin él hace falta `--reiniciar`, que rehace la historia desde
   `BASE` y la sube con `--force-with-lease`.
 - **Qué se escanea**: el árbol completo de cada commit (no solo el último) y su
@@ -86,8 +86,9 @@ solo si todos pasan el escaneo.
   visible en el espejo (ya lo era en el repo anterior).
 - **Límite:** se sigue solo el primer padre: un merge se publica como un único
   commit.
-- **Límite:** el estado vive en un tag local del privado. Si se pierde,
-  `--reiniciar` rehace el espejo desde `BASE` con un force push.
+- **Límite:** el estado vive en el tag `espejo-publicado` del privado, que el
+  script sube a `origin` tras cada publicación. Si se pierde, `--reiniciar`
+  rehace el espejo desde `BASE` con un force push.
 - **Límite:** los commits-foto anteriores del espejo se descartan con el force
   push. GitHub puede servir esos SHA un tiempo por URL directa, pero ya
   habían pasado el escaneo.
