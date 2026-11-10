@@ -132,6 +132,14 @@ export function filaDe(r: PagoRegistrado): (string | number)[] {
   ];
 }
 
+/**
+ * Fecha del registro en hora argentina: el cron corre domingo 21 hs ART, que
+ * en UTC ya es lunes. La ventana sigue en UTC, igual que la alerta semanal.
+ */
+function fechaArgentina(d: Date): string {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Argentina/Buenos_Aires' }).format(d);
+}
+
 function sumarDias(fecha: Date, dias: number): string {
   const d = new Date(fecha);
   d.setUTCDate(d.getUTCDate() + dias);
@@ -179,7 +187,7 @@ export async function registrarPagosBonos(data: DashboardData, ahora = new Date(
       ticker: p.ticker, fecha: p.fecha, moneda: p.moneda, cupon: p.cupon, principal: p.principal,
       cobroRenta: factor != null && p.cupon > 0 ? factor * p.cupon : null,
       cobroAmort: factor != null && p.principal > 0 ? factor * p.principal : null,
-      registrado: hoy,
+      registrado: fechaArgentina(ahora),
     });
   });
 

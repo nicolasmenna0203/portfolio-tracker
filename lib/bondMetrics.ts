@@ -76,8 +76,12 @@ const CACHE_MS = 6 * 60 * 60 * 1000; // 6 horas
 
 /** Extrae el array bondData embebido en el HTML de cualquier página de contenido de bonistas.com. */
 async function fetchBondDataRaw(): Promise<BondDataRaw[]> {
+  // ~1,5 MB: entra en el Data Cache de Next (límite 2 MB), que comparte el HTML
+  // entre instancias; la ruta /api/performance es POST y no cachea sola.
   const res = await fetch('https://bonistas.com/bonos-cer-hoy', {
     headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0 Safari/537.36' },
+    signal: AbortSignal.timeout(10_000),
+    next: { revalidate: CACHE_MS / 1000 },
   });
   if (!res.ok) throw new Error(`bonistas.com: HTTP ${res.status}`);
   const html = await res.text();

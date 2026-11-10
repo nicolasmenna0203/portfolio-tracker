@@ -109,7 +109,7 @@ describe('registrarPagosBonos', () => {
     expect(api.batchUpdate).not.toHaveBeenCalled();
     // factor = 1000 / 50 = 20
     expect(api.append.mock.calls[0][0].requestBody.values).toEqual([
-      ['AL35', '2026-08-24', 'USD', 2, 1, 40, 20, '2026-08-17'],
+      ['AL35', '2026-08-24', 'USD', 2, 1, 40, 20, '2026-08-16'],
     ]);
   });
 

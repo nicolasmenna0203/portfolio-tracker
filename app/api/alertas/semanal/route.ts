@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { fetchDashboardData } from '@/lib/sheets';
-import { calcularAlertaSemanal, armarContenidoMail, enviarAlertaSemanal } from '@/lib/alertas';
+import { calcularAlertaSemanal, enviarAlertaSemanal } from '@/lib/alertas';
 import { equalsSeguro } from '@/lib/timingSafe';
 import { registrarPagosBonos, type ResultadoRegistro } from '@/lib/pagosBonos';
 
@@ -58,13 +58,13 @@ export async function GET(req: NextRequest) {
     }
 
     const alerta = await calcularAlertaSemanal(data, 7);
-    const contenido = armarContenidoMail(alerta);
-
     await enviarAlertaSemanal(destinatario, alerta);
 
     const registroOk = !('error' in registro);
     return NextResponse.json(
-      { ok: registroOk, ...contenido, eventos: alerta.eventos.length, pagosBonos: registro },
+      // Solo un resumen: la respuesta queda en el log de GitHub Actions, y el
+      // mail completo (con montos) no tiene por qué quedar ahí.
+      { ok: registroOk, eventos: alerta.eventos.length, pagosBonos: registro },
       { status: registroOk ? 200 : 500 },
     );
   } catch (err) {

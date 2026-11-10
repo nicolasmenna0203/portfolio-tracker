@@ -57,7 +57,9 @@ export const MAPEO_BONOS_ARG: Record<string, string> = {
 };
 
 const USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0 Safari/537.36';
-const CACHE_MS = 6 * 60 * 60 * 1000; // 6 horas
+// 6 horas, en memoria y en el Data Cache de Next (`next.revalidate`), que se
+// comparte entre instancias: la ruta del calendario es POST y no cachea sola.
+const CACHE_MS = 6 * 60 * 60 * 1000;
 
 /** Moneda en la que se acredita un pago. bonistas distingue "USD MEP" de "USD CABLE"; acá no. */
 export type MonedaPago = 'USD' | 'ARS';
@@ -118,6 +120,8 @@ async function fetchPagosProximos(): Promise<PagoProximo[]> {
 
   const res = await fetch('https://bonistas.com/proximos-pagos', {
     headers: { 'User-Agent': USER_AGENT },
+    signal: AbortSignal.timeout(10_000),
+    next: { revalidate: CACHE_MS / 1000 },
   });
   if (!res.ok) throw new Error(`bonistas.com: HTTP ${res.status}`);
   const html = await res.text();
@@ -185,7 +189,7 @@ async function fetchFichaBono(simbolo: string): Promise<FlujoFicha | null> {
 
   const res = await fetch(
     `https://bonistas.com/bono-cotizacion-rendimiento-precio-hoy/${encodeURIComponent(simbolo)}`,
-    { headers: { 'User-Agent': USER_AGENT }, signal: AbortSignal.timeout(8000) },
+    { headers: { 'User-Agent': USER_AGENT }, signal: AbortSignal.timeout(8000), next: { revalidate: CACHE_MS / 1000 } },
   );
   if (!res.ok) throw new Error(`bonistas.com ficha ${simbolo}: HTTP ${res.status}`);
   const flujo = parsearFichaBono(await res.text());

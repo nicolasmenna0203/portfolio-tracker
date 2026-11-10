@@ -477,6 +477,7 @@ export async function enviarAlertaSemanal(destinatario: string, alerta: AlertaSe
       html,
       text: texto,
     }),
+    signal: AbortSignal.timeout(15_000),
   });
 
   if (!res.ok) {

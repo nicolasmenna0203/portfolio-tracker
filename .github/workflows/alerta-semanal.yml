@@ -23,7 +23,7 @@ jobs:
             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
             "${{ vars.DASHBOARD_URL }}/api/alertas/semanal")
           echo "HTTP $status"
-          cat /tmp/respuesta.json
+          cat /tmp/respuesta.json; echo
           if [ "$status" -ne 200 ]; then
             echo "La alerta semanal falló (HTTP $status)"
             exit 1

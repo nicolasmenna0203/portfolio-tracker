@@ -28,6 +28,10 @@ export interface DatosAccion {
 
 const cachePrecioAccion = new Map<string, { datos: DatosAccion; ts: number }>();
 const CACHE_MS = 60 * 60 * 1000; // 1 hora
+// Mismo TTL en el Data Cache de Next, que a diferencia del Map en memoria se
+// comparte entre instancias y sobrevive a un arranque en frío. Hace falta porque
+// las rutas que usan estos precios son POST, y ahí `revalidate` no cachea nada.
+const CACHE_S = CACHE_MS / 1000;
 
 /** Variación entre el último close y el close en o antes de `objetivoTs` (segundos epoch); null si no hay dato suficientemente viejo. */
 function variacionDesde(
@@ -57,7 +61,7 @@ async function fetchDatosAccion(ticker: string): Promise<DatosAccion | null> {
     // (las acciones con clase usan guión: BFB → BF-B). Sin esto el chart
     // devuelve 404 y la posición se cae del tab de renta variable.
     const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(aliasYahoo(ticker))}?range=1y&interval=1d&events=div`;
-    const res = await fetch(url, { headers: { 'User-Agent': UA }, signal: AbortSignal.timeout(8000) });
+    const res = await fetch(url, { headers: { 'User-Agent': UA }, signal: AbortSignal.timeout(8000), next: { revalidate: CACHE_S } });
     if (!res.ok) return null;
     const json = await res.json();
     const result = json?.chart?.result?.[0];
@@ -115,7 +119,7 @@ async function fetchTodosPreciosBonos(): Promise<Record<string, number>> {
   await Promise.all(
     endpoints.map(async (ep) => {
       try {
-        const res = await fetch(`https://data912.com/live/${ep}`, { headers: { 'User-Agent': UA }, signal: AbortSignal.timeout(8000) });
+        const res = await fetch(`https://data912.com/live/${ep}`, { headers: { 'User-Agent': UA }, signal: AbortSignal.timeout(8000), next: { revalidate: CACHE_S } });
         if (!res.ok) return;
         const rows: { symbol: string; px_bid: number; px_ask: number; c: number }[] = await res.json();
         for (const r of rows) {
@@ -193,6 +197,7 @@ export async function mepSpot(): Promise<number | null> {
   try {
     const res = await fetch('https://api.argentinadatos.com/v1/cotizaciones/dolares/bolsa', {
       signal: AbortSignal.timeout(8000),
+      next: { revalidate: CACHE_S },
     });
     if (!res.ok) return null;
     const json: { fecha: string; venta: number }[] = await res.json();

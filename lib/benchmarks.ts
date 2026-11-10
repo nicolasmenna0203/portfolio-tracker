@@ -10,6 +10,9 @@
 import { toMesKey } from './parser';
 import type { BenchmarkId, BenchmarkPoint, BenchmarkSeries } from '@/types';
 
+/** Un proveedor colgado no puede retener la ruta entera: cada serie falla sola (allSettled). */
+const TIMEOUT_MS = 10_000;
+
 interface RawMonthlyPrice {
   mesKey: string; // "YYYY-MM"
   valor: number;  // precio/índice crudo, aún no rebasado a 100
@@ -21,7 +24,7 @@ async function fetchYahooMensual(ticker: string, desdeTs: number): Promise<RawMo
   const period1 = Math.floor(desdeTs / 1000);
   const period2 = Math.floor(Date.now() / 1000);
   const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?period1=${period1}&period2=${period2}&interval=1mo`;
-  const res = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' } });
+  const res = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(TIMEOUT_MS) });
   if (!res.ok) throw new Error(`Yahoo Finance (${ticker}): HTTP ${res.status}`);
   const json = await res.json();
   const result = json?.chart?.result?.[0];
@@ -41,7 +44,7 @@ async function fetchYahooMensual(ticker: string, desdeTs: number): Promise<RawMo
 // ── Fuente 4: ArgentinaDatos — Dólar MEP ────────────────────────────────────────
 
 async function fetchMepMensual(desdeTs: number): Promise<RawMonthlyPrice[]> {
-  const res = await fetch('https://api.argentinadatos.com/v1/cotizaciones/dolares/bolsa');
+  const res = await fetch('https://api.argentinadatos.com/v1/cotizaciones/dolares/bolsa', { signal: AbortSignal.timeout(TIMEOUT_MS) });
   if (!res.ok) throw new Error(`ArgentinaDatos (MEP): HTTP ${res.status}`);
   const json: { fecha: string; venta: number }[] = await res.json();
 
@@ -76,7 +79,7 @@ export async function fetchMepAbsoluto(desdeTs: number): Promise<{ mesKey: strin
  */
 export async function fetchMepPorFecha(fechas: string[]): Promise<Record<string, number>> {
   if (fechas.length === 0) return {};
-  const res = await fetch('https://api.argentinadatos.com/v1/cotizaciones/dolares/bolsa');
+  const res = await fetch('https://api.argentinadatos.com/v1/cotizaciones/dolares/bolsa', { signal: AbortSignal.timeout(TIMEOUT_MS) });
   if (!res.ok) throw new Error(`ArgentinaDatos (MEP): HTTP ${res.status}`);
   const json: { fecha: string; venta: number }[] = await res.json();
 
@@ -101,7 +104,7 @@ export async function fetchMepPorFecha(fechas: string[]): Promise<Record<string,
 // ── Fuente 5: ArgentinaDatos — Inflación IPC INDEC ──────────────────────────────
 
 async function fetchInflacionMensual(desdeTs: number): Promise<RawMonthlyPrice[]> {
-  const res = await fetch('https://api.argentinadatos.com/v1/finanzas/indices/inflacion');
+  const res = await fetch('https://api.argentinadatos.com/v1/finanzas/indices/inflacion', { signal: AbortSignal.timeout(TIMEOUT_MS) });
   if (!res.ok) throw new Error(`ArgentinaDatos (Inflación): HTTP ${res.status}`);
   const json: { fecha: string; valor: number }[] = await res.json();
 

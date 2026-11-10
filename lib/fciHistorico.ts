@@ -51,7 +51,8 @@ async function fetchSnapshot(categoria: string, fecha: string): Promise<FilaFciH
   const [anio, mes, dia] = fecha.split('-').map(Number);
   const url = `${BASE_URL}/${categoria}/${anio}/${mes}/${dia}`;
   try {
-    const res = await fetch(url, { headers: { 'User-Agent': UA }, signal: AbortSignal.timeout(10_000) });
+    // Data Cache de Next: compartido entre instancias (la ruta /api/fci es POST y no cachea sola).
+    const res = await fetch(url, { headers: { 'User-Agent': UA }, signal: AbortSignal.timeout(10_000), next: { revalidate: CACHE_MS / 1000 } });
     if (!res.ok) return null; // 404: no hay snapshot para ese día
     const filas: FilaFciHistorico[] = await res.json();
     if (!Array.isArray(filas) || filas.length < FILAS_MINIMAS_SNAPSHOT_COMPLETO) return null;
