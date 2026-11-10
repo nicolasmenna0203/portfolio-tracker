@@ -95,4 +95,16 @@ describe('parseResumenBroker', () => {
     expect(() => parseResumenBroker('otro documento')).toThrow('POSICION AL CIERRE');
     expect(() => parseResumenBroker('POSICION AL CIERRE DEL 31-05-2030 nada')).toThrow('instrumentos');
   });
+
+  it('lee una fila partida en dos renglones (nombre largo: salto de línea tras el ticker)', () => {
+    // Bug real: con un espacio literal entre campos, estas filas se descartaban
+    // sin error y la posición faltaba en la carga.
+    const partidas = 'BONO PROVINCIAL DE NOMBRE MUY LARGO TASA VARIABLE 30/04/30 $ (CCC30)\n2.000,00 ARS 105,700 2.114,00 2.114,00 '
+      + 'ON EMPRESA TRES CON DESCRIPCION EXTENSA USD (DDD3O)\n10,00 USD\nMEP 1,00 10,00 15.000,00*';
+    const texto = resumen('').replace(POSICIONES, `${POSICIONES} ${partidas}`);
+    const p = parseResumenBroker(texto);
+    expect(p.rows.map((r) => r.ticker)).toEqual(['AAA', 'BBB2O', 'CCC30', 'DDD3O']);
+    expect(p.rows[2]).toEqual({ ticker: 'CCC30', tenenciaARS: 2114, tenenciaUSD: 2114 / 1500 });
+    expect(p.rows[3]).toEqual({ ticker: 'DDD3O', tenenciaARS: 15000, tenenciaUSD: 10 });
+  });
 });

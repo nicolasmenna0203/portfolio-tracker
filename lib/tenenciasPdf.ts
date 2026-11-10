@@ -102,12 +102,18 @@ export function parseResumenBroker(fullText: string): ParsedPDF {
   const rows: ParsedRow[] = [];
 
   // Regex: (TICKER) cantidad MONEDA precio totalMoneda totalARS
-  const rowRegex = /\(([A-Z0-9]+)\) ([\d.,]+) (ARS|USD MEP|USD CABLE) [\d.,]+ ([\d.,]+) ([\d.,]+)\*{0,2}/g;
+  //
+  // Entre campos va `\s+`, no un espacio: cuando el nombre del instrumento es
+  // largo la fila ocupa dos renglones y el texto extraído trae un salto de
+  // línea después del ticker. Con un espacio literal esas filas se descartaban
+  // sin error y la posición faltaba en la carga (se veía solo como diferencia
+  // contra el total del PDF en la vista previa).
+  const rowRegex = /\(([A-Z0-9]+)\)\s+([\d.,]+)\s+(ARS|USD\s+MEP|USD\s+CABLE)\s+[\d.,]+\s+([\d.,]+)\s+([\d.,]+)\*{0,2}/g;
 
   let rowMatch: RegExpExecArray | null;
   while ((rowMatch = rowRegex.exec(section)) !== null) {
     const ticker = rowMatch[1];
-    const moneda = rowMatch[3];
+    const moneda = rowMatch[3].replace(/\s+/g, ' ');
     const totalEnMoneda = parseArgNum(rowMatch[4]);
     const totalARS = parseArgNum(rowMatch[5]);
 
