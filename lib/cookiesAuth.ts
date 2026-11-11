@@ -2,9 +2,13 @@
  * Cookies de autenticación: nombres y opciones en un solo lugar, para que el
  * login con contraseña, el de passkey, el registro y el logout no difieran en
  * un flag. Ver docs/decisiones/0035-bloqueo-con-passkey-en-cada-apertura.md
+ * y docs/decisiones/0036-bloquear-al-salir-con-una-marca-del-cliente.md
  *
  * - `session`: 7 días; lleva la marca de bloqueo del dispositivo.
  * - `desbloqueo`: minutos; sin ella, una sesión con bloqueo no pasa el middleware.
+ * - `app_oculta`: la pone el cliente (no es httpOnly) cuando la app se va al
+ *   fondo; con ella, una sesión con bloqueo no pasa aunque el desbloqueo siga
+ *   vigente. Solo la borra un ingreso válido.
  * - `webauthn_reto`: el desafío de la ceremonia en curso, acotado a las rutas
  *   de passkey y borrado apenas se usa.
  *
@@ -21,6 +25,7 @@ import type { Esperado } from './webauthn';
 export const COOKIE_SESION = 'session';
 export const COOKIE_DESBLOQUEO = 'desbloqueo';
 export const COOKIE_RETO = 'webauthn_reto';
+export const COOKIE_OCULTA = 'app_oculta';
 
 const RUTA_PASSKEY = '/api/auth/passkey';
 
@@ -43,6 +48,12 @@ export async function emitirSesion(
 ): Promise<void> {
   res.cookies.set(COOKIE_SESION, await crearToken(user, secret, { bloqueo }), opciones(SESSION_MAX_AGE));
   res.cookies.set(COOKIE_DESBLOQUEO, await crearTokenDesbloqueo(user, secret), opciones(DESBLOQUEO_MAX_AGE));
+  borrarOculta(res);
+}
+
+/** La marca de "la app se fue al fondo" solo se levanta pasando por un ingreso. */
+function borrarOculta(res: NextResponse): void {
+  res.cookies.set(COOKIE_OCULTA, '', { ...opciones(0), httpOnly: false });
 }
 
 export async function renovarDesbloqueo(res: NextResponse, user: string, secret: string): Promise<void> {
@@ -56,6 +67,7 @@ export function borrarDesbloqueo(res: NextResponse): void {
 export function borrarSesion(res: NextResponse): void {
   res.cookies.set(COOKIE_SESION, '', opciones(0));
   borrarDesbloqueo(res);
+  borrarOculta(res);
 }
 
 export function guardarReto(res: NextResponse, token: string): void {

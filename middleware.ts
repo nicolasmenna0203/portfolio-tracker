@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { leerSesion, verificarDesbloqueo } from '@/lib/session';
-import { COOKIE_SESION, COOKIE_DESBLOQUEO } from '@/lib/cookiesAuth';
+import { COOKIE_SESION, COOKIE_DESBLOQUEO, COOKIE_OCULTA } from '@/lib/cookiesAuth';
 
 // Corre en el Edge runtime: sin node:crypto. Por eso la sesión se firma con
 // WebCrypto → docs/decisiones/0014-hmac-webcrypto-por-edge-runtime.md
@@ -69,12 +69,16 @@ export async function middleware(req: NextRequest) {
   // Dispositivo con bloqueo (entró o se registró con Face ID): además de la
   // sesión hace falta un desbloqueo vigente, que dura minutos y solo renueva el
   // latido del dashboard mientras está a la vista. Al volver a abrir la app ya
-  // venció, y se pide Face ID de nuevo.
-  // Ver docs/decisiones/0035-bloqueo-con-passkey-en-cada-apertura.md
+  // venció, y se pide Face ID de nuevo. Antes que eso, la marca `app_oculta`
+  // que pone el cliente al irse al fondo bloquea apenas se vuelve: el
+  // vencimiento queda como respaldo si la marca no se llegó a poner.
+  // Ver docs/decisiones/0035-bloqueo-con-passkey-en-cada-apertura.md y
+  // docs/decisiones/0036-bloquear-al-salir-con-una-marca-del-cliente.md
   if (sesion.bloqueo) {
     const desbloqueo = req.cookies.get(COOKIE_DESBLOQUEO)?.value;
     const desbloqueado = desbloqueo ? await verificarDesbloqueo(desbloqueo, secret!) : null;
-    if (desbloqueado !== sesion.sub) {
+    const oculta = req.cookies.has(COOKIE_OCULTA);
+    if (desbloqueado !== sesion.sub || oculta) {
       // Una API no redirige: el fetch seguiría la redirección y recibiría el
       // HTML del login con status 200, que el cliente no distingue de un dato.
       if (pathname.startsWith('/api/')) {

@@ -1,24 +1,48 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { COOKIE_OCULTA } from '@/lib/cookiesAuth';
 
 // Guardia del bloqueo con Face ID. Ver docs/decisiones/0035-bloqueo-con-passkey-en-cada-apertura.md
+// y docs/decisiones/0036-bloquear-al-salir-con-una-marca-del-cliente.md
 //
 // Quien bloquea de verdad es el middleware: sin un desbloqueo vigente, ni la
-// página ni las APIs responden. Este componente hace dos cosas que el servidor
-// no puede:
+// página ni las APIs responden. Este componente hace tres cosas que el
+// servidor no puede:
 //
-// 1. **Latido.** Mientras la app está a la vista renueva el desbloqueo cada
-//    30 s. Al irse al fondo (o con la pantalla apagada) el latido se corta y el
-//    desbloqueo vence solo; al volver, el primer latido recibe 401 y se va al
-//    login a pedir Face ID. Volver dentro del margen no pide nada.
-// 2. **Tapa.** Al ocultarse la app tapa el contenido, para que el selector de
+// 1. **Marca al salir.** Al irse la app al fondo pone la cookie `app_oculta`,
+//    sincrónicamente (document.cookie, sin red: iOS suspende la página enseguida).
+//    Con esa marca el middleware bloquea aunque el desbloqueo siga vigente, así
+//    que cerrar la app y volver a abrirla pide Face ID siempre. Si se vuelve
+//    antes de `TOLERANCIA_MS`, la misma página saca la marca: cambiar un
+//    momento de app no bloquea. Solo un ingreso válido la borra del lado del
+//    servidor.
+// 2. **Latido.** Mientras la app está a la vista renueva el desbloqueo cada
+//    30 s. Al irse al fondo el latido se corta y el desbloqueo vence solo: es
+//    el respaldo si la marca no se llegó a poner.
+// 3. **Tapa.** Al ocultarse la app tapa el contenido, para que el selector de
 //    apps de iOS no muestre montos en la captura, y la saca recién cuando el
 //    latido confirma que el desbloqueo sigue vigente.
 //
 // Se monta solo en el dashboard real (app/page.tsx), no en /demo.
 
 const LATIDO_MS = 30_000;
+
+/** Volver antes de esto no bloquea: el tiempo de mirar otra app y volver. */
+const TOLERANCIA_MS = 10_000;
+
+function ponerMarca() {
+  const seguro = location.protocol === 'https:' ? '; secure' : '';
+  document.cookie = `${COOKIE_OCULTA}=${Date.now()}; path=/; max-age=${60 * 60 * 24 * 7}; samesite=lax${seguro}`;
+}
+
+/** Saca la marca si la app volvió dentro de la tolerancia; si no, la deja. */
+function levantarMarcaSiFueUnMomento() {
+  const m = document.cookie.match(new RegExp(`(?:^|; )${COOKIE_OCULTA}=(\d+)`));
+  if (m && Date.now() - Number(m[1]) < TOLERANCIA_MS) {
+    document.cookie = `${COOKIE_OCULTA}=; path=/; max-age=0`;
+  }
+}
 
 export default function BloqueoFaceId() {
   const [bloqueo, setBloqueo] = useState(false);
@@ -51,9 +75,15 @@ export default function BloqueoFaceId() {
     };
 
     const alCambiarVisibilidad = () => {
+      // La marca va siempre, no solo con `conBloqueo`: hasta que responde el
+      // primer latido no se sabe si el dispositivo tiene bloqueo, y salir en ese
+      // momento no tiene que escaparse. En una sesión sin bloqueo el middleware
+      // la ignora.
       if (document.visibilityState === 'hidden') {
+        ponerMarca();
         if (conBloqueo) setTapado(true);
       } else {
+        levantarMarcaSiFueUnMomento();
         void latido();
       }
     };
