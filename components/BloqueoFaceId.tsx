@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { COOKIE_OCULTA } from '@/lib/cookiesAuth';
+import { recordarFaceId } from '@/lib/passkeyCliente';
 
 // Guardia del bloqueo con Face ID. Ver docs/decisiones/0035-bloqueo-con-passkey-en-cada-apertura.md
 // y docs/decisiones/0036-bloquear-al-salir-con-una-marca-del-cliente.md
@@ -67,6 +68,7 @@ export default function BloqueoFaceId() {
         if (!res.ok) return; // un error del servidor no es motivo para bloquear
         const data = (await res.json()) as { bloqueo?: boolean };
         conBloqueo = data.bloqueo === true;
+        if (conBloqueo) recordarFaceId();
         setBloqueo(conBloqueo);
         setTapado(false);
       } catch {

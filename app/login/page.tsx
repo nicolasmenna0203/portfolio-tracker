@@ -1,8 +1,31 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { hayFaceId, accederConPasskey, esCancelacion } from '@/lib/passkeyCliente';
+import {
+  hayFaceId, accederConPasskey, esCancelacion, usaFaceId, pedirOpcionesAcceso, type OpcionesAcceso,
+} from '@/lib/passkeyCliente';
 import './login.css';
+
+/**
+ * Resuelve cuando la página está a la vista y con foco. Al abrir la app desde
+ * la pantalla de inicio, la página carga antes de que iOS le dé el foco, y un
+ * Face ID pedido en ese momento falla y gasta el único intento sin toque que
+ * Safari concede por carga de página.
+ */
+function cuandoTengaFoco(): Promise<void> {
+  const listo = () => document.visibilityState === 'visible' && document.hasFocus();
+  if (listo()) return Promise.resolve();
+  return new Promise((resolve) => {
+    const revisar = () => {
+      if (!listo()) return;
+      window.removeEventListener('focus', revisar);
+      document.removeEventListener('visibilitychange', revisar);
+      resolve();
+    };
+    window.addEventListener('focus', revisar);
+    document.addEventListener('visibilitychange', revisar);
+  });
+}
 
 // El glifo de Face ID de iOS: cuatro esquinas, ojos, nariz y sonrisa.
 function IconFaceId({ size = 22 }: { size?: number }) {
@@ -26,13 +49,23 @@ export default function LoginPage() {
   const userRef = useRef<HTMLInputElement>(null);
 
   // Face ID: `faceId` dice si el dispositivo lo tiene; `bloqueado` si se llegó
-  // acá porque venció el desbloqueo (middleware.ts), y entonces Face ID es la
-  // vía principal y la contraseña queda detrás de un botón.
+  // acá porque venció el desbloqueo (middleware.ts). Si se viene de un bloqueo
+  // o el dispositivo ya usó Face ID, se pide solo al abrir y la contraseña
+  // queda detrás de un botón. Si Safari no lo deja abrir sin un toque, tocar
+  // en cualquier parte de la pantalla lo abre.
   // Ver docs/decisiones/0035-bloqueo-con-passkey-en-cada-apertura.md
   const [faceId, setFaceId] = useState(false);
   const [bloqueado, setBloqueado] = useState(false);
   const [conPassword, setConPassword] = useState(true);
   const [esperandoFaceId, setEsperandoFaceId] = useState(false);
+  const [tocarParaEscanear, setTocarParaEscanear] = useState(false);
+  const enCurso = useRef(false);
+  const opciones = useRef<OpcionesAcceso | null>(null);
+
+  const precargar = useCallback(() => {
+    opciones.current = null;
+    pedirOpcionesAcceso().then((o) => { opciones.current = o; }, () => {});
+  }, []);
 
   const entrar = useCallback(() => {
     // Navegación completa y no router.push: así el middleware ve las cookies
@@ -41,16 +74,23 @@ export default function LoginPage() {
   }, []);
 
   const ingresarConFaceId = useCallback(async () => {
+    if (enCurso.current) return;
+    enCurso.current = true;
     setError('');
     setEsperandoFaceId(true);
     try {
-      await accederConPasskey();
+      await accederConPasskey(opciones.current);
       entrar();
     } catch (err) {
       if (!esCancelacion(err)) setError(err instanceof Error ? err.message : 'No se pudo usar Face ID');
+      // Cancelado o frenado por falta de toque: desde ahora, un toque en
+      // cualquier parte vuelve a intentar.
+      setTocarParaEscanear(true);
       setEsperandoFaceId(false);
+      enCurso.current = false;
+      precargar(); // un POST fallido consume el reto
     }
-  }, [entrar]);
+  }, [entrar, precargar]);
 
   useEffect(() => {
     // Leído del window y no con useSearchParams, que obligaría a envolver la
@@ -61,18 +101,18 @@ export default function LoginPage() {
       const disponible = await hayFaceId();
       if (!vivo) return;
       setFaceId(disponible);
-      if (esBloqueo && disponible) {
-        setBloqueado(true);
+      if (disponible && (esBloqueo || usaFaceId())) {
+        setBloqueado(esBloqueo);
         setConPassword(false);
-        // Safari puede negarse a abrir Face ID sin un toque: si lo hace, queda
-        // el botón, que sí es un toque.
-        void ingresarConFaceId();
+        precargar();
+        await cuandoTengaFoco();
+        if (vivo) void ingresarConFaceId();
       } else {
         userRef.current?.focus();
       }
     })();
     return () => { vivo = false; };
-  }, [ingresarConFaceId]);
+  }, [ingresarConFaceId, precargar]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -105,7 +145,12 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="login-root">
+    <div
+      className="login-root"
+      // Sin formulario a la vista, toda la pantalla es el botón de Face ID: si
+      // Safari no lo abrió solo, cualquier toque lo abre.
+      onClick={!conPassword && faceId ? () => void ingresarConFaceId() : undefined}
+    >
       <div className="login-card">
         {/* El ícono de la app (app/icon.svg), como en el inicio de sesión de iOS. */}
         {/* eslint-disable-next-line @next/next/no-img-element -- SVG estático: next/image no lo optimiza */}
@@ -113,7 +158,9 @@ export default function LoginPage() {
 
         <h1 className="login-title">{bloqueado ? 'Portfolio bloqueado' : 'Portfolio'}</h1>
         <p className="login-subtitle">
-          {bloqueado ? 'Desbloqueá con Face ID para seguir.' : 'Ingresá para ver tu cartera.'}
+          {!conPassword && tocarParaEscanear
+            ? 'Tocá la pantalla para usar Face ID.'
+            : bloqueado ? 'Desbloqueá con Face ID para seguir.' : 'Ingresá para ver tu cartera.'}
         </p>
 
         {faceId && (
@@ -128,7 +175,11 @@ export default function LoginPage() {
         )}
 
         {faceId && !conPassword && (
-          <button type="button" className="login-link" onClick={() => setConPassword(true)}>
+          <button
+            type="button"
+            className="login-link"
+            onClick={(e) => { e.stopPropagation(); setConPassword(true); }}
+          >
             Usar contraseña
           </button>
         )}

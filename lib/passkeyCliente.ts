@@ -36,11 +36,50 @@ async function errorDe(res: Response, porDefecto: string): Promise<Error> {
   }
 }
 
-/** Ingreso o desbloqueo con passkey. Resuelve si el servidor abrió la sesión. */
-export async function accederConPasskey(): Promise<void> {
-  const opcionesRes = await fetch('/api/auth/passkey/acceso', { cache: 'no-store' });
-  if (!opcionesRes.ok) throw await errorDe(opcionesRes, 'No se pudo iniciar Face ID');
-  const { reto, rpId } = (await opcionesRes.json()) as { reto: string; rpId: string };
+// ── Recordar que este dispositivo usa Face ID ──────────────────────────────
+// Para intentar Face ID solo al abrir el login aunque no se venga de un
+// bloqueo (p. ej. venció la sesión de 7 días). Es una preferencia del
+// navegador, no seguridad: si se pierde, queda el botón.
+const CLAVE_RECORDAR = 'faceid_v1';
+
+export function recordarFaceId(): void {
+  try { localStorage.setItem(CLAVE_RECORDAR, '1'); } catch { /* sin storage: queda el botón */ }
+}
+
+export function usaFaceId(): boolean {
+  try { return localStorage.getItem(CLAVE_RECORDAR) === '1'; } catch { return false; }
+}
+
+// ── Ingreso ──────────────────────────────────────────────────────────────────
+
+export interface OpcionesAcceso {
+  reto: string;
+  rpId: string;
+  pedidas: number;
+}
+
+/** El reto firmado dura 2 minutos (RETO_MAX_AGE): pasado 1,5 se pide otro. */
+const VIGENCIA_OPCIONES_MS = 90_000;
+
+/**
+ * Pide el desafío por adelantado. Así, al tocar, `credentials.get` se llama sin
+ * esperar la red: Safari exige que Face ID salga de un toque, y una espera
+ * larga entre el toque y la llamada puede hacer que ya no cuente como tal.
+ */
+export async function pedirOpcionesAcceso(): Promise<OpcionesAcceso> {
+  const res = await fetch('/api/auth/passkey/acceso', { cache: 'no-store' });
+  if (!res.ok) throw await errorDe(res, 'No se pudo iniciar Face ID');
+  const { reto, rpId } = (await res.json()) as { reto: string; rpId: string };
+  return { reto, rpId, pedidas: Date.now() };
+}
+
+/**
+ * Ingreso o desbloqueo con passkey. Resuelve si el servidor abrió la sesión.
+ * Con `opciones` pedidas hace poco, no toca la red antes de abrir Face ID.
+ */
+export async function accederConPasskey(opciones?: OpcionesAcceso | null): Promise<void> {
+  const { reto, rpId } =
+    opciones && Date.now() - opciones.pedidas < VIGENCIA_OPCIONES_MS ? opciones : await pedirOpcionesAcceso();
 
   const cred = (await navigator.credentials.get({
     publicKey: {
@@ -64,6 +103,7 @@ export async function accederConPasskey(): Promise<void> {
     }),
   });
   if (!res.ok) throw await errorDe(res, 'Face ID no coincide con una passkey registrada');
+  recordarFaceId();
 }
 
 /** Alta de una passkey en este dispositivo. Requiere sesión abierta. */
@@ -117,4 +157,5 @@ export async function registrarPasskey(): Promise<void> {
     }),
   });
   if (!res.ok) throw await errorDe(res, 'No se pudo guardar la passkey');
+  recordarFaceId();
 }
