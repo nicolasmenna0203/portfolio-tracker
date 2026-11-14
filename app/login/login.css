@@ -259,3 +259,25 @@
   height: 0.5px;
   background-color: var(--material-borde);
 }
+
+/* Compu de confianza (ADR 0038): solo aparece en una compu, debajo del botón. */
+.login-recordar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 12px;
+  min-height: 44px;
+  color: var(--muted);
+  font-size: 13px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.login-recordar input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--primary);
+  cursor: pointer;
+}

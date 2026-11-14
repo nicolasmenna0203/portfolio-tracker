@@ -22,6 +22,23 @@ export async function hayFaceId(): Promise<boolean> {
   }
 }
 
+/**
+ * Es una compu: puntero fino como entrada principal, y no un iPad (que con
+ * Safari se presenta como Mac, pero tiene pantalla táctil). Decide si el login
+ * ofrece recordar el dispositivo 30 días sin bloqueo; es comodidad, no
+ * seguridad: igual hace falta la passkey para entrar.
+ * Ver docs/decisiones/0038-compu-de-confianza.md
+ */
+export function esCompu(): boolean {
+  try {
+    const punteroFino = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+    const esIpad = /Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1;
+    return punteroFino && !esIpad;
+  } catch {
+    return false;
+  }
+}
+
 /** El usuario cerró el diálogo o el sistema no dejó abrirlo sin un toque. */
 export function esCancelacion(err: unknown): boolean {
   return err instanceof DOMException && (err.name === 'NotAllowedError' || err.name === 'AbortError');
@@ -76,8 +93,12 @@ export async function pedirOpcionesAcceso(): Promise<OpcionesAcceso> {
 /**
  * Ingreso o desbloqueo con passkey. Resuelve si el servidor abrió la sesión.
  * Con `opciones` pedidas hace poco, no toca la red antes de abrir Face ID.
+ * Con `recordar`, la sesión es de una compu de confianza: 30 días, sin bloqueo.
  */
-export async function accederConPasskey(opciones?: OpcionesAcceso | null): Promise<void> {
+export async function accederConPasskey(
+  opciones?: OpcionesAcceso | null,
+  { recordar = false }: { recordar?: boolean } = {},
+): Promise<void> {
   const { reto, rpId } =
     opciones && Date.now() - opciones.pedidas < VIGENCIA_OPCIONES_MS ? opciones : await pedirOpcionesAcceso();
 
@@ -100,6 +121,7 @@ export async function accederConPasskey(opciones?: OpcionesAcceso | null): Promi
       clientDataJSON: enB64(r.clientDataJSON),
       authenticatorData: enB64(r.authenticatorData),
       signature: enB64(r.signature),
+      recordar,
     }),
   });
   if (!res.ok) throw await errorDe(res, 'Face ID no coincide con una passkey registrada');

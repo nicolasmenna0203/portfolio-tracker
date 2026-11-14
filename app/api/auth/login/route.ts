@@ -62,6 +62,6 @@ export async function POST(req: NextRequest) {
   after(() => avisarSeguridad('ingreso-con-contrasena', datos));
 
   const res = NextResponse.json({ ok: true });
-  await emitirSesion(res, validUser, secret, bloqueo);
+  await emitirSesion(res, validUser, secret, { bloqueo });
   return res;
 }

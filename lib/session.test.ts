@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import {
-  crearToken, verificarToken, leerSesion, SESSION_MAX_AGE,
+  crearToken, verificarToken, leerSesion, SESSION_MAX_AGE, SESSION_CONFIANZA_MAX_AGE,
   crearTokenDesbloqueo, verificarDesbloqueo, DESBLOQUEO_MAX_AGE,
   crearReto, verificarReto, contrasenaHabilitada,
 } from './session';
@@ -122,8 +122,25 @@ describe('tipos de token', () => {
   });
 
   it('la sesión lleva la marca de bloqueo firmada', async () => {
-    expect(await leerSesion(await crearToken('nm', SECRET, { bloqueo: true }), SECRET)).toEqual({ sub: 'nm', bloqueo: true });
-    expect(await leerSesion(await crearToken('nm', SECRET), SECRET)).toEqual({ sub: 'nm', bloqueo: false });
+    expect(await leerSesion(await crearToken('nm', SECRET, { bloqueo: true }), SECRET)).toEqual({ sub: 'nm', bloqueo: true, confianza: false });
+    expect(await leerSesion(await crearToken('nm', SECRET), SECRET)).toEqual({ sub: 'nm', bloqueo: false, confianza: false });
+  });
+
+  it('una sesión de confianza dura 30 días y no tiene bloqueo', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(Date.UTC(2026, 0, 1));
+    const token = await crearToken('nm', SECRET, { confianza: true });
+    expect(await leerSesion(token, SECRET)).toEqual({ sub: 'nm', bloqueo: false, confianza: true });
+
+    vi.setSystemTime(Date.UTC(2026, 0, 1) + SESSION_MAX_AGE * 1000 + 1000);
+    expect(await leerSesion(token, SECRET)).not.toBeNull(); // pasó la semana de una sesión común
+    vi.setSystemTime(Date.UTC(2026, 0, 1) + SESSION_CONFIANZA_MAX_AGE * 1000 + 1000);
+    expect(await leerSesion(token, SECRET)).toBeNull();
+  });
+
+  it('confianza y bloqueo se excluyen: si se piden los dos, gana el bloqueo', async () => {
+    const token = await crearToken('nm', SECRET, { bloqueo: true, confianza: true });
+    expect(await leerSesion(token, SECRET)).toEqual({ sub: 'nm', bloqueo: true, confianza: false });
   });
 
   it('con ignorarExpiracion lee una sesión vencida, pero no una con firma mala', async () => {
@@ -133,7 +150,7 @@ describe('tipos de token', () => {
     vi.setSystemTime(Date.UTC(2026, 0, 1) + SESSION_MAX_AGE * 1000 + 1000);
 
     expect(await leerSesion(token, SECRET)).toBeNull();
-    expect(await leerSesion(token, SECRET, { ignorarExpiracion: true })).toEqual({ sub: 'nm', bloqueo: true });
+    expect(await leerSesion(token, SECRET, { ignorarExpiracion: true })).toEqual({ sub: 'nm', bloqueo: true, confianza: false });
     expect(await leerSesion(token, 'otro-secreto', { ignorarExpiracion: true })).toBeNull();
   });
 

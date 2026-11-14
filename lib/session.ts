@@ -21,9 +21,12 @@
  * tipo, ese token alcanzaría para entrar.
  *
  * - `sesion`: 7 días. Con `bloqueo: true`, el dispositivo pide además un
- *   desbloqueo vigente (ver middleware.ts). Un token sin `tipo` (los de antes
- *   del ADR 0035) no vale como nada: aceptarlo dejaba abierta una puerta para
- *   cualquier otro payload firmado con este secreto.
+ *   desbloqueo vigente (ver middleware.ts). Con `confianza: true` (una compu
+ *   en la que se entró con passkey y se pidió recordarla) dura 30 días y no
+ *   tiene bloqueo: docs/decisiones/0038-compu-de-confianza.md.
+ *   Un token sin `tipo` (los de antes del ADR 0035) no vale como nada:
+ *   aceptarlo dejaba abierta una puerta para cualquier otro payload firmado
+ *   con este secreto.
  * - `desbloqueo`: pocos minutos; lo renueva el latido del dashboard mientras
  *   está a la vista (components/BloqueoFaceId.tsx).
  * - `reto`: el desafío de WebAuthn, para no guardarlo en el servidor.
@@ -37,6 +40,13 @@
  */
 
 export const SESSION_MAX_AGE = 60 * 60 * 24 * 7; // 7 días, en segundos
+
+/**
+ * Sesión de una compu de confianza: se abre solo con passkey y no pide
+ * desbloqueo. 30 días es arbitrario: un mes de no volver a pedirla, sin que una
+ * compu olvidada quede abierta para siempre. Ver docs/decisiones/0038-compu-de-confianza.md
+ */
+export const SESSION_CONFIANZA_MAX_AGE = 60 * 60 * 24 * 30;
 
 /**
  * Cuánto dura un desbloqueo sin latido. Es el margen para volver a la app sin
@@ -55,12 +65,14 @@ interface Payload {
   exp: number; // unix ts (segundos) de expiración
   tipo: Tipo;
   bloqueo?: boolean; // solo en sesiones
+  confianza?: boolean; // solo en sesiones; excluye a `bloqueo`
   reto?: string; // solo en retos: el desafío en base64url
 }
 
 export interface Sesion {
   sub: string;
   bloqueo: boolean;
+  confianza: boolean;
 }
 
 export function b64urlEncode(bytes: Uint8Array): string {
@@ -148,14 +160,24 @@ export function contrasenaHabilitada(): boolean {
 
 // ── Sesión ───────────────────────────────────────────────────────────────────
 
-/** Firma un token de sesión para `user`, válido por SESSION_MAX_AGE. */
+/**
+ * Firma un token de sesión para `user`, válido por SESSION_MAX_AGE, o por
+ * SESSION_CONFIANZA_MAX_AGE si es de una compu de confianza. Confianza y
+ * bloqueo se excluyen: si se piden los dos, gana el bloqueo, que es lo seguro.
+ */
 export async function crearToken(
   user: string,
   secret: string,
-  { bloqueo = false }: { bloqueo?: boolean } = {},
+  { bloqueo = false, confianza = false }: { bloqueo?: boolean; confianza?: boolean } = {},
 ): Promise<string> {
-  const payload: Payload = { sub: user, exp: ahora() + SESSION_MAX_AGE, tipo: 'sesion' };
+  const deConfianza = confianza && !bloqueo;
+  const payload: Payload = {
+    sub: user,
+    exp: ahora() + (deConfianza ? SESSION_CONFIANZA_MAX_AGE : SESSION_MAX_AGE),
+    tipo: 'sesion',
+  };
   if (bloqueo) payload.bloqueo = true;
+  if (deConfianza) payload.confianza = true;
   return firmar(payload, secret);
 }
 
@@ -171,7 +193,8 @@ export async function leerSesion(
 ): Promise<Sesion | null> {
   const p = await leer(token, secret, 'sesion', ignorarExpiracion);
   if (!p || typeof p.sub !== 'string' || !p.sub) return null;
-  return { sub: p.sub, bloqueo: p.bloqueo === true };
+  const bloqueo = p.bloqueo === true;
+  return { sub: p.sub, bloqueo, confianza: !bloqueo && p.confianza === true };
 }
 
 /** Verifica firma, tipo y expiración. Devuelve el usuario si es válido, o null. */

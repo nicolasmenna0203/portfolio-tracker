@@ -4,7 +4,9 @@
  * un flag. Ver docs/decisiones/0035-bloqueo-con-passkey-en-cada-apertura.md
  * y docs/decisiones/0036-bloquear-al-salir-con-una-marca-del-cliente.md
  *
- * - `session`: 7 días; lleva la marca de bloqueo del dispositivo.
+ * - `session`: 7 días; lleva la marca de bloqueo del dispositivo. La de una
+ *   compu de confianza dura 30 días y no tiene bloqueo (ver
+ *   docs/decisiones/0038-compu-de-confianza.md).
  * - `desbloqueo`: minutos; sin ella, una sesión con bloqueo no pasa el middleware.
  * - `app_oculta`: la pone el cliente (no es httpOnly) cuando la app se va al
  *   fondo; con ella, una sesión con bloqueo no pasa aunque el desbloqueo siga
@@ -17,7 +19,7 @@
 
 import type { NextRequest, NextResponse } from 'next/server';
 import {
-  SESSION_MAX_AGE, DESBLOQUEO_MAX_AGE, RETO_MAX_AGE,
+  SESSION_MAX_AGE, SESSION_CONFIANZA_MAX_AGE, DESBLOQUEO_MAX_AGE, RETO_MAX_AGE,
   crearToken, crearTokenDesbloqueo,
 } from './session';
 import type { Esperado } from './webauthn';
@@ -39,14 +41,22 @@ function opciones(maxAge: number, path = '/') {
   };
 }
 
-/** Abre sesión y deja el dispositivo desbloqueado: cualquier ingreso válido desbloquea. */
+/**
+ * Abre sesión y deja el dispositivo desbloqueado: cualquier ingreso válido
+ * desbloquea. `confianza` solo la pide el ingreso con passkey.
+ */
 export async function emitirSesion(
   res: NextResponse,
   user: string,
   secret: string,
-  bloqueo: boolean,
+  { bloqueo = false, confianza = false }: { bloqueo?: boolean; confianza?: boolean },
 ): Promise<void> {
-  res.cookies.set(COOKIE_SESION, await crearToken(user, secret, { bloqueo }), opciones(SESSION_MAX_AGE));
+  const deConfianza = confianza && !bloqueo;
+  res.cookies.set(
+    COOKIE_SESION,
+    await crearToken(user, secret, { bloqueo, confianza: deConfianza }),
+    opciones(deConfianza ? SESSION_CONFIANZA_MAX_AGE : SESSION_MAX_AGE),
+  );
   res.cookies.set(COOKIE_DESBLOQUEO, await crearTokenDesbloqueo(user, secret), opciones(DESBLOQUEO_MAX_AGE));
   borrarOculta(res);
 }

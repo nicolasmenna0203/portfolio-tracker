@@ -10,7 +10,9 @@ import { COOKIE_RETO, emitirSesion, guardarReto, borrarReto, origenDelPedido } f
 // GET  → desafío nuevo, firmado en una cookie (el servidor no guarda estado).
 // POST → verifica la firma contra la clave guardada en la hoja Passkeys y abre
 //        una sesión con bloqueo: quien entra con Face ID lo va a necesitar
-//        también para volver a abrir la app en ese dispositivo.
+//        también para volver a abrir la app en ese dispositivo. Con
+//        `recordar: true` (lo ofrece el login en una compu) la sesión es de
+//        confianza: 30 días y sin bloqueo. Ver docs/decisiones/0038-compu-de-confianza.md
 //
 // Sin `allowCredentials`: las passkeys se registran como credenciales
 // descubribles, así que el sistema ofrece las que tiene para este dominio sin
@@ -47,9 +49,9 @@ export async function POST(req: NextRequest) {
   const reto = tokenReto ? await verificarReto(tokenReto, secret) : null;
   if (!reto) return rechazo();
 
-  let body: RespuestaAcceso;
+  let body: RespuestaAcceso & { recordar?: unknown };
   try {
-    body = (await req.json()) as RespuestaAcceso;
+    body = (await req.json()) as RespuestaAcceso & { recordar?: unknown };
   } catch {
     return rechazo();
   }
@@ -79,7 +81,8 @@ export async function POST(req: NextRequest) {
   }
 
   const res = NextResponse.json({ ok: true });
-  await emitirSesion(res, user, secret, true);
+  const confianza = body.recordar === true;
+  await emitirSesion(res, user, secret, { bloqueo: !confianza, confianza });
   borrarReto(res);
   return res;
 }

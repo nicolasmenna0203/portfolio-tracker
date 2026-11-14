@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import {
-  hayFaceId, accederConPasskey, esCancelacion, usaFaceId, pedirOpcionesAcceso, type OpcionesAcceso,
+  hayFaceId, accederConPasskey, esCancelacion, usaFaceId, pedirOpcionesAcceso, esCompu, type OpcionesAcceso,
 } from '@/lib/passkeyCliente';
 import './login.css';
 
@@ -68,6 +68,15 @@ export default function LoginCliente({ conContrasena }: { conContrasena: boolean
   const enCurso = useRef(false);
   const opciones = useRef<OpcionesAcceso | null>(null);
 
+  // Compu de confianza: en una compu se ofrece recordarla 30 días sin bloqueo,
+  // marcado de entrada. Va en una ref además del estado para que tildarlo no
+  // rehaga `ingresarConFaceId` y, con él, el efecto que abre Face ID solo.
+  // Ver docs/decisiones/0038-compu-de-confianza.md
+  const [compu, setCompu] = useState(false);
+  const [recordar, setRecordar] = useState(true);
+  const recordarRef = useRef(true);
+  const cambiarRecordar = (v: boolean) => { recordarRef.current = v; setRecordar(v); };
+
   const precargar = useCallback(() => {
     opciones.current = null;
     pedirOpcionesAcceso().then((o) => { opciones.current = o; }, () => {});
@@ -85,7 +94,7 @@ export default function LoginCliente({ conContrasena }: { conContrasena: boolean
     setError('');
     setEsperandoFaceId(true);
     try {
-      await accederConPasskey(opciones.current);
+      await accederConPasskey(opciones.current, { recordar: esCompu() && recordarRef.current });
       entrar();
     } catch (err) {
       if (!esCancelacion(err)) setError(err instanceof Error ? err.message : 'No se pudo usar Face ID');
@@ -103,6 +112,7 @@ export default function LoginCliente({ conContrasena }: { conContrasena: boolean
     // página en un Suspense solo por este flag.
     const esBloqueo = new URLSearchParams(window.location.search).get('bloqueado') === '1';
     let vivo = true;
+    setCompu(esCompu());
     (async () => {
       const disponible = await hayFaceId();
       if (!vivo) return;
@@ -185,6 +195,15 @@ export default function LoginCliente({ conContrasena }: { conContrasena: boolean
                 ? <><IconFaceId /> {bloqueado ? 'Desbloquear con Face ID' : 'Ingresar con Face ID'}</>
                 : 'Ingresar con passkey'}
           </button>
+        )}
+
+        {compu && (
+          // El toque en la casilla no tiene que llegar al contenedor, que
+          // sin formulario abre Face ID con cualquier toque.
+          <label className="login-recordar" onClick={(e) => e.stopPropagation()}>
+            <input type="checkbox" checked={recordar} onChange={(e) => cambiarRecordar(e.target.checked)} />
+            Recordar esta compu por 30 días
+          </label>
         )}
 
         {conContrasena && faceId && !conPassword && (

@@ -62,6 +62,16 @@ describe('sesión', () => {
     expect(pasa(await middleware(pedido('/', cookies)))).toBe(true);
   });
 
+  it('en producción, una compu de confianza pasa sin desbloqueo y aunque la pestaña se haya ocultado', async () => {
+    vi.stubEnv('NODE_ENV', 'production');
+    const cookies = {
+      [COOKIE_SESION]: await crearToken('nm', SECRET, { confianza: true }),
+      [COOKIE_OCULTA]: '1',
+    };
+    expect(pasa(await middleware(pedido('/', cookies)))).toBe(true);
+    expect(pasa(await middleware(pedido('/api/fx', cookies)))).toBe(true);
+  });
+
   it('sin desbloqueo, o con la marca de app oculta, bloquea; las APIs responden 401', async () => {
     vi.stubEnv('NODE_ENV', 'production');
     const session = await crearToken('nm', SECRET, { bloqueo: true });

@@ -97,7 +97,7 @@ export async function POST(req: NextRequest) {
   after(() => avisarSeguridad('passkey-registrada', datos));
 
   const res = NextResponse.json({ ok: true });
-  await emitirSesion(res, sesion.sub, secret, true);
+  await emitirSesion(res, sesion.sub, secret, { bloqueo: true });
   borrarReto(res);
   return res;
 }

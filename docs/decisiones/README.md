@@ -75,6 +75,7 @@ viejo pasa a "Reemplazadas". Ver [PLANTILLA.md](PLANTILLA.md) para el flujo comp
 | [0035](0035-bloqueo-con-passkey-en-cada-apertura.md) | Bloquear la app con una passkey en cada apertura, con un desbloqueo corto que renueva un latido | `lib/webauthn.ts`, `lib/session.ts`, `middleware.ts`, `components/BloqueoFaceId.tsx` |
 | [0036](0036-bloquear-al-salir-con-una-marca-del-cliente.md) | Bloquear al salir de la app con una marca que pone el cliente, sobre el vencimiento del servidor | `components/BloqueoFaceId.tsx`, `middleware.ts`, `lib/cookiesAuth.ts` |
 | [0037](0037-ingreso-solo-con-passkey.md) | En producción se entra solo con passkey; la contraseña queda como recuperación que se prende a mano | `lib/session.ts`, `middleware.ts`, `app/api/auth/login/route.ts`, `lib/avisoSeguridad.ts`, `next.config.ts` |
+| [0038](0038-compu-de-confianza.md) | Una compu en la que se entró con passkey puede quedar recordada 30 días, sin bloqueo | `lib/session.ts`, `middleware.ts`, `app/api/auth/passkey/acceso/route.ts`, `app/login/LoginCliente.tsx` |
 
 ## Reemplazadas
 

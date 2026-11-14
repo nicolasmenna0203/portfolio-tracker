@@ -60,7 +60,8 @@ de login y la página de login). Apagada:
   para usar la passkey del celular. Por eso el ingreso no pone
   `allowCredentials` ni restringe el tipo de autenticador.
 - **El middleware rechaza toda sesión sin bloqueo.** Con la contraseña apagada,
-  toda sesión válida viene de una passkey; una sin bloqueo es de antes del
+  toda sesión válida viene de una passkey (con bloqueo, o de una compu de
+  confianza según el [0038](0038-compu-de-confianza.md)); una sin ninguna de las dos marcas es de antes del
   cambio o de cuando la contraseña estuvo prendida, y deja de valer apenas se
   apaga la variable.
 
@@ -95,7 +96,9 @@ ingreso con passkey: pasa en cada apertura de la app.
   sincronizan entre los dispositivos Apple, así que perder uno no alcanza.
 - **Límite — en la compu también rige el bloqueo.** Entrar con passkey abre
   una sesión con bloqueo: al volver a la pestaña después de la tolerancia
-  del 0036 se pide la passkey de nuevo (Windows Hello o el QR).
+  del 0036 se pide la passkey de nuevo (Windows Hello o el QR). *Modificado
+  por el [0038](0038-compu-de-confianza.md): una compu puede quedar recordada
+  30 días sin bloqueo, siempre entrando con passkey.*
 - **Límite — los avisos dependen de Resend.** Con el remitente sandbox solo
   llegan al mail de la cuenta de Resend. Si `RESEND_API_KEY` o
   `ALERTA_EMAIL` faltan, el ingreso funciona igual y el aviso queda en el log.

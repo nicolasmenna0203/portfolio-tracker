@@ -71,10 +71,11 @@ export async function middleware(req: NextRequest) {
   loginUrl.search = '';
 
   // Con la contraseña apagada (producción, ADR 0037) toda sesión válida viene
-  // de una passkey y lleva bloqueo. Una sin bloqueo es de antes del cambio o de
-  // cuando la contraseña estaba prendida para recuperar el acceso: no vale.
+  // de una passkey: lleva bloqueo, o es de una compu de confianza (ADR 0038).
+  // Una sin ninguna de las dos marcas es de antes del cambio o de cuando la
+  // contraseña estaba prendida para recuperar el acceso: no vale.
   // Ver docs/decisiones/0037-ingreso-solo-con-passkey.md
-  if (!sesion || (!sesion.bloqueo && !contrasenaHabilitada())) {
+  if (!sesion || (!sesion.bloqueo && !sesion.confianza && !contrasenaHabilitada())) {
     return NextResponse.redirect(loginUrl);
   }
 

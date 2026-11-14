@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
   const sesion = secret && token ? await leerSesion(token, secret) : null;
   if (!secret || !sesion) return NextResponse.json({ error: 'Sin sesión' }, { status: 401 });
 
-  const res = NextResponse.json({ bloqueo: sesion.bloqueo });
+  const res = NextResponse.json({ bloqueo: sesion.bloqueo, confianza: sesion.confianza });
   res.headers.set('Cache-Control', 'no-store');
   if (sesion.bloqueo) await renovarDesbloqueo(res, sesion.sub, secret);
   return res;

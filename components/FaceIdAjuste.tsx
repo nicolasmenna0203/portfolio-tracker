@@ -10,7 +10,9 @@ import { hayFaceId, registrarPasskey, esCancelacion } from '@/lib/passkeyCliente
 // No se muestra donde no hay autenticador del dispositivo, ni en /demo (el
 // panel que lo contiene decide eso).
 
-type Estado = 'cargando' | 'no-disponible' | 'inactivo' | 'registrando' | 'activo';
+// `confianza`: compu recordada 30 días sin bloqueo (docs/decisiones/0038-compu-de-confianza.md).
+// Activar Face ID ahí la pasa a pedirlo en cada apertura.
+type Estado = 'cargando' | 'no-disponible' | 'inactivo' | 'confianza' | 'registrando' | 'activo';
 
 export default function FaceIdAjuste() {
   const [estado, setEstado] = useState<Estado>('cargando');
@@ -25,8 +27,8 @@ export default function FaceIdAjuste() {
       }
       try {
         const res = await fetch('/api/auth/sesion', { cache: 'no-store' });
-        const data = res.ok ? ((await res.json()) as { bloqueo?: boolean }) : {};
-        if (vivo) setEstado(data.bloqueo ? 'activo' : 'inactivo');
+        const data = res.ok ? ((await res.json()) as { bloqueo?: boolean; confianza?: boolean }) : {};
+        if (vivo) setEstado(data.bloqueo ? 'activo' : data.confianza ? 'confianza' : 'inactivo');
       } catch {
         if (vivo) setEstado('inactivo');
       }
@@ -37,6 +39,7 @@ export default function FaceIdAjuste() {
   if (estado === 'cargando' || estado === 'no-disponible') return null;
 
   async function activar() {
+    const antes = estado;
     setError('');
     setEstado('registrando');
     try {
@@ -44,7 +47,7 @@ export default function FaceIdAjuste() {
       setEstado('activo');
       window.dispatchEvent(new Event('faceid-activado'));
     } catch (err) {
-      setEstado('inactivo');
+      setEstado(antes);
       if (err instanceof DOMException && err.name === 'InvalidStateError') {
         setError('Este dispositivo ya tiene una passkey registrada. Entrá con Face ID desde el inicio de sesión para activar el bloqueo.');
       } else if (!esCancelacion(err)) {
@@ -69,7 +72,9 @@ export default function FaceIdAjuste() {
         <p style={{ fontSize: 11, color: 'var(--muted)', margin: '4px 0 0' }}>
           {estado === 'activo'
             ? 'Activo en este dispositivo: la app pide Face ID cada vez que se abre, o al volver después de un par de minutos.'
-            : 'Pide Face ID (o Touch ID) cada vez que abrís la app en este dispositivo.'}
+            : estado === 'confianza'
+              ? 'Esta compu está recordada: no pide la passkey por 30 días desde que entraste. Activarlo la pasa a pedir Face ID (o Windows Hello) cada vez que se abre.'
+              : 'Pide Face ID (o Touch ID) cada vez que abrís la app en este dispositivo.'}
         </p>
       </div>
 
