@@ -10,7 +10,8 @@
 // solo sirve para verificar firmas. La clave privada nunca sale del
 // dispositivo (o del llavero de iCloud). Lo que sí importa es que nadie pueda
 // agregar una fila sin estar autenticado: la única ruta que escribe acá exige
-// sesión (app/api/auth/passkey/registro).
+// sesión (app/api/auth/passkey/registro), y cada alta manda un aviso por mail
+// (lib/avisoSeguridad.ts).
 //
 // ── Layout de la hoja ───────────────────────────────────────────────────────
 //
@@ -53,16 +54,6 @@ export function normalizarPasskey(fila: unknown[]): Passkey | null {
     dispositivo: String(fila[2] ?? '').trim(),
     creada: String(fila[3] ?? '').trim(),
   };
-}
-
-/** Nombre del dispositivo para la columna DISPOSITIVO, sacado del user agent. */
-export function nombreDispositivo(userAgent: string): string {
-  if (/iPhone/.test(userAgent)) return 'iPhone';
-  if (/iPad/.test(userAgent)) return 'iPad';
-  if (/Macintosh/.test(userAgent)) return 'Mac';
-  if (/Android/.test(userAgent)) return 'Android';
-  if (/Windows/.test(userAgent)) return 'Windows';
-  return 'Otro';
 }
 
 function spreadsheetId(): string {

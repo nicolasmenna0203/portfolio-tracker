@@ -43,6 +43,13 @@ const SECURITY_HEADERS = [
   // Vercel ya manda HSTS en sus dominios; explícito acá para que valga igual
   // en un dominio propio. Sin `preload`: eso es un compromiso difícil de revertir.
   { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains' },
+  // Que ningún buscador liste el sitio (también en el `metadata` de app/layout.tsx).
+  // A propósito NO hay un robots.txt con `Disallow: /`: un buscador que no
+  // puede rastrear una página no ve su `noindex`, y si encuentra el link en
+  // otro lado igual puede listar la URL pelada. Rastreando, lo único que
+  // alcanza a ver es el login, que dice `noindex`.
+  // Ver docs/decisiones/0037-ingreso-solo-con-passkey.md
+  { key: 'X-Robots-Tag', value: 'noindex, nofollow, noarchive, nosnippet, noimageindex' },
 ];
 
 const nextConfig: NextConfig = {

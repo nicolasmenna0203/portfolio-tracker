@@ -69,7 +69,7 @@ export default function FaceIdAjuste() {
         <p style={{ fontSize: 11, color: 'var(--muted)', margin: '4px 0 0' }}>
           {estado === 'activo'
             ? 'Activo en este dispositivo: la app pide Face ID cada vez que se abre, o al volver después de un par de minutos.'
-            : 'Pide Face ID (o Touch ID) cada vez que abrís la app en este dispositivo. La contraseña sigue sirviendo como alternativa.'}
+            : 'Pide Face ID (o Touch ID) cada vez que abrís la app en este dispositivo.'}
         </p>
       </div>
 

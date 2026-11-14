@@ -197,20 +197,29 @@ export async function verificarRegistro(
   return { ok: true, valor: { id: b64urlEncode(id), clavePublica: b64urlEncode(spki) } };
 }
 
+interface AccesoLegible {
+  clientData: Uint8Array<ArrayBuffer>;
+  authData: Uint8Array<ArrayBuffer>;
+  firma: Uint8Array<ArrayBuffer>;
+}
+
 /**
- * Verifica un ingreso con passkey contra la clave pública guardada para ese id.
- * La firma cubre `authenticatorData || SHA-256(clientDataJSON)`.
+ * Todo lo que se puede chequear de un ingreso sin la clave pública: forma,
+ * desafío, origen, rpId, flags y la firma bien formada. El endpoint público lo
+ * corre antes de leer la hoja Passkeys, para que un pedido basura (alcanza con
+ * pedir un reto, que es público) no consuma la cuota de Google Sheets que usa
+ * el dashboard. Ver docs/decisiones/0037-ingreso-solo-con-passkey.md
  */
-export async function verificarAcceso(
+export async function preverificarAcceso(
   r: RespuestaAcceso,
-  clavePublica: string,
   esperado: Esperado,
-): Promise<Resultado<null>> {
+): Promise<Resultado<AccesoLegible>> {
   const clientData = decodificar(r?.clientDataJSON);
   const authData = decodificar(r?.authenticatorData);
   const firmaDer = decodificar(r?.signature);
-  const spki = decodificar(clavePublica);
-  if (!clientData || !authData || !firmaDer || !spki) return falla('respuesta incompleta');
+  if (typeof r?.id !== 'string' || !r.id || !clientData || !authData || !firmaDer) {
+    return falla('respuesta incompleta');
+  }
 
   const errCd = verificarClientData(clientData, 'webauthn.get', esperado);
   if (errCd) return falla(errCd);
@@ -220,6 +229,25 @@ export async function verificarAcceso(
 
   const firma = derARaw(firmaDer);
   if (!firma) return falla('firma malformada');
+
+  return { ok: true, valor: { clientData, authData, firma } };
+}
+
+/**
+ * Verifica un ingreso con passkey contra la clave pública guardada para ese id.
+ * La firma cubre `authenticatorData || SHA-256(clientDataJSON)`.
+ */
+export async function verificarAcceso(
+  r: RespuestaAcceso,
+  clavePublica: string,
+  esperado: Esperado,
+): Promise<Resultado<null>> {
+  const spki = decodificar(clavePublica);
+  if (!spki) return falla('respuesta incompleta');
+
+  const pre = await preverificarAcceso(r, esperado);
+  if (!pre.ok) return pre;
+  const { clientData, authData, firma } = pre.valor;
 
   const hashCd = await sha256(clientData);
   const firmado = new Uint8Array(new ArrayBuffer(authData.length + hashCd.length));

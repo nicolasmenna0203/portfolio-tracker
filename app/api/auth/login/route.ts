@@ -1,9 +1,22 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { leerSesion } from '@/lib/session';
+import { NextRequest, NextResponse, after } from 'next/server';
+import { leerSesion, contrasenaHabilitada } from '@/lib/session';
 import { COOKIE_SESION, emitirSesion } from '@/lib/cookiesAuth';
 import { equalsSeguro } from '@/lib/timingSafe';
+import { avisarSeguridad, datosDelPedido } from '@/lib/avisoSeguridad';
 
+// Ingreso con contraseña. En producción está apagado: se entra solo con
+// passkey, y `PERMITIR_CONTRASENA=true` en Vercel lo prende para recuperar el
+// acceso. Apagado, responde lo mismo para cualquier credencial, sin compararla:
+// no sirve ni para probar contraseñas. Prendido, cada ingreso manda un aviso
+// por mail. Ver docs/decisiones/0037-ingreso-solo-con-passkey.md
 export async function POST(req: NextRequest) {
+  if (!contrasenaHabilitada()) {
+    return NextResponse.json(
+      { error: 'El ingreso con contraseña está desactivado. Entrá con Face ID o con una passkey.' },
+      { status: 403 },
+    );
+  }
+
   // Body malformado no debe tirar un 500 con stack: es un 400 común y corriente.
   let body: unknown;
   try {
@@ -44,6 +57,9 @@ export async function POST(req: NextRequest) {
   const bloqueo = anterior
     ? (await leerSesion(anterior, secret, { ignorarExpiracion: true }))?.bloqueo === true
     : false;
+
+  const datos = datosDelPedido(req);
+  after(() => avisarSeguridad('ingreso-con-contrasena', datos));
 
   const res = NextResponse.json({ ok: true });
   await emitirSesion(res, validUser, secret, bloqueo);

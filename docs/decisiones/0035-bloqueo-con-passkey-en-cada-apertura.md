@@ -66,12 +66,15 @@ apps de iOS.
 
 **Los tres tokens llevan `tipo` firmado** (`sesion`, `desbloqueo`, `reto`). Es
 obligatorio: el endpoint público de passkey firma un reto para cualquiera, y
-sin el tipo ese token valdría como sesión. Los tokens viejos sin `tipo` se leen
-como sesión sin bloqueo, para no cerrar las sesiones abiertas.
+sin el tipo ese token valdría como sesión. Al principio los tokens viejos sin
+`tipo` se leían como sesión sin bloqueo; desde el
+[0037](0037-ingreso-solo-con-passkey.md) no valen.
 
 **La contraseña sigue sirviendo** en la pantalla de bloqueo, y no apaga el
 bloqueo: el login con contraseña lee la sesión anterior (aunque haya vencido,
-con firma válida) y conserva la marca.
+con firma válida) y conserva la marca. *Modificado por el
+[0037](0037-ingreso-solo-con-passkey.md): en producción la contraseña está
+apagada y solo se prende a mano para recuperar el acceso.*
 
 ## Consecuencias y límites
 
@@ -79,7 +82,8 @@ con firma válida) y conserva la marca.
   Face ID. Bajar `DESBLOQUEO_MAX_AGE` lo achica, pero el latido tiene que
   seguir siendo bastante más corto que el desbloqueo.
 - **Límite — cerrar sesión apaga el bloqueo del dispositivo** hasta el próximo
-  ingreso con Face ID: la marca vive en la cookie de sesión.
+  ingreso con Face ID: la marca vive en la cookie de sesión. Con la contraseña
+  apagada (0037) no aplica: el próximo ingreso es con passkey sí o sí.
 - **Límite — Safari puede no abrir Face ID sin un toque** al cargar la
   pantalla de bloqueo. Queda el botón.
 - **Límite — sin contador de firmas ni attestation.** Las passkeys de iCloud

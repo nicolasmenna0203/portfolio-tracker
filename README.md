@@ -86,11 +86,12 @@ cp .env.example .env
 |---|---|
 | `SPREADSHEET_ID` | ID del Google Sheet (está en la URL de Sheets) |
 | `GOOGLE_SERVICE_ACCOUNT_JSON` | JSON completo de la Service Account, en una línea |
-| `BASIC_AUTH_USER` / `BASIC_AUTH_PASS` | credenciales de login |
+| `BASIC_AUTH_USER` / `BASIC_AUTH_PASS` | credenciales de login (en producción solo sirven con `PERMITIR_CONTRASENA`) |
+| `PERMITIR_CONTRASENA` | `true` prende el ingreso con contraseña en producción, para recuperar el acceso; sin ella se entra solo con passkey (ADR 0037) |
 | `SESSION_SECRET` | string aleatorio para firmar la cookie de sesión |
 | `CRON_SECRET` | secreto del cron que dispara la alerta semanal |
 | `RESEND_API_KEY` | envío del mail de alerta |
-| `ALERTA_EMAIL` | destinatario del mail de alerta |
+| `ALERTA_EMAIL` | destinatario del mail de alerta y de los avisos de seguridad (passkey nueva, ingreso con contraseña) |
 
 ### 3. Compartir el Sheet con la Service Account
 

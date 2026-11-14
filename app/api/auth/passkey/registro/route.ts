@@ -1,7 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse, after } from 'next/server';
 import { crearReto, verificarReto, leerSesion, b64urlEncode } from '@/lib/session';
 import { verificarRegistro, ALG_ES256, type RespuestaRegistro } from '@/lib/webauthn';
-import { leerPasskeys, agregarPasskey, nombreDispositivo } from '@/lib/passkeys';
+import { leerPasskeys, agregarPasskey } from '@/lib/passkeys';
+import { avisarSeguridad, datosDelPedido } from '@/lib/avisoSeguridad';
 import {
   COOKIE_SESION, COOKIE_RETO, emitirSesion, guardarReto, borrarReto, origenDelPedido,
 } from '@/lib/cookiesAuth';
@@ -10,6 +11,10 @@ import {
 // públicas del middleware): la clave pública que manda el navegador se acepta
 // sin attestation porque quien la manda ya está autenticado.
 // Ver docs/decisiones/0035-bloqueo-con-passkey-en-cada-apertura.md
+//
+// Cada alta manda un aviso por mail: una passkey ajena sería un acceso que
+// sobrevive a cambiar la contraseña y rotar SESSION_SECRET, así que no puede
+// aparecer en silencio. Ver docs/decisiones/0037-ingreso-solo-con-passkey.md
 //
 // GET  → opciones para `navigator.credentials.create`.
 // POST → verifica, agrega la fila a la hoja Passkeys y reemite la sesión con
@@ -76,17 +81,20 @@ export async function POST(req: NextRequest) {
     return res;
   }
 
+  const datos = datosDelPedido(req);
   try {
     await agregarPasskey({
       id: resultado.valor.id,
       clavePublica: resultado.valor.clavePublica,
-      dispositivo: nombreDispositivo(req.headers.get('user-agent') ?? ''),
-      creada: new Date().toISOString().slice(0, 10),
+      dispositivo: datos.dispositivo,
+      creada: datos.cuando.toISOString().slice(0, 10),
     });
   } catch (err) {
     console.error('[passkey/registro] no se pudo escribir la hoja Passkeys:', err);
     return NextResponse.json({ error: 'No se pudo guardar la passkey en el Sheet' }, { status: 502 });
   }
+
+  after(() => avisarSeguridad('passkey-registrada', datos));
 
   const res = NextResponse.json({ ok: true });
   await emitirSesion(res, sesion.sub, secret, true);

@@ -21,14 +21,19 @@
  * tipo, ese token alcanzaría para entrar.
  *
  * - `sesion`: 7 días. Con `bloqueo: true`, el dispositivo pide además un
- *   desbloqueo vigente (ver middleware.ts). Los tokens anteriores a este campo
- *   no tienen `tipo` y se leen como sesión sin bloqueo.
+ *   desbloqueo vigente (ver middleware.ts). Un token sin `tipo` (los de antes
+ *   del ADR 0035) no vale como nada: aceptarlo dejaba abierta una puerta para
+ *   cualquier otro payload firmado con este secreto.
  * - `desbloqueo`: pocos minutos; lo renueva el latido del dashboard mientras
  *   está a la vista (components/BloqueoFaceId.tsx).
  * - `reto`: el desafío de WebAuthn, para no guardarlo en el servidor.
  *
  * Usa WebCrypto (no `node:crypto`) porque este módulo lo importa también el
  * middleware, que corre en el Edge runtime.
+ *
+ * También vive acá `contrasenaHabilitada()`: el middleware y el login tienen
+ * que estar de acuerdo en si la contraseña abre sesión, y los dos importan este
+ * módulo. Ver docs/decisiones/0037-ingreso-solo-con-passkey.md
  */
 
 export const SESSION_MAX_AGE = 60 * 60 * 24 * 7; // 7 días, en segundos
@@ -48,7 +53,7 @@ type Tipo = 'sesion' | 'desbloqueo' | 'reto';
 interface Payload {
   sub: string; // usuario autenticado ('' en un reto)
   exp: number; // unix ts (segundos) de expiración
-  tipo?: Tipo; // ausente en los tokens de sesión anteriores al bloqueo
+  tipo: Tipo;
   bloqueo?: boolean; // solo en sesiones
   reto?: string; // solo en retos: el desafío en base64url
 }
@@ -118,13 +123,27 @@ async function leer(
     if (!sigOk) return null;
 
     const payload = JSON.parse(new TextDecoder().decode(b64urlDecode(payloadB64))) as Payload;
-    if ((payload.tipo ?? 'sesion') !== tipo) return null;
+    if (payload.tipo !== tipo) return null;
     if (typeof payload.exp !== 'number') return null;
     if (!ignorarExpiracion && payload.exp < ahora()) return null;
     return payload;
   } catch {
     return null;
   }
+}
+
+// ── Política de ingreso ──────────────────────────────────────────────────────
+
+/**
+ * Si la contraseña abre sesión. En producción no, salvo `PERMITIR_CONTRASENA=true`:
+ * ahí se entra solo con passkey, y la variable es la vía de recuperación si se
+ * pierden todos los dispositivos (prenderla exige entrar a Vercel y redeployar).
+ * Fuera de producción sí: las passkeys están atadas al dominio y una de
+ * producción no sirve en localhost.
+ * Ver docs/decisiones/0037-ingreso-solo-con-passkey.md
+ */
+export function contrasenaHabilitada(): boolean {
+  return process.env.NODE_ENV !== 'production' || process.env.PERMITIR_CONTRASENA === 'true';
 }
 
 // ── Sesión ───────────────────────────────────────────────────────────────────

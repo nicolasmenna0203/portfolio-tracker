@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { leerSesion, verificarDesbloqueo } from '@/lib/session';
+import { leerSesion, verificarDesbloqueo, contrasenaHabilitada } from '@/lib/session';
 import { COOKIE_SESION, COOKIE_DESBLOQUEO, COOKIE_OCULTA } from '@/lib/cookiesAuth';
 
 // Corre en el Edge runtime: sin node:crypto. Por eso la sesión se firma con
@@ -15,9 +15,15 @@ import { COOKIE_SESION, COOKIE_DESBLOQUEO, COOKIE_OCULTA } from '@/lib/cookiesAu
 // /demo y /api/demo son públicas a propósito: sirven el dashboard con datos
 // 100% sintéticos (lib/demo/) para que cualquiera que lea el repo público
 // pueda ver la app funcionando sin login ni acceso a la cartera real.
+//
+// Cada entrada cubre la ruta exacta y lo que cuelga de ella (`/demo/...`), no
+// cualquier ruta que empiece igual: con un `startsWith` a secas, `/demo`
+// abriría también una futura `/demografia`.
 const PUBLIC_PATHS = [
   '/login', '/api/auth/login', '/api/auth/passkey/acceso', '/api/alertas/semanal', '/demo', '/api/demo',
 ];
+
+const cuelgaDe = (pathname: string, p: string) => pathname === p || pathname.startsWith(`${p}/`);
 
 // DEMO_ONLY marca el deploy de Vercel separado que solo sirve /demo (dominio
 // propio, sin relación con el sitio real, sin BASIC_AUTH_USER/PASS ni
@@ -39,7 +45,7 @@ export async function middleware(req: NextRequest) {
   // de otra forma seguiría siendo público y mostraría un formulario que nunca
   // deja pasar a nadie) va directo a /demo.
   if (DEMO_ONLY) {
-    const esDemo = pathname.startsWith('/demo') || pathname.startsWith('/api/demo');
+    const esDemo = cuelgaDe(pathname, '/demo') || cuelgaDe(pathname, '/api/demo');
     if (esDemo) return NextResponse.next();
     const demoUrl = req.nextUrl.clone();
     demoUrl.pathname = '/demo';
@@ -47,7 +53,7 @@ export async function middleware(req: NextRequest) {
   }
 
   const isPublic =
-    PUBLIC_PATHS.some((p) => pathname.startsWith(p)) ||
+    PUBLIC_PATHS.some((p) => cuelgaDe(pathname, p)) ||
     pathname.startsWith('/_next/static') ||
     pathname.startsWith('/_next/image') ||
     pathname === '/favicon.ico' ||
@@ -64,7 +70,13 @@ export async function middleware(req: NextRequest) {
   loginUrl.pathname = '/login';
   loginUrl.search = '';
 
-  if (!sesion) return NextResponse.redirect(loginUrl);
+  // Con la contraseña apagada (producción, ADR 0037) toda sesión válida viene
+  // de una passkey y lleva bloqueo. Una sin bloqueo es de antes del cambio o de
+  // cuando la contraseña estaba prendida para recuperar el acceso: no vale.
+  // Ver docs/decisiones/0037-ingreso-solo-con-passkey.md
+  if (!sesion || (!sesion.bloqueo && !contrasenaHabilitada())) {
+    return NextResponse.redirect(loginUrl);
+  }
 
   // Dispositivo con bloqueo (entró o se registró con Face ID): además de la
   // sesión hace falta un desbloqueo vigente, que dura minutos y solo renueva el

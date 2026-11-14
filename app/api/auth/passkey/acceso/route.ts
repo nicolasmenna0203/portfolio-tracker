@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { crearReto, verificarReto } from '@/lib/session';
-import { verificarAcceso, type RespuestaAcceso } from '@/lib/webauthn';
+import { preverificarAcceso, verificarAcceso, type RespuestaAcceso } from '@/lib/webauthn';
 import { leerPasskeys } from '@/lib/passkeys';
 import { COOKIE_RETO, emitirSesion, guardarReto, borrarReto, origenDelPedido } from '@/lib/cookiesAuth';
 
@@ -15,6 +15,10 @@ import { COOKIE_RETO, emitirSesion, guardarReto, borrarReto, origenDelPedido } f
 // Sin `allowCredentials`: las passkeys se registran como credenciales
 // descubribles, así que el sistema ofrece las que tiene para este dominio sin
 // que este endpoint público tenga que listar los ids registrados.
+//
+// Antes de leer la hoja se chequea todo lo que no necesita la clave pública
+// (desafío, origen, rpId, flags): leer la hoja gasta cuota de Google Sheets, y
+// cualquiera puede pedir un reto. Ver docs/decisiones/0037-ingreso-solo-con-passkey.md
 
 export const dynamic = 'force-dynamic';
 
@@ -50,6 +54,13 @@ export async function POST(req: NextRequest) {
     return rechazo();
   }
 
+  const esperado = { reto, ...origenDelPedido(req) };
+  const previo = await preverificarAcceso(body, esperado);
+  if (!previo.ok) {
+    console.warn('[passkey/acceso] rechazada antes de leer la hoja:', previo.motivo);
+    return rechazo();
+  }
+
   let passkeys;
   try {
     passkeys = await leerPasskeys();
@@ -61,7 +72,7 @@ export async function POST(req: NextRequest) {
   const passkey = passkeys.find((p) => p.id === body?.id);
   if (!passkey) return rechazo();
 
-  const resultado = await verificarAcceso(body, passkey.clavePublica, { reto, ...origenDelPedido(req) });
+  const resultado = await verificarAcceso(body, passkey.clavePublica, esperado);
   if (!resultado.ok) {
     console.warn('[passkey/acceso] rechazada:', resultado.motivo);
     return rechazo();

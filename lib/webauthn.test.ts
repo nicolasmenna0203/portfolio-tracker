@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import {
-  verificarRegistro, verificarAcceso, derARaw, ALG_ES256,
+  verificarRegistro, verificarAcceso, preverificarAcceso, derARaw, ALG_ES256,
   type Esperado, type RespuestaRegistro, type RespuestaAcceso,
 } from './webauthn';
 import { b64urlEncode } from './session';
@@ -134,6 +134,43 @@ describe('verificarAcceso', () => {
     expect((await verificarAcceso({} as RespuestaAcceso, spki, ESPERADO)).ok).toBe(false);
     expect((await verificarAcceso({ ...(await asercion()), signature: '!!!' }, spki, ESPERADO)).ok).toBe(false);
     expect((await verificarAcceso(await asercion(), 'no-es-una-clave', ESPERADO)).ok).toBe(false);
+  });
+});
+
+// El endpoint público lo corre antes de leer la hoja Passkeys: tiene que
+// descartar lo mismo que verificarAcceso salvo la firma, que sin la clave
+// pública no se puede chequear.
+describe('preverificarAcceso', () => {
+  it('deja pasar una aserción bien formada, sin mirar la clave', async () => {
+    expect((await preverificarAcceso(await asercion(), ESPERADO)).ok).toBe(true);
+  });
+
+  it('rechaza sin UV, otro origen, otro rpId, otro desafío y otro tipo de ceremonia', async () => {
+    for (const opts of [
+      { flags: 0x01 },
+      { origen: 'https://phishing.example.net' },
+      { rpId: 'phishing.example.net' },
+      { reto: b64urlEncode(new Uint8Array(32).fill(8)) },
+      { type: 'webauthn.create' },
+    ]) {
+      expect((await preverificarAcceso(await asercion(opts), ESPERADO)).ok).toBe(false);
+    }
+  });
+
+  it('rechaza sin id, con la firma malformada o con basura, sin tirar excepción', async () => {
+    const a = await asercion();
+    expect((await preverificarAcceso({ ...a, id: '' }, ESPERADO)).ok).toBe(false);
+    expect((await preverificarAcceso({ ...a, signature: b64urlEncode(new Uint8Array([1, 2, 3])) }, ESPERADO)).ok).toBe(false);
+    expect((await preverificarAcceso({} as RespuestaAcceso, ESPERADO)).ok).toBe(false);
+    expect((await preverificarAcceso(null as unknown as RespuestaAcceso, ESPERADO)).ok).toBe(false);
+  });
+
+  it('no reemplaza a verificarAcceso: una firma de otra clave pasa la previa', async () => {
+    const otra = (await crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, true, ['sign', 'verify'])) as CryptoKeyPair;
+    const otraSpki = b64urlEncode(new Uint8Array(await crypto.subtle.exportKey('spki', otra.publicKey)));
+    const a = await asercion();
+    expect((await preverificarAcceso(a, ESPERADO)).ok).toBe(true);
+    expect((await verificarAcceso(a, otraSpki, ESPERADO)).ok).toBe(false);
   });
 });
 

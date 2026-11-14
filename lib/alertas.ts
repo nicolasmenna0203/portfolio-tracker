@@ -1,15 +1,15 @@
 // Alerta semanal por mail: qué cobros de dividendos, renta, amortización y
 // balances caen en los próximos 7 días para la cartera actual.
 //
-// El envío usa la API HTTP de Resend directamente (fetch, sin el paquete
-// `resend`) siguiendo la misma convención que el resto de lib/ (Yahoo,
-// bonistas.com) de no sumar SDKs para un solo POST.
+// El envío va por `enviarMail` (lib/mail.ts), que usa la API HTTP de Resend
+// directamente.
 
 import type { DashboardData, EventoCalendario } from '@/types';
 import { fetchCalendarioFinanciero } from './calendario';
 import { tickersDeCartera } from './tickersElegibles';
 import { calcularVariacionSemanal, type VariacionSemanal, type VariacionActivo } from './variacionSemanal';
 import { formatMoney, formatPercent, formatFx } from './format';
+import { enviarMail } from './mail';
 
 const TIPO_LABEL: Record<EventoCalendario['tipo'], string> = {
   dividendo: 'Dividendo',
@@ -460,42 +460,7 @@ export function armarContenidoMail(alerta: AlertaSemanal): { asunto: string; tex
   return { asunto, texto: armarTexto(alerta), html };
 }
 
-// Remitente por defecto de Resend cuando no hay dominio propio verificado.
-// Solo puede mandar al mismo mail con el que te registraste en Resend.
-const REMITENTE_DEFAULT = 'onboarding@resend.dev';
-
-/**
- * Envía la alerta semanal por mail vía la API de Resend.
- * Requiere RESEND_API_KEY. Opcionalmente RESEND_FROM si se verificó un
- * dominio propio en Resend (si no, se usa el remitente sandbox de Resend,
- * que solo entrega al mail con el que te registraste ahí).
- */
+/** Envía la alerta semanal por mail. */
 export async function enviarAlertaSemanal(destinatario: string, alerta: AlertaSemanal): Promise<void> {
-  const apiKey = process.env.RESEND_API_KEY;
-  if (!apiKey) {
-    throw new Error('RESEND_API_KEY no configurada.');
-  }
-
-  const { asunto, html, texto } = armarContenidoMail(alerta);
-
-  const res = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      from: process.env.RESEND_FROM || REMITENTE_DEFAULT,
-      to: [destinatario],
-      subject: asunto,
-      html,
-      text: texto,
-    }),
-    signal: AbortSignal.timeout(15_000),
-  });
-
-  if (!res.ok) {
-    const detalle = await res.text().catch(() => '');
-    throw new Error(`Resend: HTTP ${res.status} ${detalle}`);
-  }
+  await enviarMail(destinatario, armarContenidoMail(alerta));
 }

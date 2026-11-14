@@ -2,13 +2,14 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import {
   crearToken, verificarToken, leerSesion, SESSION_MAX_AGE,
   crearTokenDesbloqueo, verificarDesbloqueo, DESBLOQUEO_MAX_AGE,
-  crearReto, verificarReto,
+  crearReto, verificarReto, contrasenaHabilitada,
 } from './session';
 
 const SECRET = 'un-secreto-de-test-bien-largo';
 
 afterEach(() => {
   vi.useRealTimers();
+  vi.unstubAllEnvs();
 });
 
 describe('crearToken / verificarToken', () => {
@@ -108,12 +109,16 @@ describe('tipos de token', () => {
     expect(await verificarReto(token, 'otro-secreto')).toBeNull();
   });
 
-  it('una sesión anterior al campo tipo sigue valiendo, sin bloqueo', async () => {
+  it('un token sin tipo, aunque esté bien firmado, no vale como nada', async () => {
     // Así eran los tokens antes del ADR 0035: { sub, exp }, sin tipo.
     const payload = Buffer.from(JSON.stringify({ sub: 'nm', exp: Math.floor(Date.now() / 1000) + 60 })).toString('base64url');
     const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(SECRET), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
     const sig = Buffer.from(await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(payload))).toString('base64url');
-    expect(await leerSesion(`${payload}.${sig}`, SECRET)).toEqual({ sub: 'nm', bloqueo: false });
+    const token = `${payload}.${sig}`;
+    expect(await leerSesion(token, SECRET)).toBeNull();
+    expect(await leerSesion(token, SECRET, { ignorarExpiracion: true })).toBeNull();
+    expect(await verificarDesbloqueo(token, SECRET)).toBeNull();
+    expect(await verificarReto(token, SECRET)).toBeNull();
   });
 
   it('la sesión lleva la marca de bloqueo firmada', async () => {
@@ -140,5 +145,23 @@ describe('tipos de token', () => {
     expect(await verificarDesbloqueo(token, SECRET)).toBe('nm');
     vi.setSystemTime(Date.UTC(2026, 0, 1) + DESBLOQUEO_MAX_AGE * 1000 + 1000);
     expect(await verificarDesbloqueo(token, SECRET)).toBeNull();
+  });
+});
+
+describe('contrasenaHabilitada', () => {
+  it('en producción está apagada salvo PERMITIR_CONTRASENA=true', () => {
+    vi.stubEnv('NODE_ENV', 'production');
+    vi.stubEnv('PERMITIR_CONTRASENA', '');
+    expect(contrasenaHabilitada()).toBe(false);
+    vi.stubEnv('PERMITIR_CONTRASENA', '1'); // solo "true" literal la prende
+    expect(contrasenaHabilitada()).toBe(false);
+    vi.stubEnv('PERMITIR_CONTRASENA', 'true');
+    expect(contrasenaHabilitada()).toBe(true);
+  });
+
+  it('fuera de producción está prendida: las passkeys de producción no sirven en localhost', () => {
+    vi.stubEnv('NODE_ENV', 'development');
+    vi.stubEnv('PERMITIR_CONTRASENA', '');
+    expect(contrasenaHabilitada()).toBe(true);
   });
 });

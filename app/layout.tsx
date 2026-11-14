@@ -15,6 +15,9 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: 'Portfolio · Dashboard',
   description: 'Dashboard personal de inversiones',
+  // Que no aparezca en buscadores. El header X-Robots-Tag de next.config.ts
+  // dice lo mismo y cubre también las APIs y los archivos.
+  robots: { index: false, follow: false, nocache: true, googleBot: { index: false, follow: false, noimageindex: true } },
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
