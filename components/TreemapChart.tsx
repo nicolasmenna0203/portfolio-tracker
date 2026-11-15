@@ -77,10 +77,14 @@ function buildData(tenencias: TenenciaActual[], dim: Dim, moneda: Moneda) {
 interface PropsCelda {
   x?: number; y?: number; width?: number; height?: number;
   name?: string; value?: number; depth?: number;
-  root?: { value?: number };
+  root?: { value?: number; children?: { name?: string; y?: number; width?: number }[] };
   group?: string; color?: string; fillOpacity?: number;
   filtroActivo?: string | null;
 }
+
+/** Alto de la banda con el nombre del grupo, y ancho mínimo del grupo para dibujarla. */
+const ALTO_BANDA = 24;
+const ANCHO_MIN_BANDA = 40;
 
 function CustomCell({ x = 0, y = 0, width, height, name = '', value = 0, depth, root, group, color, fillOpacity: fo, filtroActivo }: PropsCelda) {
   if (depth === 0 || !width || !height || width < 4 || height < 4) return <g />;
@@ -108,24 +112,23 @@ function CustomCell({ x = 0, y = 0, width, height, name = '', value = 0, depth, 
           strokeOpacity={dimmed ? 0.15 : 0.7}
           rx={6}
         />
-        {width > 40 && (
+        {width > ANCHO_MIN_BANDA && (
           <g>
             {/* Banda sólida de color del grupo — siempre opaca */}
             <rect
-              x={x} y={y} width={width} height={26}
-              fill={cellColor} fillOpacity={dimmed ? 0.18 : 0.9}
+              x={x} y={y} width={width} height={ALTO_BANDA}
+              fill={cellColor} fillOpacity={dimmed ? 0.18 : 1}
               rx={6}
             />
-            {/* Redondear solo esquinas inferiores de la banda */}
+            {/* Redondear solo esquinas superiores de la banda */}
             <rect
-              x={x} y={y + 14} width={width} height={12}
-              fill={cellColor} fillOpacity={dimmed ? 0.18 : 0.9}
+              x={x} y={y + 12} width={width} height={ALTO_BANDA - 12}
+              fill={cellColor} fillOpacity={dimmed ? 0.18 : 1}
             />
             <text
-              x={x + 8} y={y + 13}
+              x={x + 8} y={y + ALTO_BANDA / 2 + 0.5}
               fill="#fff" fillOpacity={dimmed ? 0.45 : 1}
-              fontSize={11} fontWeight="800" dominantBaseline="middle"
-              style={{ filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.7))' }}
+              fontSize={11} fontWeight="700" dominantBaseline="middle"
             >
               {label}
             </text>
@@ -140,6 +143,17 @@ function CustomCell({ x = 0, y = 0, width, height, name = '', value = 0, depth, 
   // ("VWO" se leía "VWC"). Si ni a 8 px entra, no se dibuja: el tooltip lo nombra.
   const ANCHO_CARACTER = 0.72;
   const fontSize = Math.max(8, Math.min(12, (width - 6) / (name.length * ANCHO_CARACTER)));
+
+  // Recharts reparte los tickers sobre todo el rectángulo del grupo y los dibuja
+  // después, así que los de la fila de arriba quedaban encima de la banda con el
+  // nombre: el rótulo se leía lavado, o pisado por el ticker en un grupo chico.
+  // Los que tocan la banda arrancan debajo de ella.
+  const padre = root?.children?.find((g) => g.name === group);
+  const finBanda = padre?.y != null && (padre.width ?? 0) > ANCHO_MIN_BANDA ? padre.y + ALTO_BANDA : y;
+  const corte = Math.max(0, Math.min(finBanda - y, height - 4));
+  y += corte;
+  height -= corte;
+
   const entra = name.length * fontSize * ANCHO_CARACTER <= width - 4 && height > fontSize + 4;
   return (
     <g style={{ cursor: 'pointer' }}>
@@ -172,15 +186,14 @@ function TooltipContent({ active, payload, hideValues, moneda }: PropsTooltip) {
   const d = payload[0].payload;
   const currency: Moneda = moneda === 'ARS' ? 'ARS' : 'USD';
   return (
-    <div style={{
-      background: 'var(--material)', backdropFilter: 'saturate(180%) blur(20px)', WebkitBackdropFilter: 'saturate(180%) blur(20px)',
-      border: '0.5px solid var(--material-borde)',
-      borderRadius: 12, padding: '10px 14px', fontSize: 12,
-      boxShadow: '0 10px 30px rgba(0,0,0,0.2)',
-    }}>
-      <p style={{ fontWeight: 600, color: 'var(--text)', marginBottom: 4 }}>{d.name}</p>
+    <div className="tooltip-panel">
+      <p style={{ fontWeight: 600, marginBottom: 2 }}>{d.name}</p>
       <p style={{ color: 'var(--text-sec)', fontVariantNumeric: 'tabular-nums' }}>{formatMoney(d.value, { currency, hidden: hideValues })}</p>
-      {d.group && <p style={{ color: d.color ?? 'var(--muted)', marginTop: 2, fontSize: 11 }}>{d.group}</p>}
+      {d.group && (
+        <p className="tooltip-fila" style={{ marginTop: 4, justifyContent: 'flex-start' }}>
+          <span><span className="tooltip-marca" style={{ background: d.color ?? 'var(--muted)' }} />{d.group}</span>
+        </p>
+      )}
     </div>
   );
 }
@@ -204,25 +217,12 @@ export default function TreemapChart({ tenencias, dim, filtroTipo, onFiltroTipo,
   }
 
   return (
-    <div style={{
-      background: 'var(--card)',
-      border: filtroTipo ? '1px solid var(--primary)' : '1px solid var(--border-subtle)',
-      borderRadius: 12,
-      padding: '12px 14px 10px',
-      transition: 'border-color 0.15s',
-      display: 'flex',
-      flexDirection: 'column',
-      height: '100%',
-    }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, flexShrink: 0 }}>
-        <p style={{
-          fontSize: 13, fontWeight: 700, letterSpacing: '0.02em',
-          color: filtroTipo ? 'var(--primary)' : 'var(--text-sec)',
-          margin: 0, flexShrink: 0, transition: 'color 0.15s',
-        }}>
+    <div className="card" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+      <div className="card-cabecera">
+        <p className="card-titulo">
           Distribución
-          {filtroTipo && dim === 'TIPO' && <span style={{ fontWeight: 400, marginLeft: 6, color: 'var(--primary)' }}>· {filtroTipo}</span>}
-          {dim === 'SECTOR_GEO' && <span style={{ fontWeight: 400, marginLeft: 6, color: 'var(--muted)', fontSize: 11 }}>· solo Renta Variable</span>}
+          {filtroTipo && dim === 'TIPO' && <span className="dato" style={{ color: 'var(--primary)' }}>{filtroTipo}</span>}
+          {dim === 'SECTOR_GEO' && <span className="dato">solo renta variable</span>}
         </p>
       </div>
 

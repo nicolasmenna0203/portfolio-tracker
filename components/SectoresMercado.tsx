@@ -62,27 +62,20 @@ function SectorCard({
   const gradientId = `sparkline-${ticker}`;
 
   return (
-    <div
+    <button
+      type="button"
       onClick={onClick}
-      role="button"
-      tabIndex={0}
-      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } }}
-      title={`${ticker} · ver composición`}
-      className="pill-touch"
-      style={{
-        border: '1px solid var(--border-subtle)', borderRadius: 10,
-        padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 2,
-        cursor: 'pointer',
-      }}
+      aria-label={`${label} (${ticker}): ver composición`}
+      className="sector-card"
     >
-      <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text)' }}>{label}</span>
-      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
-        <span style={{ fontSize: 9, color: 'var(--muted)' }}>{ticker}</span>
-        <span style={{ fontSize: 12, fontWeight: 700, color, fontVariantNumeric: 'tabular-nums' }}>
+      <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{label}</span>
+      <span style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
+        <span style={{ fontSize: 12, color: 'var(--muted)' }}>{ticker}</span>
+        <span style={{ fontSize: 13, fontWeight: 600, color, fontVariantNumeric: 'tabular-nums' }}>
           {variacion != null ? fmtPct1(variacion) : '—'}
         </span>
-      </div>
-      <div style={{ height: 40, marginTop: 2 }}>
+      </span>
+      <span style={{ display: 'block', height: 40, marginTop: 2 }}>
         {!loading && puntos.length > 1 && (
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={puntos} margin={{ top: 2, right: 0, left: 0, bottom: 0 }}>
@@ -102,8 +95,8 @@ function SectorCard({
             </AreaChart>
           </ResponsiveContainer>
         )}
-      </div>
-    </div>
+      </span>
+    </button>
   );
 }
 
@@ -121,27 +114,20 @@ export default function SectoresMercado() {
   const variacionKey = RANGOS.find((r) => r.id === rango)?.variacionKey ?? 'variacionYtd';
 
   return (
-    <div style={{
-      background: 'var(--card)', border: '1px solid var(--border-subtle)', borderRadius: 12,
-      padding: '14px 16px',
-    }}>
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10, marginBottom: 12 }}>
+    <div className="card">
+      <div className="card-cabecera" style={{ alignItems: 'flex-start', justifyContent: 'space-between' }}>
         <div>
-          <p style={{ fontSize: 13, fontWeight: 700, letterSpacing: '0.04em', color: 'var(--text-sec)', margin: 0 }}>
-            Sectores del mercado
-          </p>
-          <span style={{ fontSize: 10, color: 'var(--muted)' }}>
-            ETFs SPDR Select Sector
-          </span>
+          <p className="card-titulo">Sectores del mercado</p>
+          <p className="card-sub">ETFs SPDR Select Sector. Tocá uno para ver qué tiene adentro.</p>
         </div>
         <Segmented opciones={RANGOS} activa={rango} onChange={setRango} chico etiqueta="Rango" />
       </div>
 
       {loading && (
-        <p style={{ margin: 0, fontSize: 12, color: 'var(--muted)' }}>Cargando sectores…</p>
+        <span className="skeleton" role="status" aria-label="Cargando sectores" style={{ height: 196, borderRadius: 12 }} />
       )}
       {error && (
-        <p style={{ margin: 0, fontSize: 12, color: 'var(--down)' }}>Error cargando sectores: {error}</p>
+        <p className="nota" role="alert" style={{ color: 'var(--down)' }}>No se pudieron cargar los sectores: {error}</p>
       )}
 
       {!loading && !error && (

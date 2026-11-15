@@ -78,20 +78,15 @@ export default function TenenciasTab({ data, hideValues, moneda }: Props) {
       <SubTabs tabs={VISTAS_TENENCIAS} activa={vistaTenencias} onChange={setVistaTenencias} />
 
       {/* Barra de controles de la vista: selector de mes + dimensión */}
-      <div className="tenencias-controles" style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', flexShrink: 0 }}>
+      <div className="tenencias-controles" style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', flexShrink: 0 }}>
 
         {/* Botón Último a la izquierda */}
         {mesesDisponibles.indexOf(mesSel) < mesesDisponibles.length - 1 && (
           <button
-            className="pill-touch"
+            type="button"
+            className="chip accion"
             onClick={() => setMesSel(mesesDisponibles[mesesDisponibles.length - 1])}
-            style={{
-              padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600,
-              cursor: 'pointer', border: '1px solid var(--primary)',
-              background: 'var(--primary-dim)', color: 'var(--primary)',
-              whiteSpace: 'nowrap', flexShrink: 0,
-            }}
-          >‹ Último</button>
+          >Ir al último mes</button>
         )}
 
         {/* MonthSlider centrado */}
@@ -121,16 +116,16 @@ export default function TenenciasTab({ data, hideValues, moneda }: Props) {
       {vistaTenencias === 'composicion' && filtroTipo && (
         <div style={{ display: 'flex', flexShrink: 0 }}>
           <button
-            className="pill-touch"
+            type="button"
+            className="chip accion"
             onClick={() => setFiltroTipo(null)}
             aria-label={`Quitar filtro ${filtroTipo}`}
-            style={{
-              padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600,
-              cursor: 'pointer', border: '1px solid var(--primary)',
-              background: 'var(--primary-dim)', color: 'var(--primary)',
-              whiteSpace: 'nowrap',
-            }}
-          >{filtroTipo} ×</button>
+          >
+            {filtroTipo}
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" aria-hidden="true">
+              <path d="M2 2l6 6M8 2l-6 6" />
+            </svg>
+          </button>
         </div>
       )}
 

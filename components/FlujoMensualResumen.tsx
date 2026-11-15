@@ -27,10 +27,7 @@ export default function FlujoMensualResumen({ resumen, moneda, hideValues, error
 
   if (resumen.mesesBase === 0 || resumen.ingresoProm == null) {
     return (
-      <div style={{
-        background: 'var(--card)', border: '1px solid var(--border-subtle)', borderRadius: 12,
-        padding: '12px 18px', fontSize: 12, color: 'var(--muted)', lineHeight: 1.5,
-      }}>
+      <div className={errorIngresos ? 'aviso error' : 'aviso'} role={errorIngresos ? 'alert' : undefined}>
         {errorIngresos
           ? 'No se pudieron leer los ingresos: el ratio de inversión y la distribución del ingreso no están disponibles.'
           : <>Sin ingresos cargados todavía: el ratio de inversión y la distribución del ingreso
@@ -94,28 +91,23 @@ export default function FlujoMensualResumen({ resumen, moneda, hideValues, error
       </div>
 
       {partes.length > 0 && !hideValues && (
-        <div style={{
-          background: 'var(--card)', border: '1px solid var(--border-subtle)', borderRadius: 12,
-          padding: '12px 18px',
-        }}>
-          <p style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', margin: '0 0 8px' }}>
-            A dónde va cada ingreso
-          </p>
+        <div className="card">
+          <p className="card-titulo" style={{ marginBottom: 10 }}>A dónde va cada ingreso</p>
           <div
             role="img"
             aria-label={partes.map((p) => `${p.label} ${Math.round((p.valor / ingresoProm) * 100)}%`).join(', ')}
-            style={{ display: 'flex', height: 10, borderRadius: 5, overflow: 'hidden', background: 'var(--border)' }}
+            style={{ display: 'flex', gap: 2, height: 10, borderRadius: 5, overflow: 'hidden', background: 'var(--track)' }}
           >
             {partes.map((p) => (
               <div key={p.id} style={{ width: `${(p.valor / ingresoProm) * 100}%`, background: p.color }} />
             ))}
           </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 16px', marginTop: 8, fontSize: 11, color: 'var(--muted)' }}>
+          <div className="leyenda" style={{ marginTop: 10 }}>
             {partes.map((p) => (
-              <span key={p.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+              <span key={p.id}>
                 <span style={{ width: 8, height: 8, borderRadius: '50%', background: p.color, flexShrink: 0 }} />
                 {p.label}{' '}
-                <strong style={{ color: 'var(--text-sec)', fontVariantNumeric: 'tabular-nums' }}>
+                <strong style={{ fontWeight: 600, color: 'var(--text)', fontVariantNumeric: 'tabular-nums' }}>
                   {formatPercent((p.valor / ingresoProm) * 100, { sign: false, decimals: 0 })}
                 </strong>
               </span>

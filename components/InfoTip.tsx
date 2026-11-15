@@ -4,6 +4,10 @@
 // el dedo, al tocarlo, y se cierra tocando afuera (en iOS un botón tocado no toma
 // el foco, así que no alcanza con cerrarlo en `blur`). `type="button"` porque
 // también se usa dentro de formularios, donde un botón común los enviaría.
+//
+// Es la única ayuda contextual del dashboard: las guías de los gráficos y las
+// notas de método pasan por acá en vez de armar cada una su propio popover.
+// Estilos en globals.css (.info-btn, .info-globo).
 
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 
@@ -11,9 +15,11 @@ interface Props {
   /** Qué se explica: va en la etiqueta para lectores de pantalla ("Qué es …"). */
   label: string;
   children: ReactNode;
+  /** Ancho del globo en px. Por defecto 250; las guías de gráfico piden más. */
+  ancho?: number;
 }
 
-export default function InfoTip({ label, children }: Props) {
+export default function InfoTip({ label, children, ancho = 250 }: Props) {
   const [abierto, setAbierto] = useState(false);
   const raiz = useRef<HTMLSpanElement>(null);
   const globo = useRef<HTMLDivElement>(null);
@@ -64,30 +70,18 @@ export default function InfoTip({ label, children }: Props) {
         onBlur={() => setAbierto(false)}
         aria-label={`Qué es ${label}`}
         aria-expanded={abierto}
-        className="kpi-info"
-        style={{
-          width: 14, height: 14, borderRadius: '50%', border: '1px solid var(--border)',
-          background: 'transparent', color: 'var(--muted)', fontSize: 9, lineHeight: 1,
-          cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-          padding: 0, position: 'relative',
-        }}
+        className="info-btn"
       >
-        ⓘ
+        {/* Un solo círculo: el carácter "ⓘ" dentro de un botón con borde se
+            veía como dos anillos concéntricos. */}
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+          <circle cx="8" cy="8" r="6.75" stroke="currentColor" strokeWidth="1.2" />
+          <circle cx="8" cy="5" r="0.9" fill="currentColor" />
+          <path d="M8 7.4v4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+        </svg>
       </button>
       {abierto && (
-        <div
-          ref={globo}
-          role="tooltip"
-          style={{
-            position: 'absolute', top: 18, left: 0, zIndex: 20,
-            width: 240, maxWidth: 'calc(100vw - 32px)',
-            background: 'var(--material)', backdropFilter: 'saturate(180%) blur(20px)', WebkitBackdropFilter: 'saturate(180%) blur(20px)',
-            border: '0.5px solid var(--material-borde)', borderRadius: 12,
-            padding: '10px 12px', fontSize: 12, lineHeight: 1.45, color: 'var(--text)',
-            boxShadow: '0 10px 30px rgba(0,0,0,0.2)', fontWeight: 400, textTransform: 'none',
-            letterSpacing: 'normal', whiteSpace: 'normal', textAlign: 'left',
-          }}
-        >
+        <div ref={globo} role="tooltip" className="tooltip-panel info-globo" style={{ width: ancho }}>
           {children}
         </div>
       )}

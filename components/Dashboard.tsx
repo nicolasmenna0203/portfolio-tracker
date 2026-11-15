@@ -9,21 +9,47 @@ import { useEstadoCargas } from '@/lib/useEstadoCargas';
 import { precargarCalendario } from '@/lib/useCalendario';
 import { tickersDeCartera } from '@/lib/tickersElegibles';
 import { usePathname } from 'next/navigation';
-import UploadTenencias from './UploadTenencias';
+import dynamic from 'next/dynamic';
+import { useThumb } from '@/lib/useThumb';
 import FaceIdAjuste from './FaceIdAjuste';
 import { EstadoCargasIconos, EstadoCargasDetalle, describirEstadoCargas } from './EstadoCargasIconos';
 import ResumenTab from './ResumenTab';
-import TenenciasTab from './TenenciasTab';
-import BenchmarksTab from './BenchmarksTab';
-import CalendarioTab from './CalendarioTab';
-import PerformanceTab from './PerformanceTab';
-import FinanzasPersonalesTab from './FinanzasPersonalesTab';
+import { Cargando } from './Estados';
 import {
   IconOjo, IconOjoTachado, IconSol, IconLuna, IconCargar,
   IconSeccionResumen, IconSeccionTenencias, IconSeccionBenchmarks,
   IconSeccionCalendario, IconSeccionPerformance, IconSeccionFinanzas,
 } from './HeaderIcons';
 type Tab = 'resumen' | 'tenencias' | 'benchmarks' | 'calendario' | 'performance' | 'finanzas-personales';
+
+// ── Carga diferida de las pestañas ────────────────────────────────────────────
+// Solo Resumen viaja con la página: es lo único que se ve al entrar. El resto
+// (y el panel de carga, que arrastra el parser de PDF) baja en trozos aparte.
+// Para que el primer cambio de pestaña no espere a la red, `precargarPestanas`
+// los pide en segundo plano apenas el dashboard queda quieto; el skeleton de
+// `loading` solo llega a verse si se toca una pestaña antes de eso.
+const cargadores = {
+  tenencias:  () => import('./TenenciasTab'),
+  benchmarks: () => import('./BenchmarksTab'),
+  calendario: () => import('./CalendarioTab'),
+  performance: () => import('./PerformanceTab'),
+  finanzas:   () => import('./FinanzasPersonalesTab'),
+  carga:      () => import('./UploadTenencias'),
+};
+const esqueleto = (etiqueta: string) => {
+  const Esqueleto = () => <Cargando etiqueta={etiqueta} />;
+  return Esqueleto;
+};
+const TenenciasTab = dynamic(cargadores.tenencias, { loading: esqueleto('Cargando tenencias') });
+const BenchmarksTab = dynamic(cargadores.benchmarks, { loading: esqueleto('Cargando benchmarks') });
+const CalendarioTab = dynamic(cargadores.calendario, { loading: esqueleto('Cargando calendario') });
+const PerformanceTab = dynamic(cargadores.performance, { loading: esqueleto('Cargando performance') });
+const FinanzasPersonalesTab = dynamic(cargadores.finanzas, { loading: esqueleto('Cargando finanzas personales') });
+const UploadTenencias = dynamic(cargadores.carga, { loading: esqueleto('Cargando el panel de carga') });
+
+function precargarPestanas() {
+  for (const cargar of Object.values(cargadores)) cargar().catch(() => {});
+}
 
 // `corto`: la etiqueta de la tab bar de mobile y el large title, donde
 // "Finanzas personales" no entra. El ícono solo se ve en esa tab bar.
@@ -59,10 +85,12 @@ function temaEfectivo(): Tema {
 // guardado, con un techo de intentos para no quedar en loop si el contenido
 // terminó siendo más corto.
 function TabScroll({
-  tab, posiciones, style, children,
+  tab, posiciones, alScrollear, style, children,
 }: {
   tab: Tab;
   posiciones: React.RefObject<Partial<Record<Tab, number>>>;
+  /** Avisa cada movimiento del scroll: la barra superior se compacta con eso. */
+  alScrollear: (el: HTMLElement) => void;
   style?: React.CSSProperties;
   children: React.ReactNode;
 }) {
@@ -86,6 +114,7 @@ function TabScroll({
       ref={restaurar}
       onScroll={(e) => {
         if (posiciones.current) posiciones.current[tab] = e.currentTarget.scrollTop;
+        alScrollear(e.currentTarget);
       }}
       style={{ display: 'flex', flexDirection: 'column', gap: 12, flex: 1, minHeight: 0, ...style }}
     >
@@ -105,7 +134,7 @@ interface Props {
 export default function Dashboard({ data, valoresSiempreOcultos = false }: Props) {
   const { kpis, resumenSeries } = data;
 
-  const [tab, setTab]               = useState<Tab>('resumen');
+  const [tab, setTabElegida]        = useState<Tab>('resumen');
   const [uploadOpen, setUploadOpen] = useState(false);
   const [theme, setTheme]           = useState<Tema>('dark');
   const [hideValuesElegido, setHideValuesElegido] = useState(false);
@@ -125,13 +154,36 @@ export default function Dashboard({ data, valoresSiempreOcultos = false }: Props
     return () => clearTimeout(t);
   }, [data, pathname]);
 
+  // El código de las otras pestañas, en segundo plano (ver `cargadores`).
+  useEffect(() => {
+    const t = setTimeout(precargarPestanas, 800);
+    return () => clearTimeout(t);
+  }, []);
+
+  // Barra superior compacta (solo se nota en mobile, ver `.app-bar[data-compacto]`
+  // en globals.css): al scrollear, el large title se achica y sube a la fila de
+  // los botones. Con histéresis y no un umbral único, porque compactar la barra
+  // agranda el scroller: con poco contenido dejaría de haber qué scrollear,
+  // `scrollTop` volvería a 0, la barra se expandiría y así en loop. Por eso
+  // solo se compacta si queda scroll de sobra aun después de ganar ese alto.
+  const [compacto, setCompacto] = useState(false);
+  const alScrollear = useCallback((el: HTMLElement) => {
+    const recorrido = el.scrollHeight - el.clientHeight;
+    setCompacto((prev) => (prev ? el.scrollTop > 4 : el.scrollTop > 28 && recorrido > 160));
+  }, []);
+  const setTab = useCallback((t: Tab) => {
+    setTabElegida(t);
+    setCompacto(false);
+  }, []);
+
   // scrollTop por pestaña (en memoria) — ver TabScroll
   const scrollPorTab = useRef<Partial<Record<Tab, number>>>({});
 
   // Nav de pestañas: en pantallas angostas el contenido excede el ancho visible,
   // así que la pestaña activa puede quedar fuera de vista. Se la centra cada vez
   // que cambia, incluso cuando el cambio viene por código y no por click.
-  const navRef  = useRef<HTMLElement | null>(null);
+  // El mismo ref mide el segmento elegido para deslizarlo (lib/useThumb.ts).
+  const navRef  = useThumb<HTMLElement>(tab);
   const tabRefs = useRef<Partial<Record<Tab, HTMLButtonElement | null>>>({});
   const [navSombra, setNavSombra] = useState({ izq: false, der: false });
 
@@ -142,7 +194,7 @@ export default function Dashboard({ data, valoresSiempreOcultos = false }: Props
       izq: el.scrollLeft > 1,
       der: el.scrollLeft + el.clientWidth < el.scrollWidth - 1,
     });
-  }, []);
+  }, [navRef]);
 
   useEffect(() => {
     // En dos pasos a propósito: la pestaña activa pasa a font-weight 700, así
@@ -164,7 +216,7 @@ export default function Dashboard({ data, valoresSiempreOcultos = false }: Props
     const ro = new ResizeObserver(actualizarSombras);
     ro.observe(el);
     return () => ro.disconnect();
-  }, [actualizarSombras]);
+  }, [actualizarSombras, navRef]);
 
   useEffect(() => {
     try {
@@ -239,7 +291,7 @@ export default function Dashboard({ data, valoresSiempreOcultos = false }: Props
     }}>
 
       {/* ── Barra superior: marca, pestañas y controles (ver .app-bar en globals.css) ── */}
-      <header className="app-bar">
+      <header className="app-bar" data-compacto={compacto ? '' : undefined}>
         <div className="app-bar-marca">
           {/* El ícono de la webapp (app/icon.svg), servido por Next: una sola fuente. */}
           {/* eslint-disable-next-line @next/next/no-img-element -- SVG estático: next/image no lo optimiza */}
@@ -365,14 +417,14 @@ export default function Dashboard({ data, valoresSiempreOcultos = false }: Props
 
       {/* ── Tab: Resumen ────────────────────────────────────────────────────── */}
       {tab === 'resumen' && (
-        <TabScroll tab={tab} posiciones={scrollPorTab}>
+        <TabScroll tab={tab} posiciones={scrollPorTab} alScrollear={alScrollear}>
           <ResumenTab data={data} hideValues={hideValues} moneda={moneda} />
         </TabScroll>
       )}
 
       {/* ── Tab: Tenencias ──────────────────────────────────────────────────── */}
       {tab === 'tenencias' && (
-        <TabScroll tab={tab} posiciones={scrollPorTab}>
+        <TabScroll tab={tab} posiciones={scrollPorTab} alScrollear={alScrollear}>
           <TenenciasTab
             data={data}
             hideValues={hideValues}
@@ -382,28 +434,28 @@ export default function Dashboard({ data, valoresSiempreOcultos = false }: Props
       )}
       {/* ── Tab: Benchmarks ───────────────────────────────────────────────────── */}
       {tab === 'benchmarks' && (
-        <TabScroll tab={tab} posiciones={scrollPorTab}>
+        <TabScroll tab={tab} posiciones={scrollPorTab} alScrollear={alScrollear}>
           <BenchmarksTab data={data} />
         </TabScroll>
       )}
 
       {/* ── Tab: Calendario (Eventos) ─────────────────────────────────────────── */}
       {tab === 'calendario' && (
-        <TabScroll tab={tab} posiciones={scrollPorTab}>
+        <TabScroll tab={tab} posiciones={scrollPorTab} alScrollear={alScrollear}>
           <CalendarioTab data={data} hideValues={hideValues} />
         </TabScroll>
       )}
 
       {/* ── Tab: Performance (TIR, duration, paridad de bonos, ratios entre activos) ── */}
       {tab === 'performance' && (
-        <TabScroll tab={tab} posiciones={scrollPorTab}>
+        <TabScroll tab={tab} posiciones={scrollPorTab} alScrollear={alScrollear}>
           <PerformanceTab data={data} hideValues={hideValues} />
         </TabScroll>
       )}
 
       {/* ── Tab: Finanzas Personales (Ingresos / Gastos / Proyecciones) ── */}
       {tab === 'finanzas-personales' && (
-        <TabScroll tab={tab} posiciones={scrollPorTab}>
+        <TabScroll tab={tab} posiciones={scrollPorTab} alScrollear={alScrollear}>
           <FinanzasPersonalesTab data={data} hideValues={hideValues} moneda={moneda} mepActual={mepActual} />
         </TabScroll>
       )}

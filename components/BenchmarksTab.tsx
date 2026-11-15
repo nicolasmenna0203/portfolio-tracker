@@ -9,6 +9,9 @@ import {
 import type { DashboardData, BenchmarksResponse, BenchmarkId } from '@/types';
 import { toMesKey } from '@/lib/parser';
 import { formatNumber, niceTicks } from '@/lib/format';
+import Segmented from './Segmented';
+import InfoTip from './InfoTip';
+import { Cargando, AvisoError } from './Estados';
 
 interface Props {
   data: DashboardData;
@@ -62,19 +65,14 @@ interface TooltipPayload {
 function CustomTooltip({ active, payload, label }: { active?: boolean; payload?: TooltipPayload[]; label?: string }) {
   if (!active || !payload?.length) return null;
   return (
-    <div style={{
-      background: 'var(--card)', border: '1px solid var(--border-subtle)',
-      borderRadius: 8, padding: '10px 14px', fontSize: 12,
-      boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
-    }}>
-      <p style={{ margin: '0 0 6px', color: 'var(--muted)', fontWeight: 600 }}>{label}</p>
-      {payload.map((p) => (
-        p.value != null && (
-          <p key={p.dataKey} style={{ margin: '2px 0', color: p.color, display: 'flex', justifyContent: 'space-between', gap: 12 }}>
-            <span>{p.name}</span>
-            <strong style={{ fontVariantNumeric: 'tabular-nums' }}>{formatNumber(p.value, { decimals: 1 })}</strong>
-          </p>
-        )
+    <div className="tooltip-panel">
+      <p className="tooltip-titulo">{label}</p>
+      {/* De mayor a menor: el orden del tooltip es el del gráfico en ese mes. */}
+      {[...payload].filter((p) => p.value != null).sort((a, b) => b.value - a.value).map((p) => (
+        <p key={p.dataKey} className="tooltip-fila">
+          <span><span className="tooltip-marca" style={{ background: p.color }} />{p.name}</span>
+          <span>{formatNumber(p.value, { decimals: 1 })}</span>
+        </p>
       ))}
     </div>
   );
@@ -134,12 +132,9 @@ export default function BenchmarksTab({ data }: Props) {
   // docs/decisiones/0007-mep-mensual-no-mep-unico.md sobre por qué ARS ≠ USD
   // reescalado (el MEP se mueve distinto que cualquier activo).
   const [monedaChart, setMonedaChartState] = useState<'usd' | 'ars'>(loadMonedaChart);
-  function setMonedaChart(updater: (m: 'usd' | 'ars') => 'usd' | 'ars') {
-    setMonedaChartState((prev) => {
-      const next = updater(prev);
-      try { localStorage.setItem(MONEDA_CHART_KEY, next); } catch {}
-      return next;
-    });
+  function setMonedaChart(next: 'usd' | 'ars') {
+    setMonedaChartState(next);
+    try { localStorage.setItem(MONEDA_CHART_KEY, next); } catch {}
   }
 
   // Cartera en TWR ARS: el mismo índice Modified Dietz pero con flujos y
@@ -240,7 +235,7 @@ export default function BenchmarksTab({ data }: Props) {
     const min = Math.min(...valores);
     const max = Math.max(...valores);
     const margen = (max - min) * 0.05 || 5;
-    const ticks = niceTicks(min - margen, max + margen, 5);
+    const ticks = niceTicks(min - margen, max + margen, 6);
     return { yDomain: [ticks[0], ticks[ticks.length - 1]] as [number, number], yTicks: ticks };
   }, [chartData, seriesActivas]);
 
@@ -254,13 +249,22 @@ export default function BenchmarksTab({ data }: Props) {
     return Array.from(idxs).sort((a, b) => a - b).map((i) => chartData[i].fecha as string);
   }, [chartData]);
 
-  const [infoAbierto, setInfoAbierto] = useState(false);
-
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12, flex: 1, minHeight: 0 }}>
 
       {/* ── Toggles de series + moneda del gráfico ──────────────────────────── */}
-      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', flexShrink: 0, alignItems: 'center' }}>
+      <div style={{ display: 'flex', gap: '8px 12px', flexWrap: 'wrap', flexShrink: 0, alignItems: 'center' }}>
+        <Segmented
+          opciones={[
+            { id: 'ars' as const, label: 'ARS', title: 'Todo en pesos nominales; incluye la inflación' },
+            { id: 'usd' as const, label: 'USD', title: 'Cada serie en su moneda; la inflación no se muestra' },
+          ]}
+          activa={monedaChart}
+          onChange={setMonedaChart}
+          chico
+          etiqueta="Moneda del gráfico"
+        />
+        <div className="chips" role="group" aria-label="Series del gráfico">
         {SERIES_ORDER.filter((id) => !(monedaChart === 'usd' && id === 'inflacion')).map((id) => {
           const meta = SERIES_META[id];
           const err = id !== 'cartera' ? seriesConError.get(id as BenchmarkId) : undefined;
@@ -271,113 +275,50 @@ export default function BenchmarksTab({ data }: Props) {
               key={id}
               onClick={() => toggle(id)}
               disabled={!!err}
-              className="pill-touch"
+              type="button"
+              className="chip"
               aria-pressed={isVisible && !err}
               title={err ? `No se pudo cargar: ${err}` : meta.tooltip}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap',
-                padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600,
-                cursor: err ? 'not-allowed' : 'pointer',
-                border: '1px solid',
-                borderColor: isVisible && !err ? meta.color : 'var(--border)',
-                background: isVisible && !err ? `${meta.color}22` : 'transparent',
-                color: err ? 'var(--muted)' : isVisible ? meta.color : 'var(--muted)',
-                opacity: err ? 0.5 : 1,
-                transition: 'all 0.12s',
-              }}
+              style={{ '--chip-color': err ? 'var(--muted)' : meta.color } as React.CSSProperties}
             >
-              <span style={{ width: 8, height: 8, borderRadius: '50%', background: err ? 'var(--muted)' : meta.color, flexShrink: 0 }} />
+              <span className="chip-punto" />
               {meta.shortLabel}
-              {err ? ' ⚠' : valor != null && (
-                <strong style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 700 }}>
-                  {formatNumber(valor, { decimals: 0 })}
-                </strong>
+              {err ? <span aria-hidden="true">sin datos</span> : valor != null && (
+                <strong>{formatNumber(valor, { decimals: 0 })}</strong>
               )}
             </button>
           );
         })}
-
-        <div style={{ width: 1, height: 20, background: 'var(--border)', flexShrink: 0, margin: '0 2px' }} />
-
-        <button
-          onClick={() => setMonedaChart((m) => (m === 'usd' ? 'ars' : 'usd'))}
-          className="pill-touch"
-          title="Cambiar la moneda del gráfico. La inflación solo se muestra en ARS."
-          style={{
-            padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600,
-            cursor: 'pointer', border: '1px solid var(--primary)',
-            background: 'var(--primary-dim)', color: 'var(--primary)',
-            whiteSpace: 'nowrap', flexShrink: 0,
-          }}
-        >
-          Ver en {monedaChart === 'usd' ? 'ARS' : 'USD'}
-        </button>
+        </div>
       </div>
 
       {/* ── Estado de carga / error global ────────────────────────────────── */}
-      {loading && (
-        <p style={{ margin: 0, fontSize: 12, color: 'var(--muted)' }}>Cargando benchmarks…</p>
-      )}
-      {error && (
-        <div style={{
-          background: 'var(--card)', border: '1px solid var(--down)', borderRadius: 10,
-          padding: '10px 14px', fontSize: 12, color: 'var(--down)',
-        }}>
-          Error cargando benchmarks: {error}
-        </div>
-      )}
+      {loading && <Cargando etiqueta="Cargando benchmarks" alto={300} />}
+      {error && <AvisoError titulo="No se pudieron cargar los benchmarks">{error}</AvisoError>}
 
       {/* ── Gráfico ────────────────────────────────────────────────────────── */}
       {!loading && (
-        <div className="bench-chart-card" style={{
-          background: 'var(--card)',
-          border: '1px solid var(--border-subtle)',
-          borderRadius: 12,
-          padding: '12px 14px 6px',
-          flex: 1,
-          minHeight: 280,
-          display: 'flex',
-          flexDirection: 'column',
-        }}>
-          <div style={{ marginBottom: 8, flexShrink: 0, display: 'flex', alignItems: 'baseline', gap: 6 }}>
-            <p style={{ fontSize: 13, fontWeight: 700, letterSpacing: '0.04em', color: 'var(--text-sec)', margin: 0 }}>
-              Rendimiento Relativo (Índice Base 100)
-            </p>
-            <span style={{ fontSize: 10, color: 'var(--muted)', flex: 1, minWidth: 0 }}>
-              Base 100 = {resumenSeries[0]?.fecha ?? 'primer mes'} · en {monedaChart === 'ars' ? 'ARS nominal' : 'USD'} · cartera en TWR
-            </span>
-            <span style={{ position: 'relative', flexShrink: 0 }}>
-              <button
-                onClick={() => setInfoAbierto((v) => !v)}
-                onBlur={() => setInfoAbierto(false)}
-                aria-label="Más información sobre el cálculo"
-                style={{
-                  width: 18, height: 18, borderRadius: '50%', border: '1px solid var(--border)',
-                  background: 'transparent', color: 'var(--muted)', fontSize: 11, lineHeight: 1,
-                  cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}
-              >
-                ⓘ
-              </button>
-              {infoAbierto && (
-                <div style={{
-                  position: 'absolute', top: 24, right: 0, zIndex: 10, width: 260,
-                  background: 'var(--card)', border: '1px solid var(--border-subtle)', borderRadius: 8,
-                  padding: '10px 12px', fontSize: 11, lineHeight: 1.5, color: 'var(--text-sec)',
-                  boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
-                }}>
+        <div className="card bench-chart-card" style={{ paddingBottom: 8, flex: 1, minHeight: 280, display: 'flex', flexDirection: 'column' }}>
+          <div className="card-cabecera" style={{ alignItems: 'flex-start', flexWrap: 'nowrap' }}>
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <p className="card-titulo">Rendimiento relativo</p>
+                <InfoTip label="cómo se calcula el índice" ancho={300}>
                   {monedaChart === 'ars'
-                    ? 'Vista en ARS nominal: Cartera/S&P 500/Oro/Bitcoin se convierten a pesos vía dólar MEP para ser comparables con la inflación (IPC INDEC), que solo existe en pesos. Dólar MEP muestra la devaluación del peso.'
-                    : 'Vista en USD: cada serie en su moneda nativa, sin convertir. La inflación argentina (IPC) no tiene valor en dólares y no se muestra en esta vista — cambiá a ARS para verla.'}
+                    ? 'En ARS nominal: cartera, S&P 500, oro y Bitcoin se convierten a pesos con el dólar MEP para compararlos con la inflación (IPC INDEC), que solo existe en pesos. El dólar MEP muestra la devaluación del peso.'
+                    : 'En USD: cada serie en su moneda, sin convertir. La inflación argentina no tiene valor en dólares y no se muestra; para verla, pasá a ARS.'}
                   {' '}Mi Cartera es TWR (Time-Weighted Return): aísla el rendimiento de mercado del efecto de cuánto o cuándo aportaste. Es una aproximación por Modified Dietz mensual (no hay valuación diaria), igual al TWR de Resumen.
-                </div>
-              )}
-            </span>
+                </InfoTip>
+              </div>
+              <p className="card-sub">
+                Índice base 100 en {resumenSeries[0]?.fecha ?? 'el primer mes'}, en {monedaChart === 'ars' ? 'pesos nominales' : 'dólares'}
+              </p>
+            </div>
           </div>
           <div style={{ flex: 1, minHeight: 240 }}>
             <ResponsiveContainer width="100%" height="100%">
               <ComposedChart data={chartData} margin={{ top: 5, right: 12, left: 0, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="2 4" stroke="var(--border-subtle)" vertical={false} />
+                <CartesianGrid stroke="var(--border-subtle)" vertical={false} />
                 <XAxis
                   dataKey="fecha"
                   ticks={xTicks}
@@ -397,7 +338,7 @@ export default function BenchmarksTab({ data }: Props) {
                   width={36}
                 />
                 <ReferenceLine y={100} stroke="var(--muted)" strokeDasharray="3 4" strokeOpacity={0.5} />
-                <Tooltip content={<CustomTooltip />} />
+                <Tooltip content={<CustomTooltip />} cursor={{ stroke: 'var(--border)' }} />
                 {[...seriesActivas]
                   // "cartera" se dibuja último (queda al frente, nunca tapada por los benchmarks)
                   .sort((a, b) => (a === 'cartera' ? 1 : b === 'cartera' ? -1 : 0))
@@ -408,13 +349,13 @@ export default function BenchmarksTab({ data }: Props) {
                       dataKey={id}
                       name={SERIES_META[id].label}
                       stroke={SERIES_META[id].color}
-                      strokeWidth={id === 'cartera' ? 4 : 2}
-                      strokeOpacity={id === 'cartera' ? 1 : 0.75}
+                      strokeWidth={id === 'cartera' ? 3 : 1.75}
+                      strokeOpacity={id === 'cartera' ? 1 : 0.85}
                       strokeDasharray={SERIES_META[id].dashed ? '5 4' : undefined}
                       dot={false}
                       animationDuration={300}
                       connectNulls
-                      activeDot={{ r: id === 'cartera' ? 6 : 5, fill: SERIES_META[id].color, strokeWidth: 0 }}
+                      activeDot={{ r: id === 'cartera' ? 5 : 4, fill: SERIES_META[id].color, stroke: 'var(--card)', strokeWidth: 2 }}
                     />
                   ))}
               </ComposedChart>

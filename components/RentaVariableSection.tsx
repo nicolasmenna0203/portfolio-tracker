@@ -8,11 +8,13 @@ import {
 import type { RangoHistorico, StockPerformance } from '@/types';
 import { usePerformanceVariable } from '@/lib/usePerformanceVariable';
 import { useHistoricoTicker } from '@/lib/useHistoricoTicker';
-import { formatMoney, formatPercent, formatNumber, CURRENCY_PREFIX } from '@/lib/format';
+import { formatMoney, formatPercent, formatNumber, formatFechaEje, CURRENCY_PREFIX } from '@/lib/format';
 import { PALETA_TIPO } from '@/lib/constants';
 import KPICard from './KPICard';
 import SectoresMercado from './SectoresMercado';
 import Segmented from './Segmented';
+import ThOrden from './ThOrden';
+import { Cargando, AvisoError, Vacio } from './Estados';
 
 interface Props {
   tickersUsa: string[];
@@ -72,13 +74,9 @@ function ChartTooltip({ active, payload }: { active?: boolean; payload?: ChartTo
   if (!active || !payload?.length) return null;
   const p = payload[0].payload;
   return (
-    <div style={{
-      background: 'var(--card)', border: '1px solid var(--border-subtle)',
-      borderRadius: 8, padding: '8px 12px', fontSize: 12,
-      boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
-    }}>
-      <p style={{ margin: '0 0 2px', color: 'var(--muted)', fontSize: 11 }}>{p.fecha}</p>
-      <p style={{ margin: 0, fontWeight: 700, color: 'var(--text)' }}>{fmtPx(p.close)}</p>
+    <div className="tooltip-panel">
+      <p className="tooltip-titulo" style={{ marginBottom: 2 }}>{formatFechaEje(p.fecha, true, true)}</p>
+      <p style={{ fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>{fmtPx(p.close)}</p>
     </div>
   );
 }
@@ -139,47 +137,25 @@ export default function RentaVariableSection({ tickersUsa, tenencias, tickersFci
     else { setSortKey(key); setSortDesc(true); }
   }
 
-  const cabecera = (key: SortKey, label: string, title?: string) => (
-    <th
-      onClick={() => toggleSort(key)}
-      title={title}
-      style={{
-        cursor: title ? 'help' : 'pointer', textAlign: 'right', padding: '8px 10px',
-        fontSize: 11, fontWeight: 600,
-        color: sortKey === key ? 'var(--primary)' : 'var(--muted)', whiteSpace: 'nowrap',
-      }}
-    >
-      {label}{sortKey === key ? (sortDesc ? ' ▼' : ' ▲') : ''}
-    </th>
+  const cabecera = (key: SortKey, label: string, align: 'left' | 'right' = 'right') => (
+    <ThOrden clave={key} label={label} activa={sortKey} desc={sortDesc} onOrden={toggleSort} align={align} />
   );
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, flex: 1 }}>
-        <p style={{ margin: 0, fontSize: 12, color: 'var(--muted)' }}>Cargando métricas de renta variable…</p>
-      </div>
+      <Cargando etiqueta="Cargando métricas de renta variable" kpis={1} alto={300} />
     );
   }
 
   if (error) {
     return (
-      <div style={{
-        background: 'var(--card)', border: '1px solid var(--down)', borderRadius: 10,
-        padding: '10px 14px', fontSize: 12, color: 'var(--down)',
-      }}>
-        Error cargando performance: {error}
-      </div>
+      <AvisoError titulo="No se pudieron cargar las métricas de renta variable">{error}</AvisoError>
     );
   }
 
   if (acciones.length === 0) {
     return (
-      <div style={{
-        background: 'var(--card)', border: '1px solid var(--border-subtle)', borderRadius: 12,
-        padding: '24px', fontSize: 13, color: 'var(--muted)', textAlign: 'center',
-      }}>
-        No hay acciones, CEDEARs ni ETFs en tu cartera actual.
-      </div>
+      <Vacio>No hay acciones, CEDEARs ni ETFs en la cartera.</Vacio>
     );
   }
 
@@ -191,31 +167,25 @@ export default function RentaVariableSection({ tickersUsa, tenencias, tickersFci
         <KPICard
           label="Valor en cartera"
           value={formatMoney(valorTotalCartera, { currency: 'USD', hidden: hideValues })}
-          sub={`${acciones.filter((a) => a.tenenciaUsd).length} de ${acciones.length} posiciones${hayFci ? ' · incluye fondos (VCP de CAFCI)' : ''}`}
+          sub={`${acciones.filter((a) => a.tenenciaUsd).length} de ${acciones.length} posiciones${hayFci ? ', incluye fondos (VCP de CAFCI)' : ''}`}
         />
       </div>
 
       {/* ── Gráfico histórico de precio ──────────────────────────────────── */}
-      <div style={{
-        background: 'var(--card)', border: '1px solid var(--border-subtle)', borderRadius: 12,
-        padding: '14px 16px 8px', minHeight: 320, display: 'flex', flexDirection: 'column', flexShrink: 0,
-      }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10, marginBottom: 10, flexShrink: 0 }}>
+      <div className="card" style={{ paddingBottom: 8, minHeight: 320, display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
+        <div className="card-cabecera" style={{ alignItems: 'flex-start', justifyContent: 'space-between' }}>
           <div>
-            <p style={{ fontSize: 13, fontWeight: 700, letterSpacing: '0.04em', color: 'var(--text-sec)', margin: 0 }}>
-              Histórico de precio {tickerSel ? `· ${tickerSel}` : ''}
+            <p className="card-titulo">
+              Precio histórico
+              {tickerSel && <span className="dato">{tickerSel}</span>}
             </p>
-            <span style={{ fontSize: 10, color: 'var(--muted)' }}>
-              Precio de cierre · elegí un ticker en la tabla
-            </span>
+            <p className="card-sub">Precio de cierre en USD. Para ver otro activo, elegilo en la tabla.</p>
           </div>
           <Segmented opciones={RANGOS} activa={rango} onChange={setRango} chico etiqueta="Rango" />
         </div>
         <div style={{ height: 280, position: 'relative' }}>
           {loadingHist && (
-            <p style={{ position: 'absolute', inset: 0, margin: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, color: 'var(--muted)' }}>
-              Cargando histórico…
-            </p>
+            <span className="skeleton" role="status" aria-label="Cargando el precio histórico" style={{ position: 'absolute', inset: '0 0 24px', borderRadius: 10 }} />
           )}
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={historico?.puntos ?? []} margin={{ top: 5, right: 16, left: 0, bottom: 0 }}>
@@ -225,19 +195,22 @@ export default function RentaVariableSection({ tickersUsa, tenencias, tickersFci
                   <stop offset="100%" stopColor="var(--primary)" stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="2 4" stroke="var(--border-subtle)" vertical={false} />
+              <CartesianGrid stroke="var(--border-subtle)" vertical={false} />
               <XAxis
                 dataKey="fecha" tick={{ fill: 'var(--muted)', fontSize: 11 }}
                 tickLine={false} axisLine={false}
+                tickFormatter={(f) => formatFechaEje(f, rango === '1m' || rango === '6m')}
                 minTickGap={40}
               />
+              {/* Sin "USD" en el eje: con el prefijo la etiqueta no entraba en el
+                  ancho y se leía "D 420,00". La moneda está en el subtítulo. */}
               <YAxis
                 dataKey="close" domain={['auto', 'auto']}
-                tickFormatter={(v) => fmtPx(v)}
+                tickFormatter={(v) => formatNumber(v, { decimals: v >= 1000 ? 0 : 2 })}
                 tick={{ fill: 'var(--muted)', fontSize: 11 }}
-                tickLine={false} axisLine={false} width={56}
+                tickLine={false} axisLine={false} width={52}
               />
-              <Tooltip content={<ChartTooltip />} cursor={{ stroke: 'var(--border)', strokeDasharray: '3 3' }} />
+              <Tooltip content={<ChartTooltip />} cursor={{ stroke: 'var(--border)' }} />
               <Area
                 type="monotone" dataKey="close"
                 stroke="var(--primary)" strokeWidth={2}
@@ -250,24 +223,19 @@ export default function RentaVariableSection({ tickersUsa, tenencias, tickersFci
       </div>
 
       {/* ── Tabla de fundamentals ────────────────────────────────────────── */}
-      <div className="tabla-wrap" style={{
-        background: 'var(--card)', border: '1px solid var(--border-subtle)', borderRadius: 12,
-        overflowX: 'auto',
-      }}>
-        <table className="tabla-datos" style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+      <div className="tabla-wrap">
+        <table className="tabla-datos" style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
           <thead style={{ position: 'sticky', top: 0, background: 'var(--card)', zIndex: 1 }}>
             <tr style={{ borderBottom: '1px solid var(--border)' }}>
-              <th onClick={() => toggleSort('ticker')} style={{ cursor: 'pointer', textAlign: 'left', padding: '8px 10px', fontSize: 11, fontWeight: 600, color: sortKey === 'ticker' ? 'var(--primary)' : 'var(--muted)' }}>
-                Ticker{sortKey === 'ticker' ? (sortDesc ? ' ▼' : ' ▲') : ''}
-              </th>
-              <th style={{ textAlign: 'right', padding: '8px 10px', fontSize: 11, fontWeight: 600, color: 'var(--muted)' }}>Precio</th>
+              {cabecera('ticker', 'Ticker', 'left')}
+              <th style={{ textAlign: 'right', padding: '10px 12px', fontSize: 12, fontWeight: 600, color: 'var(--muted)' }}>Precio</th>
               {cabecera('variacion1d', 'Var. 1D')}
-              <th style={{ textAlign: 'right', padding: '8px 10px', fontSize: 11, fontWeight: 600, color: 'var(--muted)' }}>Var. 1M</th>
+              <th style={{ textAlign: 'right', padding: '10px 12px', fontSize: 12, fontWeight: 600, color: 'var(--muted)' }}>Var. 1M</th>
               {cabecera('variacionYtd', 'Var. YTD')}
-              <th style={{ textAlign: 'right', padding: '8px 10px', fontSize: 11, fontWeight: 600, color: 'var(--muted)' }}>Var. 1A</th>
+              <th style={{ textAlign: 'right', padding: '10px 12px', fontSize: 12, fontWeight: 600, color: 'var(--muted)' }}>Var. 1A</th>
               {cabecera('peRatio', 'P/E')}
               {cabecera('marketCap', 'Market Cap')}
-              <th style={{ textAlign: 'right', padding: '8px 10px', fontSize: 11, fontWeight: 600, color: 'var(--muted)' }}>Rango 52s</th>
+              <th style={{ textAlign: 'right', padding: '10px 12px', fontSize: 12, fontWeight: 600, color: 'var(--muted)' }}>Rango 52s</th>
               {cabecera('dividendYield', 'Yield')}
             </tr>
           </thead>
@@ -278,36 +246,34 @@ export default function RentaVariableSection({ tickersUsa, tenencias, tickersFci
                 <tr
                   key={a.ticker}
                   onClick={() => { if (!a.esFci) setTickerSel(a.ticker); }}
+                  className={a.esFci ? undefined : 'elegible'}
+                  aria-selected={activo}
                   style={{
                     borderBottom: '1px solid var(--border-subtle)',
                     background: activo ? 'var(--primary-dim)' : a.tenenciaUsd ? 'color-mix(in srgb, var(--primary) 6%, transparent)' : 'transparent',
-                    cursor: a.esFci ? 'default' : 'pointer',
                   }}
                 >
-                  <td style={{ padding: '7px 10px', fontWeight: 700, color: 'var(--text)' }}>
+                  <td style={{ padding: '10px 12px', fontWeight: 700, color: 'var(--text)' }}>
                     {a.ticker}{a.tenenciaUsd ? ' ★' : ''}
                     {a.esFci && (
                       <span
                         title={`Fondo común de inversión (${a.nombre ?? 'CAFCI'}). No cotiza en el proveedor de precios: el valor es el VCP de la planilla de CAFCI${a.fciFecha ? ` al ${a.fciFecha}` : ''}, en ${a.fciMoneda ?? 'su moneda'}, y las variaciones son los rendimientos publicados (mes, año y 12 meses).`}
-                        style={{
-                          marginLeft: 6, fontSize: 9, fontWeight: 700, cursor: 'help',
-                          padding: '1px 5px', borderRadius: 4, verticalAlign: 'middle',
-                          color: PALETA_TIPO.FCI, background: `${PALETA_TIPO.FCI}22`,
-                        }}
+                        className="etiqueta"
+                        style={{ cursor: 'help', '--etiqueta-color': PALETA_TIPO.FCI } as React.CSSProperties}
                       >FCI</span>
                     )}
                   </td>
-                  <td style={{ padding: '7px 10px', textAlign: 'right', fontWeight: 700, color: 'var(--text)', fontVariantNumeric: 'tabular-nums' }}>{fmtPrecio(a)}</td>
-                  <td style={{ padding: '7px 10px', textAlign: 'right', color: colorVar(a.variacion1d), fontVariantNumeric: 'tabular-nums' }}>{a.variacion1d != null ? fmtPct1(a.variacion1d) : '—'}</td>
-                  <td style={{ padding: '7px 10px', textAlign: 'right', color: colorVar(a.variacion1m), fontVariantNumeric: 'tabular-nums' }}>{a.variacion1m != null ? fmtPct1(a.variacion1m) : '—'}</td>
-                  <td style={{ padding: '7px 10px', textAlign: 'right', color: colorVar(a.variacionYtd), fontVariantNumeric: 'tabular-nums' }}>{a.variacionYtd != null ? fmtPct1(a.variacionYtd) : '—'}</td>
-                  <td style={{ padding: '7px 10px', textAlign: 'right', color: colorVar(a.variacion1a), fontVariantNumeric: 'tabular-nums' }}>{a.variacion1a != null ? fmtPct1(a.variacion1a) : '—'}</td>
-                  <td style={{ padding: '7px 10px', textAlign: 'right', color: 'var(--text-sec)', fontVariantNumeric: 'tabular-nums' }}>{a.peRatio != null ? formatNumber(a.peRatio, { decimals: 1 }) : '—'}</td>
-                  <td style={{ padding: '7px 10px', textAlign: 'right', color: 'var(--text-sec)', fontVariantNumeric: 'tabular-nums' }}>{a.marketCap != null ? fmtCompact(a.marketCap) : '—'}</td>
-                  <td style={{ padding: '7px 10px', textAlign: 'right', color: 'var(--muted)', fontSize: 11, whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>
+                  <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 700, color: 'var(--text)', fontVariantNumeric: 'tabular-nums' }}>{fmtPrecio(a)}</td>
+                  <td style={{ padding: '10px 12px', textAlign: 'right', color: colorVar(a.variacion1d), fontVariantNumeric: 'tabular-nums' }}>{a.variacion1d != null ? fmtPct1(a.variacion1d) : '—'}</td>
+                  <td style={{ padding: '10px 12px', textAlign: 'right', color: colorVar(a.variacion1m), fontVariantNumeric: 'tabular-nums' }}>{a.variacion1m != null ? fmtPct1(a.variacion1m) : '—'}</td>
+                  <td style={{ padding: '10px 12px', textAlign: 'right', color: colorVar(a.variacionYtd), fontVariantNumeric: 'tabular-nums' }}>{a.variacionYtd != null ? fmtPct1(a.variacionYtd) : '—'}</td>
+                  <td style={{ padding: '10px 12px', textAlign: 'right', color: colorVar(a.variacion1a), fontVariantNumeric: 'tabular-nums' }}>{a.variacion1a != null ? fmtPct1(a.variacion1a) : '—'}</td>
+                  <td style={{ padding: '10px 12px', textAlign: 'right', color: 'var(--text-sec)', fontVariantNumeric: 'tabular-nums' }}>{a.peRatio != null ? formatNumber(a.peRatio, { decimals: 1 }) : '—'}</td>
+                  <td style={{ padding: '10px 12px', textAlign: 'right', color: 'var(--text-sec)', fontVariantNumeric: 'tabular-nums' }}>{a.marketCap != null ? fmtCompact(a.marketCap) : '—'}</td>
+                  <td style={{ padding: '10px 12px', textAlign: 'right', color: 'var(--muted)', fontSize: 11, whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>
                     {a.fiftyTwoWeekLow != null && a.fiftyTwoWeekHigh != null ? `${fmtPx(a.fiftyTwoWeekLow)} – ${fmtPx(a.fiftyTwoWeekHigh)}` : '—'}
                   </td>
-                  <td style={{ padding: '7px 10px', textAlign: 'right', color: 'var(--text-sec)', fontVariantNumeric: 'tabular-nums' }}>{a.dividendYield != null ? fmtPct1(a.dividendYield) : '—'}</td>
+                  <td style={{ padding: '10px 12px', textAlign: 'right', color: 'var(--text-sec)', fontVariantNumeric: 'tabular-nums' }}>{a.dividendYield != null ? fmtPct1(a.dividendYield) : '—'}</td>
                 </tr>
               );
             })}
@@ -316,7 +282,7 @@ export default function RentaVariableSection({ tickersUsa, tenencias, tickersFci
       </div>
 
       {hayFci && (
-        <p style={{ margin: 0, fontSize: 10, color: 'var(--muted)' }}>
+        <p className="nota">
           Las filas marcadas <strong>FCI</strong> son fondos comunes de inversión: no cotizan en el proveedor de precios, así que el
           valor es el VCP de la Planilla Diaria de CAFCI (en la moneda del fondo) y las columnas de variación son los rendimientos
           publicados de mes, año y 12 meses. No tienen P/E, market cap, rango de 52 semanas ni gráfico de precio.

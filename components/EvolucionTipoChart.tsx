@@ -99,19 +99,12 @@ function TooltipContent({ active, payload, label, mode, hideValues, moneda }: Pr
   const rows = [...filas].reverse().filter((p) => (p.value ?? 0) > 0);
 
   return (
-    <div style={{
-      background: 'var(--card)',
-      border: '1px solid var(--border-subtle)',
-      borderRadius: 10,
-      padding: '10px 14px',
-      fontSize: 12,
-      boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
-      minWidth: 160,
-    }}>
-      <p style={{ fontWeight: 600, color: 'var(--text-sec)', marginBottom: 6, fontSize: 11 }}>{label}</p>
+    <div className="tooltip-panel">
+      <p className="tooltip-titulo">{label}</p>
       {mode === 'nominal' && (
-        <p style={{ color: 'var(--muted)', marginBottom: 6, fontSize: 11 }}>
-          Total: {formatMoney(nominalTotal, { currency, hidden: hideValues })}
+        <p className="tooltip-fila" style={{ marginBottom: 4 }}>
+          <span>Total</span>
+          <span>{formatMoney(nominalTotal, { currency, hidden: hideValues })}</span>
         </p>
       )}
       {rows.map((p) => {
@@ -120,9 +113,9 @@ function TooltipContent({ active, payload, label, mode, hideValues, moneda }: Pr
           ? formatPercent(pct, { sign: false })
           : `${formatMoney(p.value, { currency })} · ${formatPercent(pct, { sign: false })}`;
         return (
-          <p key={p.dataKey} style={{ color: p.color, marginBottom: 2, fontVariantNumeric: 'tabular-nums' }}>
-            <span style={{ color: 'var(--muted)', marginRight: 6 }}>{p.name}:</span>
-            {display}
+          <p key={p.dataKey} className="tooltip-fila">
+            <span><span className="tooltip-marca" style={{ background: p.color }} />{p.name}</span>
+            <span>{display}</span>
           </p>
         );
       })}
@@ -153,18 +146,12 @@ export default function EvolucionTipoChart({ tenenciasPorMes, mesesDisponibles, 
     : (v: number) => formatMoney(v, { currency: moneda === 'ARS' ? 'ARS' : 'USD', mode: 'compact', compactShort: isMobile, hidden: hideValues });
 
   return (
-    <div style={{
-      background: 'var(--card)',
-      border: '1px solid var(--border-subtle)',
-      borderRadius: 12,
-      padding: '14px 16px 8px',
-      display: 'flex',
-      flexDirection: 'column',
-    }}>
+    <div className="card" style={{ paddingBottom: 8, display: 'flex', flexDirection: 'column' }}>
       {/* Header + controles */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, flexShrink: 0, flexWrap: 'wrap' }}>
-        <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-sec)', margin: 0, flexShrink: 0 }}>
-          Evolución · {DIMS.find(d => d.key === dim)?.label ?? dim}
+      <div className="card-cabecera">
+        <p className="card-titulo">
+          Evolución
+          <span className="dato">por {(DIMS.find(d => d.key === dim)?.label ?? dim).toLowerCase()}</span>
         </p>
 
         {/* Toggle moneda / % */}
@@ -194,7 +181,7 @@ export default function EvolucionTipoChart({ tenenciasPorMes, mesesDisponibles, 
               </linearGradient>
             ))}
           </defs>
-          <CartesianGrid strokeDasharray="2 4" stroke="var(--border-subtle)" vertical={false} />
+          <CartesianGrid stroke="var(--border-subtle)" vertical={false} />
           <XAxis
             dataKey="fecha"
             tick={{ fill: 'var(--muted)', fontSize: 11 }}
@@ -223,7 +210,7 @@ export default function EvolucionTipoChart({ tenenciasPorMes, mesesDisponibles, 
           <Legend
             iconType="circle"
             iconSize={7}
-            wrapperStyle={{ color: 'var(--text-sec)', fontSize: 11, paddingTop: 10 }}
+            wrapperStyle={{ color: 'var(--text-sec)', fontSize: 12, paddingTop: 10 }}
           />
           {groups.map((g) => (
             <Area

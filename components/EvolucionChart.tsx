@@ -35,6 +35,7 @@ import type { ResumenRow, TenenciaActual } from '@/types';
 import { useIsMobile } from '@/lib/useIsMobile';
 import { formatMoney, type Moneda } from '@/lib/format';
 import Segmented from './Segmented';
+import InfoTip from './InfoTip';
 
 interface Props {
   data: ResumenRow[];
@@ -199,26 +200,18 @@ function TooltipContent({ active, payload, label, hideValues, moneda }: PropsToo
   );
 
   const Fila = ({ nombre, marca, valor, color }: { nombre: string; marca?: string; valor: string; color?: string }) => (
-    <p style={{ marginBottom: 3, display: 'flex', justifyContent: 'space-between', gap: 12 }}>
-      <span style={{ color: 'var(--muted)', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-        {marca && <span style={{ width: 8, height: 8, borderRadius: 2, background: marca, flexShrink: 0 }} />}
+    <p className="tooltip-fila">
+      <span>
+        {marca && <span className="tooltip-marca" style={{ background: marca }} />}
         {nombre}
       </span>
-      <span style={{ fontWeight: 600, fontVariantNumeric: 'tabular-nums', color: color ?? 'var(--text)' }}>{valor}</span>
+      <span style={color ? { color } : undefined}>{valor}</span>
     </p>
   );
 
   return (
-    <div style={{
-      background: 'var(--card)',
-      border: '1px solid var(--border-subtle)',
-      borderRadius: 10,
-      padding: '10px 14px',
-      fontSize: 12,
-      boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
-      minWidth: 160,
-    }}>
-      <p style={{ fontWeight: 600, color: 'var(--text-sec)', marginBottom: 8, fontSize: 11 }}>{label}</p>
+    <div className="tooltip-panel">
+      <p className="tooltip-titulo">{label}</p>
       {sorted.map((p) => {
         if (p.value === null || p.value === undefined) return null;
         const esGanancia = p.dataKey === 'ganancia' || p.dataKey === 'ganancia_acumulada';
@@ -243,7 +236,6 @@ export default function EvolucionChart({ data, tenenciasPorMes, hideValues, mone
   const chartData = buildData(data, tenenciasPorMes, moneda);
   const isMobile = useIsMobile();
   const [vista, setVista] = useState<Vista>('capital');
-  const [guiaAbierta, setGuiaAbierta] = useState(false);
 
   const currency: Moneda = moneda === 'ARS' ? 'ARS' : 'USD';
   let suma = 0;
@@ -311,67 +303,34 @@ export default function EvolucionChart({ data, tenenciasPorMes, hideValues, mone
       ];
 
   return (
-    <div style={{
-      background: 'var(--card)',
-      border: '1px solid var(--border-subtle)',
-      borderRadius: 12,
-      padding: '14px 16px 8px',
-      display: 'flex',
-      flexDirection: 'column',
-      flex: '1 0 auto',
-    }}>
-      <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px 16px', marginBottom: 10, flexShrink: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, position: 'relative' }}>
-          <p style={{ fontSize: 13, fontWeight: 700, letterSpacing: '0.04em', color: 'var(--text-sec)', margin: 0 }}>
-            Evolución de la Cartera
-            <span style={{ fontWeight: 500, color: 'var(--muted)', marginLeft: 6 }}>· {currency}</span>
+    <div className="card" style={{ paddingBottom: 8, display: 'flex', flexDirection: 'column', flex: '1 0 auto' }}>
+      <div className="card-cabecera">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <p className="card-titulo">
+            Evolución de la cartera
+            <span className="dato">{currency}</span>
           </p>
-          <button
-            onClick={() => setGuiaAbierta((v) => !v)}
-            onBlur={() => setGuiaAbierta(false)}
-            aria-label="Cómo leer el gráfico"
-            aria-expanded={guiaAbierta}
-            className="kpi-info"
-            style={{
-              width: 14, height: 14, borderRadius: '50%', border: '1px solid var(--border)',
-              background: 'transparent', color: 'var(--muted)', fontSize: 9, lineHeight: 1,
-              cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              padding: 0, flexShrink: 0,
-            }}
-          >
-            ⓘ
-          </button>
-          {guiaAbierta && (
-            <div style={{
-              position: 'absolute', top: 22, left: 0, zIndex: 10,
-              width: 300, maxWidth: 'calc(100vw - 48px)',
-              background: 'var(--card)', border: '1px solid var(--border-subtle)', borderRadius: 8,
-              padding: '10px 12px', fontSize: 11, lineHeight: 1.45, color: 'var(--text-sec)',
-              boxShadow: '0 8px 32px rgba(0,0,0,0.5)', fontWeight: 400,
-              display: 'flex', flexDirection: 'column', gap: 8,
-            }}>
+          <InfoTip label="cada serie del gráfico" ancho={300}>
+            <span style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {GUIA[vista].map((g) => (
-                <div key={g.titulo} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-                  <span style={{ width: 16, flexShrink: 0, height: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <span key={g.titulo} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                  <span style={{ width: 16, flexShrink: 0, height: 18, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     {g.marca}
                   </span>
                   <span>
-                    <strong style={{ color: 'var(--text)', fontWeight: 600 }}>{g.titulo}.</strong> {g.texto}
+                    <strong style={{ fontWeight: 600 }}>{g.titulo}.</strong> {g.texto}
                   </span>
-                </div>
+                </span>
               ))}
-            </div>
-          )}
+            </span>
+          </InfoTip>
         </div>
 
         <Segmented opciones={VISTAS} activa={vista} onChange={setVista} chico etiqueta="Vista del gráfico" />
 
-        <div style={{
-          display: 'flex', flexWrap: 'wrap', gap: '4px 14px', marginLeft: isMobile ? 0 : 'auto',
-          fontSize: isMobile ? 10 : 11, color: 'var(--text-sec)',
-        }}>
+        <div className="leyenda" style={{ marginLeft: isMobile ? 0 : 'auto' }}>
           {leyenda.map((l) => (
-            <span key={l.label} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' }}>
+            <span key={l.label}>
               {l.marca}
               {l.label}
             </span>

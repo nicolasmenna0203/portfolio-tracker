@@ -14,6 +14,7 @@ import { CATEGORIAS, descripcionCategoria, esCategoriaDeLista } from '@/lib/gast
 import InfoTip from './InfoTip';
 import GastoForm, { type ResultadoForm } from './GastoForm';
 import SugerenciasGastos from './SugerenciasGastos';
+import { Cargando, AvisoError } from './Estados';
 
 // Catálogo de gastos mensuales: recurrentes (suscripciones, seguros, alquiler)
 // y también estimados (supermercado, transporte, salidas) cargados como un
@@ -380,37 +381,25 @@ export default function GastosSection({
 
   if (loading) {
     return (
-      <div style={{ padding: 40, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>
-        Cargando gastos...
-      </div>
+      <Cargando etiqueta="Cargando gastos" alto={260} />
     );
   }
 
   // Sin la lista no hay nada que mostrar ni que se pueda editar sin riesgo (ver header).
   if (loadError) {
     return (
-      <div role="alert" style={{
-        background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.3)',
-        borderRadius: 8, padding: '14px 18px',
-      }}>
-        <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--down)', margin: '0 0 4px' }}>No se pudieron leer los gastos</p>
-        <p style={{ fontSize: 13, color: 'var(--text)', margin: '0 0 10px' }}>
-          La edición queda desactivada para no pisar lo que hay en el Sheet. {loadError}
-        </p>
-        <button type="button" className="g-btn chico" onClick={onReintentar}>Reintentar</button>
-      </div>
+      <AvisoError titulo="No se pudieron leer los gastos" onReintentar={onReintentar}>
+        La edición queda desactivada para no pisar lo que hay en el Sheet. {loadError}
+      </AvisoError>
     );
   }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       {saveError && (
-        <div ref={errorRef} role="alert" style={{
-          background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.3)',
-          borderRadius: 8, padding: '14px 18px',
-        }}>
-          <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--down)', margin: '0 0 4px' }}>Error</p>
-          <p style={{ fontSize: 13, color: 'var(--text)', margin: 0 }}>{saveError}</p>
+        <div ref={errorRef} className="aviso error" role="alert">
+          <p className="aviso-titulo">No se pudo guardar</p>
+          <p>{saveError}</p>
         </div>
       )}
 
@@ -476,7 +465,7 @@ export default function GastosSection({
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
           <p className="g-eyebrow" style={{ margin: 0 }}>Detalle por categoría</p>
           <span className="g-ayuda" role="status" style={{ marginLeft: 'auto' }}>
-            {saving ? 'Guardando…' : guardado ? (esDemo ? 'Aplicado (demo)' : 'Guardado ✓') : ''}
+            {saving ? 'Guardando…' : guardado ? (esDemo ? 'Aplicado (demo)' : 'Guardado') : ''}
           </span>
           <button
             type="button"
@@ -484,7 +473,7 @@ export default function GastosSection({
             style={{ flexShrink: 0, whiteSpace: 'nowrap' }}
             onClick={() => setAgregando((v) => !v)}
             aria-expanded={agregando}
-          >{agregando ? 'Cerrar' : '+ Agregar gasto'}</button>
+          >{agregando ? 'Cerrar' : 'Agregar gasto'}</button>
         </div>
 
         {esDemo && (
@@ -527,7 +516,7 @@ export default function GastosSection({
                   />
                 ) : (
                   <>
-                    <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{categoria}</span>
+                    <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{categoria}</span>
                     {descripcionCategoria(categoria) && (
                       <InfoTip label={categoria}>{descripcionCategoria(categoria)}</InfoTip>
                     )}
@@ -543,7 +532,7 @@ export default function GastosSection({
                       >✎</button>
                     )}
                     {/* Subtotal mensual de la categoría y su peso sobre el ingreso. */}
-                    <span style={{ marginLeft: 'auto', flexShrink: 0, fontSize: 11, color: 'var(--muted)', fontVariantNumeric: 'tabular-nums' }}>
+                    <span style={{ marginLeft: 'auto', flexShrink: 0, fontSize: 13, color: 'var(--text-sec)', fontVariantNumeric: 'tabular-nums' }}>
                       {formatMoney(total, { currency: moneda, hidden: hideValues })}
                       {pctIngreso(total) != null && !hideValues && ` · ${formatPercent(pctIngreso(total), { sign: false, decimals: 1 })}`}
                     </span>

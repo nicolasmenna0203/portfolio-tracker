@@ -10,6 +10,9 @@ import { usePerformance } from '@/lib/usePerformance';
 import { calcularCarryTrade, techoBandaEnFecha } from '@/lib/carryTrade';
 import { formatMesLabel } from '@/lib/parser';
 import { formatMoney, formatPercent, formatFx } from '@/lib/format';
+import Segmented from './Segmented';
+import ThOrden from './ThOrden';
+import { Cargando, AvisoError, Vacio } from './Estados';
 
 interface Props {
   tenencias: Record<string, number>;
@@ -118,28 +121,29 @@ function CarryTooltip({ active, payload }: { active?: boolean; payload?: Tooltip
   const itemBanda = payload.find((p) => !esCarryItem(p.payload))?.payload as PuntoBanda | undefined;
 
   return (
-    <div style={{
-      background: 'var(--card)', border: '1px solid var(--border-subtle)',
-      borderRadius: 8, padding: '10px 14px', fontSize: 12,
-      boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
-    }}>
+    <div className="tooltip-panel">
       {b ? (
         <>
-          <p style={{ margin: '0 0 4px', fontWeight: 700, color: 'var(--text)' }}>{b.ticker}</p>
-          <p style={{ margin: '0 0 6px', color: 'var(--muted)', fontSize: 11 }}>Vto. {fmtFecha(b.vencimiento)} · {b.diasAlVencimiento} días</p>
-          <p style={{ margin: '2px 0', color: 'var(--text-sec)' }}>TIR (ARS): <strong>{fmtPct1(b.tir)}</strong></p>
-          <p style={{ margin: '2px 0', color: 'var(--text-sec)' }}>Retorno directo (ARS): <strong>{fmtPct1(b.retornoDirectoArs)}</strong></p>
+          <p style={{ fontWeight: 600 }}>{b.ticker}</p>
+          <p className="tooltip-titulo" style={{ fontWeight: 400 }}>Vence el {fmtFecha(b.vencimiento)}, en {b.diasAlVencimiento} días</p>
+          <p className="tooltip-fila"><span>TIR en pesos</span><span>{fmtPct1(b.tir)}</span></p>
+          <p className="tooltip-fila"><span>Retorno directo en pesos</span><span>{fmtPct1(b.retornoDirectoArs)}</span></p>
           {!Number.isNaN(b.mepBreakeven) && (
-            <p style={{ margin: '2px 0', color: 'var(--text-sec)' }}>MEP breakeven: <strong>{formatFx(b.mepBreakeven, { decimals: 2 })}</strong> ({fmtPct1(b.devaluacionBreakeven)})</p>
+            <p className="tooltip-fila"><span>MEP breakeven</span><span>{formatFx(b.mepBreakeven, { decimals: 2 })} ({fmtPct1(b.devaluacionBreakeven)})</span></p>
           )}
-          <p style={{ margin: '2px 0', color: '#2a78d6' }}>Banda superior a esa fecha: <strong>{formatFx(b.techoBandaVto, { decimals: 2 })}</strong></p>
-          {b.tenenciaUsd != null && <p style={{ margin: '6px 0 0', color: 'var(--primary)', fontSize: 11 }}>En cartera</p>}
+          <p className="tooltip-fila">
+            <span><span className="tooltip-marca" style={{ background: '#2a78d6' }} />Techo de la banda</span>
+            <span>{formatFx(b.techoBandaVto, { decimals: 2 })}</span>
+          </p>
+          {b.tenenciaUsd != null && <p className="tooltip-nota" style={{ color: 'var(--primary)' }}>En cartera</p>}
         </>
       ) : itemBanda ? (
         <>
-          <p style={{ margin: '0 0 4px', fontWeight: 700, color: '#2a78d6' }}>Banda superior proyectada</p>
-          <p style={{ margin: '0 0 6px', color: 'var(--muted)', fontSize: 11 }}>{formatMesLabel(itemBanda.fechaTs)}</p>
-          <p style={{ margin: '2px 0', color: 'var(--text-sec)' }}>Techo estimado: <strong>{formatFx(itemBanda.techoBanda, { decimals: 2 })}</strong></p>
+          <p className="tooltip-titulo">{formatMesLabel(itemBanda.fechaTs)}</p>
+          <p className="tooltip-fila">
+            <span><span className="tooltip-marca" style={{ background: '#2a78d6' }} />Techo de la banda</span>
+            <span>{formatFx(itemBanda.techoBanda, { decimals: 2 })}</span>
+          </p>
         </>
       ) : null}
     </div>
@@ -208,7 +212,7 @@ export default function CarryTradeSection({ tenencias }: Props) {
       fijas.map((f) => ({ key: f.key, label: f.label, custom: false }));
     if (carryCustom != null) {
       const idx = fijas.findIndex((f) => carryCustom < f.mep);
-      const entrada = { key: 'custom' as const, label: `Carry ${formatFx(carryCustom, { decimals: 2 })} (custom)`, custom: true };
+      const entrada = { key: 'custom' as const, label: `Carry ${formatFx(carryCustom, { decimals: 2 })} (propio)`, custom: true };
       if (idx === -1) columnas.push(entrada);
       else columnas.splice(idx, 0, entrada);
     }
@@ -216,16 +220,7 @@ export default function CarryTradeSection({ tenencias }: Props) {
   }, [carryCustom]);
 
   const cabecera = (key: SortKey, label: string, align: 'left' | 'right' = 'right') => (
-    <th
-      onClick={() => toggleSort(key)}
-      style={{
-        cursor: 'pointer', textAlign: align, padding: '8px 10px',
-        fontSize: 11, fontWeight: 600,
-        color: sortKey === key ? 'var(--primary)' : 'var(--muted)', whiteSpace: 'nowrap',
-      }}
-    >
-      {label}{sortKey === key ? (sortDesc ? ' ▼' : ' ▲') : ''}
-    </th>
+    <ThOrden clave={key} label={label} activa={sortKey} desc={sortDesc} onOrden={toggleSort} align={align} />
   );
 
   const puntosScatter = useMemo(
@@ -286,20 +281,13 @@ export default function CarryTradeSection({ tenencias }: Props) {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, flex: 1 }}>
-        <p style={{ margin: 0, fontSize: 12, color: 'var(--muted)' }}>Cargando instrumentos de carry trade…</p>
-      </div>
+      <Cargando etiqueta="Cargando instrumentos de carry trade" alto={300} />
     );
   }
 
   if (error) {
     return (
-      <div style={{
-        background: 'var(--card)', border: '1px solid var(--down)', borderRadius: 10,
-        padding: '10px 14px', fontSize: 12, color: 'var(--down)',
-      }}>
-        Error cargando performance: {error}
-      </div>
+      <AvisoError titulo="No se pudieron cargar los instrumentos">{error}</AvisoError>
     );
   }
 
@@ -307,96 +295,87 @@ export default function CarryTradeSection({ tenencias }: Props) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
 
       {/* ── Barra de control: FX spot + modo + carry custom ──────────────── */}
-      <div style={{
-        background: 'var(--card)', border: '1px solid var(--border-subtle)', borderRadius: 12,
-        padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 12,
-      }}>
-        <p style={{ margin: 0, fontSize: 12, color: 'var(--text-sec)', lineHeight: 1.5 }}>
+      <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <p style={{ margin: 0, fontSize: 13, color: 'var(--text-sec)', lineHeight: 1.5, maxWidth: '78ch' }}>
           Vender USD al MEP de entrada, comprar el instrumento en pesos y mantenerlo hasta el vencimiento,
           para volver a comprar USD al MEP de salida. El <strong>MEP breakeven</strong> es el tipo de cambio al
           que el carry deja de ganarle a quedarse directamente en dólares.
         </p>
-        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
-          <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--muted)', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 20, padding: '4px 10px 4px 12px' }}>
-            MEP
+        <div style={{ display: 'flex', gap: '10px 18px', flexWrap: 'wrap', alignItems: 'center' }}>
+          <label className="campo-etiqueta">
+            MEP de entrada
             <input
               type="number" inputMode="decimal" placeholder="ej. 1517,67"
               value={mepStr}
               onChange={(e) => setMepStr(e.target.value)}
-              style={{ width: 84, padding: '2px 4px', border: 'none', background: 'transparent', color: 'var(--text)', fontSize: 13, fontWeight: 700, outline: 'none' }}
+              className="campo"
+              style={{ width: 96, fontWeight: 600 }}
             />
           </label>
 
-          <div style={{ display: 'flex', borderRadius: 20, border: '1px solid var(--border)', overflow: 'hidden', marginLeft: 4 }}>
-            {(['directa', 'tir'] as ModoTasa[]).map((m) => (
-              <button
-                key={m}
-                onClick={() => setModoTasa(m)}
-                style={{
-                  padding: '6px 14px', fontSize: 11, fontWeight: 700, cursor: 'pointer', border: 'none',
-                  background: modoTasa === m ? 'var(--primary)' : 'transparent',
-                  color: modoTasa === m ? 'var(--bg)' : 'var(--muted)',
-                }}
-              >
-                {m === 'directa' ? 'Tasa directa' : 'TIR'}
-              </button>
-            ))}
-          </div>
+          <Segmented
+            opciones={[{ id: 'directa' as ModoTasa, label: 'Tasa directa' }, { id: 'tir' as ModoTasa, label: 'TIR' }]}
+            activa={modoTasa}
+            onChange={setModoTasa}
+            chico
+            etiqueta="Tasa de la tabla"
+          />
 
-          <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--muted)', marginLeft: 'auto' }}>
-            Carry custom
+          <label className="campo-etiqueta" style={{ marginLeft: 'auto' }}>
+            MEP de salida propio
             <input
               type="number" inputMode="decimal" placeholder="1350"
               value={carryCustomStr}
               onChange={(e) => setCarryCustomStr(e.target.value)}
-              style={{
-                width: 90, padding: '6px 10px', borderRadius: 8, border: '1px solid var(--border)',
-                background: 'var(--bg)', color: 'var(--text)', fontSize: 13, fontWeight: 700,
-              }}
+              className="campo"
+              style={{ width: 96, fontWeight: 600 }}
             />
           </label>
-          <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--muted)' }}>
-            Inflación mens. banda
+          <label className="campo-etiqueta">
+            Inflación mensual de la banda
             <input
               type="number" inputMode="decimal" step="0.1" placeholder="1"
               value={inflacionStr}
               onChange={(e) => setInflacionStr(e.target.value)}
-              style={{
-                width: 60, padding: '6px 8px', borderRadius: 8, border: '1px solid var(--border)',
-                background: 'var(--bg)', color: 'var(--text)', fontSize: 13, fontWeight: 700,
-              }}
+              className="campo"
+              style={{ width: 64, fontWeight: 600 }}
             />
             %
           </label>
         </div>
       </div>
 
+      {/* Sin instrumentos la tabla quedaba en una fila de encabezados y el gráfico
+          en ejes sin sentido ("1 ARS/USD"): se dice qué falta. */}
+      {items.length === 0 && (
+        <Vacio titulo="No hay instrumentos para analizar">
+          El carry trade se arma con letras y bonos a tasa fija en pesos, y hoy la fuente de mercado no trajo ninguno.
+        </Vacio>
+      )}
+
       {/* ── Tabla: precio, retorno directo y heatmap de carry por escenario ─ */}
-      <div className="tabla-wrap" style={{
-        background: 'var(--card)', border: '1px solid var(--border-subtle)', borderRadius: 12,
-        overflowX: 'auto',
-      }}>
-        <table className="tabla-datos" style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+      <div className="tabla-wrap" hidden={items.length === 0}>
+        <table className="tabla-datos" style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
           <thead style={{ position: 'sticky', top: 0, background: 'var(--card)', zIndex: 1 }}>
             <tr style={{ borderBottom: '1px solid var(--border)' }}>
               {cabecera('ticker', 'Ticker', 'left')}
-              <th style={{ textAlign: 'right', padding: '8px 10px', fontSize: 11, fontWeight: 600, color: 'var(--muted)' }}>Precio</th>
-              {cabecera('diasAlVencimiento', 'Días al Vto.')}
-              <th style={{ textAlign: 'right', padding: '8px 10px', fontSize: 11, fontWeight: 600, color: 'var(--muted)' }}>Vto.</th>
-              <th style={{ textAlign: 'right', padding: '8px 10px', fontSize: 11, fontWeight: 600, color: 'var(--muted)' }}>Pr. finish</th>
+              <th style={{ textAlign: 'right', padding: '10px 12px', fontSize: 12, fontWeight: 600, color: 'var(--muted)' }}>Precio</th>
+              {cabecera('diasAlVencimiento', 'Días al vto.')}
+              <th style={{ textAlign: 'right', padding: '10px 12px', fontSize: 12, fontWeight: 600, color: 'var(--muted)' }}>Vto.</th>
+              <th style={{ textAlign: 'right', padding: '10px 12px', fontSize: 12, fontWeight: 600, color: 'var(--muted)' }}>Valor final</th>
               {cabecera(modoTasa === 'directa' ? 'retornoDirectoArs' : 'tir', modoTasa === 'directa' ? 'Retorno directo' : 'TIR')}
               {columnasCarry.map((c) => (
                 <th
                   key={c.key}
                   style={{
-                    textAlign: 'right', padding: '8px 10px', fontSize: 11, fontWeight: 600,
+                    textAlign: 'right', padding: '10px 12px', fontSize: 12, fontWeight: 600,
                     color: c.custom ? 'var(--primary)' : 'var(--muted)',
                   }}
                 >{c.label}</th>
               ))}
               <th
                 title="Retorno en USD si el MEP de salida termina en el techo de banda cambiaria proyectado a esa fecha con la inflación mensual asumida."
-                style={{ textAlign: 'right', padding: '8px 10px', fontSize: 11, fontWeight: 600, color: 'var(--muted)', cursor: 'help' }}
+                style={{ textAlign: 'right', padding: '10px 12px', fontSize: 12, fontWeight: 600, color: 'var(--muted)', cursor: 'help' }}
               >Banda superior</th>
             </tr>
           </thead>
@@ -406,35 +385,35 @@ export default function CarryTradeSection({ tenencias }: Props) {
                 key={i.ticker}
                 style={{
                   borderBottom: '1px solid var(--border-subtle)',
-                  background: i.tenenciaUsd ? '#1baf7a11' : 'transparent',
+                  background: i.tenenciaUsd ? 'color-mix(in srgb, var(--primary) 6%, transparent)' : 'transparent',
                 }}
               >
-                <td style={{ padding: '7px 10px', fontWeight: 700, color: 'var(--text)' }}>
+                <td style={{ padding: '10px 12px', fontWeight: 700, color: 'var(--text)' }}>
                   {i.ticker}{i.tenenciaUsd ? ' ★' : ''}
                 </td>
-                <td style={{ padding: '7px 10px', textAlign: 'right', color: 'var(--text-sec)', fontVariantNumeric: 'tabular-nums' }}>
+                <td style={{ padding: '10px 12px', textAlign: 'right', color: 'var(--text-sec)', fontVariantNumeric: 'tabular-nums' }}>
                   {i.precio != null ? formatMoney(i.precio, { currency: 'ARS', mode: 'price' }) : '—'}
                 </td>
-                <td style={{ padding: '7px 10px', textAlign: 'right', color: 'var(--text-sec)', fontVariantNumeric: 'tabular-nums' }}>{i.diasAlVencimiento}</td>
-                <td style={{ padding: '7px 10px', textAlign: 'right', color: 'var(--text-sec)', whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>{fmtFecha(i.vencimiento)}</td>
-                <td style={{ padding: '7px 10px', textAlign: 'right', color: 'var(--text-sec)', fontVariantNumeric: 'tabular-nums' }}>
+                <td style={{ padding: '10px 12px', textAlign: 'right', color: 'var(--text-sec)', fontVariantNumeric: 'tabular-nums' }}>{i.diasAlVencimiento}</td>
+                <td style={{ padding: '10px 12px', textAlign: 'right', color: 'var(--text-sec)', whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>{fmtFecha(i.vencimiento)}</td>
+                <td style={{ padding: '10px 12px', textAlign: 'right', color: 'var(--text-sec)', fontVariantNumeric: 'tabular-nums' }}>
                   {i.prFinish != null ? formatMoney(i.prFinish, { currency: 'ARS', mode: 'price' }) : '—'}
                 </td>
-                <td style={{ padding: '7px 10px', textAlign: 'right', fontWeight: 700, color: 'var(--text)', fontVariantNumeric: 'tabular-nums' }}>
+                <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 700, color: 'var(--text)', fontVariantNumeric: 'tabular-nums' }}>
                   {fmtPct1(modoTasa === 'directa' ? i.retornoDirectoArs : i.tir)}
                 </td>
                 {columnasCarry.map((c) => (
                   <td
                     key={c.key}
                     style={{
-                      padding: '7px 10px', textAlign: 'right', fontWeight: 700, fontVariantNumeric: 'tabular-nums',
+                      padding: '10px 12px', textAlign: 'right', fontWeight: 700, fontVariantNumeric: 'tabular-nums',
                       background: colorHeatmap(i.carryPorTarget[c.key]), color: colorHeatmapTexto(i.carryPorTarget[c.key]),
                     }}
                   >
                     {i.carryPorTarget[c.key] != null ? fmtPct1(i.carryPorTarget[c.key]!) : '—'}
                   </td>
                 ))}
-                <td style={{ padding: '7px 10px', textAlign: 'right', fontWeight: 700, fontVariantNumeric: 'tabular-nums', background: colorHeatmap(i.bandaSuperior), color: colorHeatmapTexto(i.bandaSuperior) }}>
+                <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 700, fontVariantNumeric: 'tabular-nums', background: colorHeatmap(i.bandaSuperior), color: colorHeatmapTexto(i.bandaSuperior) }}>
                   {i.bandaSuperior != null ? fmtPct1(i.bandaSuperior) : '—'}
                 </td>
               </tr>
@@ -444,27 +423,23 @@ export default function CarryTradeSection({ tenencias }: Props) {
       </div>
 
       {/* ── Curva de breakeven: MEP breakeven vs. vencimiento + banda proyectada ── */}
-      <div style={{
-        background: 'var(--card)', border: '1px solid var(--border-subtle)', borderRadius: 12,
-        padding: '14px 16px 8px', minHeight: 320, display: 'flex', flexDirection: 'column',
-      }}>
-        <div style={{ marginBottom: 10 }}>
-          <p style={{ fontSize: 13, fontWeight: 700, letterSpacing: '0.04em', color: 'var(--text-sec)', margin: 0 }}>
-            Curva de Breakeven Carry Trade
+      <div className="card" hidden={items.length === 0} style={{ paddingBottom: 8, minHeight: 320, flexDirection: 'column' }}>
+        <div className="card-cabecera" style={{ display: 'block' }}>
+          <p className="card-titulo">Curva de breakeven</p>
+          <p className="card-sub">
+            Cada punto naranja es el MEP breakeven de un instrumento a su vencimiento. La línea es el techo de la banda,
+            proyectado con una inflación mensual del {fmtPct2(inflacionMensual)}.
           </p>
-          <span style={{ fontSize: 10, color: 'var(--muted)' }}>
-            Bandas proyectadas con inflación del {fmtPct2(inflacionMensual)} · un punto naranja = MEP breakeven por ticker
-          </span>
         </div>
         <div ref={chartWrapRef} style={{ height: 300 }}>
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart margin={{ top: 20, right: 20, left: 4, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="2 4" stroke="var(--border-subtle)" />
+              <CartesianGrid stroke="var(--border-subtle)" />
               <XAxis
                 type="number" dataKey="fechaTs" name="Vencimiento"
                 domain={dominioFechaX} allowDataOverflow
                 tickFormatter={formatMesLabel}
-                tick={{ fill: 'var(--muted)', fontSize: 10 }}
+                tick={{ fill: 'var(--muted)', fontSize: 11 }}
                 tickLine={false} axisLine={false}
               />
               <YAxis

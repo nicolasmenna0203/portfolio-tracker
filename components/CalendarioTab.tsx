@@ -7,6 +7,8 @@ import { tickersDeCartera } from '@/lib/tickersElegibles';
 import { RETENCION_USA, IMPUESTO_CHEQUE, FACTOR_NETO_DIVIDENDO } from '@/lib/retenciones';
 import { formatMoney, formatPercent } from '@/lib/format';
 import { useIsMobile } from '@/lib/useIsMobile';
+import Segmented from './Segmented';
+import { Cargando } from './Estados';
 
 interface Props {
   data: DashboardData;
@@ -21,12 +23,15 @@ const TIPO_EVENTO_META: Record<EventoTipo, { label: string; color: string }> = {
   amortizacion:   { label: 'Amortización',     color: '#b455e8' },
 };
 
-// Tipos agrupados para los filtros (dividendo histórico + futuro se filtran juntos).
-const FILTROS_TIPO: { label: string; tipos: EventoTipo[] }[] = [
-  { label: 'Balances',      tipos: ['earnings'] },
-  { label: 'Dividendos',    tipos: ['dividendo', 'dividendo-fut'] },
-  { label: 'Renta',         tipos: ['renta'] },
-  { label: 'Amortización',  tipos: ['amortizacion'] },
+// Tipos agrupados para el filtro (dividendo histórico + futuro se filtran juntos).
+// Es una opción a la vez, así que va en un segmented control; `null` = todos.
+type FiltroTipo = 'todos' | 'balances' | 'dividendos' | 'renta' | 'amortizacion';
+const FILTROS_TIPO: { id: FiltroTipo; label: string; corto?: string; tipos: EventoTipo[] | null }[] = [
+  { id: 'todos',        label: 'Todos',        tipos: null },
+  { id: 'balances',     label: 'Balances',     tipos: ['earnings'] },
+  { id: 'dividendos',   label: 'Dividendos',   tipos: ['dividendo', 'dividendo-fut'] },
+  { id: 'renta',        label: 'Renta',        tipos: ['renta'] },
+  { id: 'amortizacion', label: 'Amortización', corto: 'Amort.', tipos: ['amortizacion'] },
 ];
 
 const MESES_LABEL = [
@@ -65,35 +70,11 @@ function tooltipMonto(tipo: EventoTipo, estimadoAl?: string): string {
   return 'Cobro estimado según tu tenencia y el precio de mercado actual.\nSin retención de origen: los bonos ARG se acreditan completos.';
 }
 
-function Pill({ label, active, color, onClick }: {
-  label: string; active: boolean; color?: string; onClick: () => void;
-}) {
-  const c = color ?? 'var(--primary)';
+function Chevron({ haciaAtras = false }: { haciaAtras?: boolean }) {
   return (
-    <button
-      onClick={onClick}
-      className="pill-touch"
-      aria-pressed={active}
-      style={{
-        padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600,
-        cursor: 'pointer', border: '1px solid',
-        borderColor: active ? c : 'var(--border)',
-        background: active ? `${c}22` : 'transparent',
-        color: active ? c : 'var(--muted)',
-        transition: 'all 0.12s', whiteSpace: 'nowrap', flexShrink: 0,
-      }}
-    >{label}</button>
-  );
-}
-
-function Card({ children }: { children: React.ReactNode }) {
-  return (
-    <div style={{
-      background: 'var(--card)', border: '1px solid var(--border-subtle)',
-      borderRadius: 12, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 10,
-    }}>
-      {children}
-    </div>
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d={haciaAtras ? 'M15 5l-7 7 7 7' : 'M9 5l7 7-7 7'} />
+    </svg>
   );
 }
 
@@ -120,9 +101,9 @@ function LogoTicker({ ticker, conLogo, size }: { ticker: string; conLogo: boolea
   if (!conLogo || error) {
     return (
       <div style={{
-        width: size, height: size, borderRadius: '50%', background: 'var(--border)',
+        width: size, height: size, borderRadius: '50%', background: 'var(--chip-hover)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontSize: size * 0.4, fontWeight: 700, color: 'var(--muted)', flexShrink: 0,
+        fontSize: size * 0.42, fontWeight: 600, color: 'var(--text-sec)', flexShrink: 0,
       }}>
         {ticker[0]}
       </div>
@@ -135,6 +116,8 @@ function LogoTicker({ ticker, conLogo, size }: { ticker: string; conLogo: boolea
       alt={ticker}
       width={size}
       height={size}
+      loading="lazy"
+      decoding="async"
       onError={() => setError(true)}
       style={{ borderRadius: '50%', flexShrink: 0, objectFit: 'contain', background: '#fff' }}
     />
@@ -151,41 +134,28 @@ function tickerConLogo(tipo: EventoTipo): boolean {
 // día con evento es "qué ticker paga", no la fecha. Con 2+ eventos el segundo
 // logo se solapa (no se achica la grilla); a partir del tercero se cuenta.
 function DiaCelda({
-  dia, eventosDia, esHoy, logoSize, maxLogos, yieldPorTicker, hideValues,
+  dia, eventosDia, esHoy, esFinde, logoSize, maxLogos, yieldPorTicker, hideValues,
 }: {
   dia: number | null;
   eventosDia?: EventoCalendario[];
   esHoy: boolean;
+  esFinde: boolean;
   logoSize: number;
   maxLogos: number;
   yieldPorTicker: Map<string, YieldTicker>;
   hideValues: boolean;
 }) {
-  if (dia === null) {
-    return <div className="cal-dia-vacio" style={{ minHeight: 56, borderRadius: 8 }} />;
-  }
+  // Las celdas de relleno llevan la misma línea de arriba: el renglón de la
+  // semana se lee entero aunque el mes empiece un jueves.
+  if (dia === null) return <div className="cal-dia" aria-hidden="true" />;
 
   const hayEventos = eventosDia != null && eventosDia.length > 0;
-  const conEvento = hayEventos
-    ? `color-mix(in srgb, var(--primary) 35%, ${esHoy ? 'var(--primary)' : 'var(--border)'})`
-    : undefined;
 
   return (
-    <div className="cal-dia" style={{
-      minHeight: 56, borderRadius: 8, padding: 4,
-      border: `1px solid ${esHoy ? 'var(--primary)' : conEvento ?? 'var(--border-subtle)'}`,
-      background: esHoy ? 'var(--primary-dim)' : 'var(--card)',
-      position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center',
-    }}>
-      <span className="cal-dia-num" style={{
-        position: 'absolute', top: hayEventos ? 2 : 3, left: hayEventos ? 2 : 5,
-        fontSize: hayEventos ? 9 : 10, fontWeight: esHoy ? 800 : 600,
-        color: esHoy ? 'var(--primary)' : 'var(--muted)',
-      }}>
-        {dia}
-      </span>
+    <div className="cal-dia" data-hoy={esHoy ? '' : undefined} data-finde={esFinde ? '' : undefined}>
+      <span className="cal-dia-num">{dia}</span>
       {hayEventos && (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div className="cal-dia-logos">
           {eventosDia.slice(0, maxLogos).map((e, i) => {
             const meta = TIPO_EVENTO_META[e.tipo];
             const montoTxt = e.montoEstimado != null && e.montoEstimado > 0
@@ -213,11 +183,7 @@ function DiaCelda({
             );
           })}
           {eventosDia.length > maxLogos && (
-            <span style={{
-              fontSize: 10, fontWeight: 700, color: 'var(--muted)', marginLeft: 3,
-            }}>
-              +{eventosDia.length - maxLogos}
-            </span>
+            <span className="cal-dia-mas">+{eventosDia.length - maxLogos}</span>
           )}
         </div>
       )}
@@ -229,7 +195,7 @@ export default function CalendarioTab({ data, hideValues = false }: Props) {
   const { tenenciasPorMes } = data;
 
   const esMobile = useIsMobile();
-  const logoSize = esMobile ? 18 : 30;
+  const logoSize = esMobile ? 20 : 30;
   const maxLogos = esMobile ? 3 : 12;
 
   const hoy = useMemo(() => new Date(), []);
@@ -271,7 +237,8 @@ export default function CalendarioTab({ data, hideValues = false }: Props) {
   }, [cobroAnualTotal, tenencias]);
 
   const [filtroTicker, setFiltroTicker] = useState<string | null>(null);
-  const [filtroTipos, setFiltroTipos] = useState<EventoTipo[] | null>(null);
+  const [filtroTipo, setFiltroTipo] = useState<FiltroTipo>('todos');
+  const filtroTipos = FILTROS_TIPO.find((f) => f.id === filtroTipo)?.tipos ?? null;
 
   const tickersDisponibles = useMemo(() => {
     const set = new Set<string>();
@@ -337,68 +304,51 @@ export default function CalendarioTab({ data, hideValues = false }: Props) {
   }, [eventosFiltrados, hoyKey]);
 
   return (
-    <div className="cal-root scroll-y" style={{ display: 'flex', flexDirection: 'column', gap: 12, flex: 1, minHeight: 0 }}>
+    <div className="cal-root" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
 
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <button
-            onClick={irMesAnterior}
-            className="cal-nav-btn"
-            aria-label="Mes anterior"
-            style={{
-              border: '1px solid var(--border)', background: 'transparent', color: 'var(--text)',
-              borderRadius: 8, padding: '4px 10px', cursor: 'pointer', fontSize: 13,
-            }}
-          >‹</button>
-          <p className="cal-header-mes" style={{ margin: 0, fontSize: 16, fontWeight: 700, minWidth: 150, textAlign: 'center' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px 12px' }}>
+        <div className="cal-nav">
+          <button type="button" onClick={irMesAnterior} className="app-bar-btn" aria-label="Mes anterior">
+            <Chevron haciaAtras />
+          </button>
+          <p className="cal-header-mes" aria-live="polite">
             {MESES_LABEL[mesIdx]} {year}
           </p>
-          <button
-            onClick={irMesSiguiente}
-            className="cal-nav-btn"
-            aria-label="Mes siguiente"
-            style={{
-              border: '1px solid var(--border)', background: 'transparent', color: 'var(--text)',
-              borderRadius: 8, padding: '4px 10px', cursor: 'pointer', fontSize: 13,
-            }}
-          >›</button>
+          <button type="button" onClick={irMesSiguiente} className="app-bar-btn" aria-label="Mes siguiente">
+            <Chevron />
+          </button>
           {!esMesActual && (
-            <Pill label="Hoy" active={false} onClick={irHoy} />
+            <button type="button" className="chip accion" onClick={irHoy} style={{ marginLeft: 4 }}>Hoy</button>
           )}
         </div>
 
-        <div className="filtro-tickers" style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-          <Pill label="Todos" active={filtroTipos === null} onClick={() => setFiltroTipos(null)} />
-          {FILTROS_TIPO.map((f) => {
-            const activo = filtroTipos !== null && f.tipos.every((t) => filtroTipos.includes(t)) && filtroTipos.length === f.tipos.length;
-            return (
-              <Pill
-                key={f.label}
-                label={f.label}
-                active={activo}
-                color={TIPO_EVENTO_META[f.tipos[0]].color}
-                onClick={() => setFiltroTipos((prev) =>
-                  prev !== null && prev.length === f.tipos.length && f.tipos.every((t) => prev.includes(t)) ? null : f.tipos,
-                )}
-              />
-            );
-          })}
-        </div>
+        <Segmented
+          opciones={FILTROS_TIPO}
+          activa={filtroTipo}
+          onChange={setFiltroTipo}
+          chico
+          etiqueta="Tipo de evento"
+          className="seg-ancho"
+        />
       </div>
 
       {tickersDisponibles.length > 0 && (
-        <div className="filtro-tickers" style={{ display: 'flex', gap: 6, flexWrap: 'wrap', flexShrink: 0 }}>
-          <Pill label="Todos" active={filtroTicker === null} onClick={() => setFiltroTicker(null)} />
+        <div className="chips" role="group" aria-label="Filtrar por activo">
+          <button type="button" className="chip" aria-pressed={filtroTicker === null} onClick={() => setFiltroTicker(null)}>Todos</button>
           {tickersDisponibles.map((t) => (
-            <Pill key={t} label={t} active={filtroTicker === t} onClick={() => setFiltroTicker((prev) => prev === t ? null : t)} />
+            <button
+              key={t}
+              type="button"
+              className="chip"
+              aria-pressed={filtroTicker === t}
+              onClick={() => setFiltroTicker((prev) => prev === t ? null : t)}
+            >{t}</button>
           ))}
         </div>
       )}
 
       {loadingEventos ? (
-        <Card>
-          <p style={{ margin: 0, fontSize: 12, color: 'var(--muted)' }}>Cargando eventos de {year}…</p>
-        </Card>
+        <Cargando etiqueta={`Cargando eventos de ${year}`} kpis={3} alto={300} />
       ) : (
         <>
           {/* ── Resumen: responde "¿cuánto cobro y cuándo es lo próximo?" sin
@@ -406,90 +356,75 @@ export default function CalendarioTab({ data, hideValues = false }: Props) {
               algo que mostrar; si no hay próximo cobro ni cobro anual, no
               tiene sentido ocupar el espacio con ceros. */}
           {(proximoCobro || Object.keys(totalMesPorMoneda).length > 0 || cobroAnualTotal > 0) && (
-            <div className="cal-resumen-row" style={{ display: 'grid', gridTemplateColumns: '1.3fr 1fr 1fr', gap: 10, flexShrink: 0 }}>
-              <div style={{
-                background: proximoCobro ? 'color-mix(in srgb, var(--primary) 6%, var(--card))' : 'var(--card)',
-                border: `1px solid ${proximoCobro ? 'var(--primary)' : 'var(--border)'}`,
-                borderRadius: 12, padding: '10px 14px',
-                display: 'flex', flexDirection: 'column', gap: 4, justifyContent: 'center',
-              }}>
-                <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)' }}>
-                  Próximo cobro
-                </span>
+            <div className="cal-resumen-row">
+              <div className={`card cal-resumen${proximoCobro ? ' destacado' : ''}`}>
+                <span className="cal-resumen-label">Próximo cobro</span>
                 {proximoCobro ? (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <LogoTicker ticker={proximoCobro.ticker} conLogo={tickerConLogo(proximoCobro.tipo)} size={30} />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+                    <LogoTicker ticker={proximoCobro.ticker} conLogo={tickerConLogo(proximoCobro.tipo)} size={32} />
                     <div style={{ minWidth: 0 }}>
-                      <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: 'var(--text)', whiteSpace: 'nowrap' }}>
-                        {proximoCobro.ticker} · {fmtFechaEvento(proximoCobro.fecha)}
+                      <p className="cal-resumen-valor" style={{ fontSize: 17 }}>
+                        {proximoCobro.ticker}
+                        <span style={{ fontWeight: 400, color: 'var(--text-sec)' }}> el {fmtFechaEvento(proximoCobro.fecha)}</span>
                       </p>
-                      <p style={{ margin: 0, fontSize: 11, color: 'var(--muted)' }}>
+                      <p className="card-sub" style={{ margin: 0 }}>
                         {fmtMonto(proximoCobro.montoEstimado!, proximoCobro.monedaMonto, hideValues)}
                         {esDividendo(proximoCobro.tipo) ? ' neto' : ''}
                       </p>
                     </div>
                   </div>
                 ) : (
-                  <p style={{ margin: 0, fontSize: 12, color: 'var(--muted)' }}>Sin cobros próximos a la vista</p>
+                  <p className="card-sub">Sin cobros próximos a la vista</p>
                 )}
               </div>
 
-              <div style={{
-                background: 'var(--card)', border: '1px solid var(--border-subtle)', borderRadius: 12,
-                padding: '10px 14px', display: 'flex', flexDirection: 'column', gap: 2, justifyContent: 'center',
-              }}>
-                <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)' }}>
-                  A cobrar este mes
-                </span>
+              <div className="card cal-resumen">
+                <span className="cal-resumen-label">A cobrar este mes</span>
                 {Object.keys(totalMesPorMoneda).length > 0 ? (
                   <>
                     <p
                       title={`Neto estimado a acreditar este mes según tu tenencia y precios actuales.\n\nDividendos: ya descontada la retención del ${formatPercent(RETENCION_USA * 100, { sign: false, decimals: 0 })} de EE.UU. y el ${formatPercent(IMPUESTO_CHEQUE * 100, { sign: false })} de débitos y créditos → llega el ${formatPercent(FACTOR_NETO_DIVIDENDO * 100, { sign: false })} del bruto.\nNo incluye la comisión del depositario.\n\nRenta y amortización de bonos ARG: sin retención, al 100%.`}
-                      style={{ margin: 0, fontSize: 19, fontWeight: 700, color: 'var(--text)', fontVariantNumeric: 'tabular-nums' }}
+                      className="cal-resumen-valor"
                     >
-                      {Object.entries(totalMesPorMoneda).map(([moneda, total]) => fmtMonto(total, moneda, hideValues)).join(' · ')}
+                      {Object.entries(totalMesPorMoneda).map(([moneda, total]) => fmtMonto(total, moneda, hideValues)).join(' + ')}
                     </p>
-                    <span style={{ fontSize: 11, color: 'var(--muted)' }}>neto estimado</span>
+                    <span className="card-sub" style={{ margin: 0 }}>neto estimado</span>
                   </>
                 ) : (
-                  <p style={{ margin: 0, fontSize: 13, color: 'var(--muted)' }}>Sin cobros este mes</p>
+                  <p className="card-sub">Sin cobros este mes</p>
                 )}
               </div>
 
-              <div style={{
-                background: 'var(--card)', border: '1px solid var(--border-subtle)', borderRadius: 12,
-                padding: '10px 14px', display: 'flex', flexDirection: 'column', gap: 2, justifyContent: 'center',
-              }}>
-                <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)' }}>
-                  Proyección anual
-                </span>
+              <div className="card cal-resumen">
+                <span className="cal-resumen-label">Proyección anual</span>
                 {cobroAnualTotal > 0 ? (
                   <>
                     <p
                       title="Tenencia actual × yield de los últimos 12 meses, ya neto de retenciones. Asume que se repiten igual el año próximo — no son pagos confirmados."
-                      style={{ margin: 0, fontSize: 19, fontWeight: 700, color: 'var(--up)', fontVariantNumeric: 'tabular-nums' }}
+                      className="cal-resumen-valor"
+                      style={{ color: 'var(--up)' }}
                     >
                       {/* "≈ +USD 120", no "+≈ USD": el signo va pegado al monto. */}
-                      ≈ {formatMoney(cobroAnualTotal, { currency: 'USD', sign: true, hidden: hideValues })}<span style={{ fontSize: 12, fontWeight: 500, color: 'var(--muted)' }}>/año</span>
+                      ≈ {formatMoney(cobroAnualTotal, { currency: 'USD', sign: true, hidden: hideValues })}
                     </p>
-                    <span style={{ fontSize: 11, color: 'var(--muted)' }}>
-                      {formatPercent(yieldCartera * 100, { sign: false, decimals: 2 })} de la cartera
+                    <span className="card-sub" style={{ margin: 0 }}>
+                      por año, {formatPercent(yieldCartera * 100, { sign: false, decimals: 2 })} de la cartera
                     </span>
                   </>
                 ) : (
-                  <p style={{ margin: 0, fontSize: 13, color: 'var(--muted)' }}>Sin proyección disponible</p>
+                  <p className="card-sub">Sin proyección disponible</p>
                 )}
               </div>
             </div>
           )}
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flexShrink: 0 }}>
-            <div className="cal-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 6 }}>
+          <div className="card cal-mes">
+            <div className="cal-grid" aria-hidden="true">
               {DIAS_SEMANA.map((d) => (
-                <div key={d} style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textAlign: 'center' }}>{d}</div>
+                <div key={d} className="cal-semana-dia">{d}</div>
               ))}
             </div>
-            <div className="cal-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 6 }}>
+            <div className="cal-grid">
               {celdas.map((dia, i) => {
                 const key = dia !== null ? `${year}-${String(mesIdx + 1).padStart(2, '0')}-${String(dia).padStart(2, '0')}` : '';
                 return (
@@ -498,6 +433,7 @@ export default function CalendarioTab({ data, hideValues = false }: Props) {
                     dia={dia}
                     eventosDia={dia !== null ? eventosPorDia.get(key) : undefined}
                     esHoy={key === hoyKey}
+                    esFinde={i % 7 >= 5}
                     logoSize={logoSize}
                     maxLogos={maxLogos}
                     yieldPorTicker={yieldPorTicker}
@@ -508,46 +444,34 @@ export default function CalendarioTab({ data, hideValues = false }: Props) {
             </div>
           </div>
 
-          <Card>
-            <p style={{ margin: 0, fontSize: 11, fontWeight: 600, color: 'var(--primary)' }}>
-              Eventos de {MESES_LABEL[mesIdx]}
-            </p>
+          <div className="card">
+            <p className="card-titulo" style={{ marginBottom: 4 }}>Eventos de {MESES_LABEL[mesIdx].toLowerCase()}</p>
             {eventosDelMes.length === 0 ? (
-              <p style={{ margin: 0, fontSize: 12, color: 'var(--muted)' }}>Sin eventos este mes para los tickers actuales.</p>
+              <p className="card-sub">No hay eventos este mes con los filtros elegidos.</p>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <div>
                 {eventosDelMes.map((e, i) => {
                   const meta = TIPO_EVENTO_META[e.tipo];
                   return (
-                    <div key={i} className="cal-evento-fila" style={{
-                      display: 'flex', alignItems: 'center', gap: 10, fontSize: 12,
-                      padding: '6px 0', borderBottom: '1px solid var(--border-subtle)',
-                    }}>
-                      <LogoTicker ticker={e.ticker} conLogo={tickerConLogo(e.tipo)} size={20} />
-                      <span style={{ color: 'var(--muted)', minWidth: 80, flexShrink: 0 }}>{fmtFechaEvento(e.fecha)}</span>
-                      <span style={{ fontWeight: 700, color: 'var(--text)', minWidth: 56 }}>{e.ticker}</span>
-                      <span style={{
-                        fontSize: 10, fontWeight: 700, color: meta.color, background: `${meta.color}22`,
-                        padding: '2px 8px', borderRadius: 10, whiteSpace: 'nowrap',
-                      }}>{meta.label}</span>
+                    <div key={i} className="cal-evento-fila">
+                      <LogoTicker ticker={e.ticker} conLogo={tickerConLogo(e.tipo)} size={24} />
+                      <span style={{ fontWeight: 600, color: 'var(--text)', minWidth: 52 }}>{e.ticker}</span>
+                      <span style={{ color: 'var(--text-sec)', minWidth: 96, flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>{fmtFechaEvento(e.fecha)}</span>
+                      <span className="etiqueta" style={{ marginLeft: 0, '--etiqueta-color': meta.color } as React.CSSProperties}>{meta.label}</span>
                       {e.detalle && <span style={{ color: 'var(--muted)' }}>{e.detalle}</span>}
                       {esDividendo(e.tipo) && yieldPorTicker.has(e.ticker) && (
                         <span
-                          title={`Yield de los últimos 12 meses · ${fmtMonto(yieldPorTicker.get(e.ticker)!.cobroAnual ?? 0, 'USD', hideValues)}/año`}
-                          style={{
-                            fontSize: 10, fontWeight: 700, color: TIPO_EVENTO_META.dividendo.color,
-                            border: `1px solid ${TIPO_EVENTO_META.dividendo.color}55`,
-                            padding: '1px 6px', borderRadius: 10, whiteSpace: 'nowrap',
-                          }}
+                          title={`Yield de los últimos 12 meses, ${fmtMonto(yieldPorTicker.get(e.ticker)!.cobroAnual ?? 0, 'USD', hideValues)} por año`}
+                          style={{ color: 'var(--muted)', whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}
                         >
-                          {formatPercent(yieldPorTicker.get(e.ticker)!.yieldAnual * 100, { sign: false, decimals: 2 })}
+                          rinde {formatPercent(yieldPorTicker.get(e.ticker)!.yieldAnual * 100, { sign: false, decimals: 2 })}
                         </span>
                       )}
                       {e.montoEstimado != null && e.montoEstimado > 0 && (
                         <span
                           className="cal-evento-monto"
                           title={tooltipMonto(e.tipo, e.estimadoAl)}
-                          style={{ marginLeft: 'auto', fontWeight: 700, color: meta.color, whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}
+                          style={{ marginLeft: 'auto', fontWeight: 600, color: 'var(--text)', whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}
                         >
                           {fmtMonto(e.montoEstimado, e.monedaMonto, hideValues)}
                         </span>
@@ -557,12 +481,12 @@ export default function CalendarioTab({ data, hideValues = false }: Props) {
                 })}
               </div>
             )}
-          </Card>
+          </div>
         </>
       )}
 
       {errorEventos && (
-        <p style={{ margin: 0, fontSize: 11, color: 'var(--down)' }}>Algunos eventos no pudieron cargarse: {errorEventos}</p>
+        <p className="nota" role="alert" style={{ color: 'var(--down)' }}>Algunos eventos no se pudieron cargar: {errorEventos}</p>
       )}
     </div>
   );

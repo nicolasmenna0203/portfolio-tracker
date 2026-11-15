@@ -203,14 +203,15 @@ export default function ResumenTab({ data, hideValues, moneda }: Props) {
         <KPICard
           label="Retorno TWR"
           tooltip="Time-Weighted Return: rendimiento puro de la inversión, sin el efecto de cuándo o cuánto aportaste. Se aproxima encadenando Modified Dietz mes a mes (no hay valuación diaria del Sheet)."
-          value={twrPct != null ? formatPercent(twrPct, { sign: false }) : 'N/D'}
+          value={twrPct != null ? formatPercent(twrPct, { sign: false }) : 'Sin datos'}
+          vacio={twrPct == null}
           sub={esReal ? 'rendimiento real de la cartera' : 'rendimiento de la cartera'}
           subColor={twrColor}
           extra={
-            <p style={{ fontSize: 11, color: 'var(--muted)', margin: '4px 0 0' }}>
+            <p className="kpi-sub" style={{ marginTop: 4 }}>
               TWR anual{' '}
               <span style={{ color: twrColor, fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>
-                {twrAnualPct != null ? formatPercent(twrAnualPct, { sign: false }) : 'N/D'}
+                {twrAnualPct != null ? formatPercent(twrAnualPct, { sign: false }) : 'sin datos'}
               </span>
             </p>
           }
@@ -218,14 +219,15 @@ export default function ResumenTab({ data, hideValues, moneda }: Props) {
         <KPICard
           label="TIR anual"
           tooltip="XIRR sobre los flujos reales (aportes y retiros) con sus fechas exactas, más el valor actual como flujo terminal. Pondera cuándo entró cada peso."
-          value={tirPeriodoPct != null ? formatPercent(tirPeriodoPct, { sign: false }) : 'N/D'}
+          value={tirPeriodoPct != null ? formatPercent(tirPeriodoPct, { sign: false }) : 'Sin datos'}
+          vacio={tirPeriodoPct == null}
           sub={esReal ? 'rendimiento real del capital' : 'rendimiento del capital'}
           subColor={tirColor}
         />
       </div>
 
       {moneda === 'ARS' && ajustar && (
-        <p style={{ margin: 0, fontSize: 11, color: errorIpc ? 'var(--down)' : 'var(--muted)' }}>
+        <p className="nota" role={errorIpc ? 'alert' : 'status'} style={errorIpc ? { color: 'var(--down)' } : undefined}>
           {errorIpc
             ? 'No se pudo cargar el IPC: se muestran los valores sin ajustar.'
             : !esReal

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { formatMoney, formatPercent, formatNumber, formatFx, formatMonto, valorSegunMoneda, niceTicks } from './format';
+import { formatMoney, formatPercent, formatNumber, formatFx, formatMonto, formatFechaEje, valorSegunMoneda, niceTicks } from './format';
 
 describe('formatMoney', () => {
   it('usa separador de miles es-AR (punto) y código de moneda con prefijo', () => {
@@ -152,5 +152,21 @@ describe('niceTicks', () => {
   it('nunca produce pasos irregulares que generen etiquetas engañosas', () => {
     const ticks = niceTicks(0, 26000, 5);
     for (const t of ticks) expect(t % (ticks[1] - ticks[0])).toBeCloseTo(0, 6);
+  });
+});
+
+describe('formatFechaEje', () => {
+  it('sin día da el mes en el formato del resto del dashboard', () => {
+    expect(formatFechaEje('2026-03-20')).toBe('mar-26');
+  });
+
+  it('con día lo pone adelante, sin cero a la izquierda', () => {
+    expect(formatFechaEje('2026-03-05', true)).toBe('5 mar');
+    expect(formatFechaEje('2026-12-31', true, true)).toBe('31 dic 2026');
+  });
+
+  it('devuelve el texto tal cual si no es una fecha ISO', () => {
+    expect(formatFechaEje('mar-26')).toBe('mar-26');
+    expect(formatFechaEje('')).toBe('');
   });
 });

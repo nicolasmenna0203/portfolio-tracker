@@ -1,5 +1,9 @@
 'use client';
 
+// Selector de mes: un slider con un paso por mes. Estilos en globals.css
+// (.month-*): el thumb necesita `:focus-visible` y `:active`, que con estilos
+// inline no se pueden expresar (el foco de teclado no se veía).
+
 import { useRef } from 'react';
 
 interface Props {
@@ -65,31 +69,22 @@ export default function MonthSlider({ meses, selected, onSelect }: Props) {
     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
 
       {/* Mes seleccionado */}
-      <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)', whiteSpace: 'nowrap', minWidth: 56, textAlign: 'right' }}>
+      <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)', whiteSpace: 'nowrap', minWidth: 56, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
         {selected}
       </span>
 
       {/* Track */}
-      {/* gap mayor que el radio del thumb: en los extremos sobresale del track
-          y tapaba la primera letra de la etiqueta. */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 }}>
-        <span className="month-endlabel" style={{ fontSize: 10, color: 'var(--muted)', whiteSpace: 'nowrap' }}>{meses[0]}</span>
+      {/* gap mayor que el radio del thumb (11px): en los extremos sobresale del
+          track y tapaba la primera letra de la etiqueta. */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 16, flex: 1, minWidth: 0 }}>
+        <span className="month-endlabel" style={{ fontSize: 12, color: 'var(--muted)', whiteSpace: 'nowrap' }}>{meses[0]}</span>
         <div
           ref={trackRef}
           onClick={handleTrackClick}
           className="month-track"
-          style={{ flex: 1, position: 'relative', height: 20, display: 'flex', alignItems: 'center', cursor: 'pointer', userSelect: 'none', touchAction: 'none' }}
         >
-          <div style={{ position: 'absolute', left: 0, right: 0, height: 2, borderRadius: 2, background: 'var(--border)' }} />
-          {meses.map((_, i) => (
-            <div key={i} style={{
-              position: 'absolute',
-              left: `${meses.length > 1 ? (i / (meses.length - 1)) * 100 : 0}%`,
-              transform: 'translateX(-50%)',
-              width: 3, height: 3, borderRadius: '50%',
-              background: 'var(--border)', pointerEvents: 'none', zIndex: 1,
-            }} />
-          ))}
+          <div className="month-pista" />
+          <div className="month-relleno" style={{ width: `${pct}%` }} />
           <div
             tabIndex={0}
             role="slider"
@@ -102,18 +97,10 @@ export default function MonthSlider({ meses, selected, onSelect }: Props) {
             onMouseDown={handleThumbMouseDown}
             onTouchStart={handleThumbTouchStart}
             onKeyDown={handleKeyDown}
-            style={{
-              position: 'absolute', left: `${pct}%`, transform: 'translateX(-50%)',
-              width: 22, height: 22, borderRadius: '50%', touchAction: 'none',
-              // Thumb de UISlider: círculo blanco con sombra, sin borde.
-              background: '#fff', border: '0.5px solid rgba(0,0,0,0.04)',
-              boxShadow: '0 0.5px 4px rgba(0,0,0,0.12), 0 6px 13px rgba(0,0,0,0.12)',
-              cursor: 'grab', zIndex: 3, outline: 'none',
-              transition: 'left 0.08s ease',
-            }}
+            style={{ left: `${pct}%` }}
           />
         </div>
-        <span className="month-endlabel" style={{ fontSize: 10, color: 'var(--muted)', whiteSpace: 'nowrap' }}>{meses[meses.length - 1]}</span>
+        <span className="month-endlabel" style={{ fontSize: 12, color: 'var(--muted)', whiteSpace: 'nowrap' }}>{meses[meses.length - 1]}</span>
       </div>
     </div>
   );

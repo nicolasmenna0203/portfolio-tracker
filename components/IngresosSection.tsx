@@ -11,6 +11,7 @@ import { useIsMobile } from '@/lib/useIsMobile';
 import { formatMoney, formatPercent, type Moneda } from '@/lib/format';
 import KPICard from './KPICard';
 import InfoTip from './InfoTip';
+import { Cargando, AvisoError, Vacio } from './Estados';
 
 // Los datos los carga FinanzasPersonalesTab (se comparten con Gastos y
 // Proyecciones); acá solo se muestran.
@@ -43,17 +44,13 @@ function CustomTooltip({ active, payload, label, moneda }: { active?: boolean; p
   if (!active || !payload?.length) return null;
   const currency: Moneda = moneda === 'USD' ? 'USD' : 'ARS';
   return (
-    <div style={{
-      background: 'var(--card)', border: '1px solid var(--border-subtle)',
-      borderRadius: 8, padding: '10px 14px', fontSize: 12,
-      boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
-    }}>
-      <p style={{ margin: '0 0 6px', color: 'var(--muted)', fontWeight: 600 }}>{label}</p>
+    <div className="tooltip-panel">
+      <p className="tooltip-titulo">{label}</p>
       {payload.map((p) => (
         p.value > 0 && (
-          <p key={p.dataKey} style={{ margin: '2px 0', color: p.color, display: 'flex', justifyContent: 'space-between', gap: 12 }}>
-            <span>{p.name}</span>
-            <strong style={{ fontVariantNumeric: 'tabular-nums' }}>{formatMoney(p.value, { currency })}</strong>
+          <p key={p.dataKey} className="tooltip-fila">
+            <span><span className="tooltip-marca" style={{ background: p.color }} />{p.name}</span>
+            <span>{formatMoney(p.value, { currency })}</span>
           </p>
         )
       ))}
@@ -75,46 +72,39 @@ function InversionTooltip({ active, payload, moneda }: { active?: boolean; paylo
   if (!active || !payload?.length) return null;
   const m = payload[0].payload;
   return (
-    <div style={{
-      background: 'var(--card)', border: '1px solid var(--border-subtle)',
-      borderRadius: 8, padding: '10px 14px', fontSize: 12,
-      boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
-    }}>
-      <p style={{ margin: '0 0 6px', color: 'var(--muted)', fontWeight: 600 }}>
-        {m.fecha}{m.cerrado ? '' : ' · en curso'}
+    <div className="tooltip-panel">
+      <p className="tooltip-titulo">
+        {m.fecha}{m.cerrado ? '' : ' (en curso)'}
       </p>
-      <p style={{ margin: '2px 0', display: 'flex', justifyContent: 'space-between', gap: 12 }}>
-        <span style={{ color: 'var(--muted)' }}>Ingreso</span>
-        <strong style={{ fontVariantNumeric: 'tabular-nums' }}>{formatMoney(m.ingreso, { currency: moneda })}</strong>
+      <p className="tooltip-fila">
+        <span>Ingreso</span>
+        <span>{formatMoney(m.ingreso, { currency: moneda })}</span>
       </p>
       {/* Retiro neto en rojo y con signo: formatMoney descarta el signo salvo
           que se lo pidan, y un retiro sin "-" se leería como aporte. */}
-      <p style={{ margin: '2px 0', display: 'flex', justifyContent: 'space-between', gap: 12 }}>
-        <span style={{ color: m.aporte < 0 ? 'var(--down)' : 'var(--up)' }}>
+      <p className="tooltip-fila">
+        <span>
+          <span className="tooltip-marca" style={{ background: m.aporte < 0 ? 'var(--down)' : 'var(--up)' }} />
           {m.aporte < 0 ? 'Retiro neto' : 'Aporte a la cartera'}
         </span>
-        <strong style={{ fontVariantNumeric: 'tabular-nums', color: m.aporte < 0 ? 'var(--down)' : undefined }}>
+        <span style={m.aporte < 0 ? { color: 'var(--down)' } : undefined}>
           {formatMoney(m.aporte, { currency: moneda, sign: m.aporte < 0 })}
-        </strong>
+        </span>
       </p>
-      <p style={{ margin: '2px 0', display: 'flex', justifyContent: 'space-between', gap: 12 }}>
-        <span style={{ color: 'var(--muted)' }}>Ratio de inversión</span>
-        <strong style={{ fontVariantNumeric: 'tabular-nums', color: m.aporte < 0 ? 'var(--down)' : undefined }}>
+      <p className="tooltip-fila">
+        <span>Ratio de inversión</span>
+        <span style={m.aporte < 0 ? { color: 'var(--down)' } : undefined}>
           {formatPercent(m.ratioInversionPct, { sign: false, decimals: 0 })}
-        </strong>
+        </span>
       </p>
       {m.aporte < 0 && (
-        <p style={{ margin: '6px 0 0', color: 'var(--muted)', fontSize: 11 }}>
-          Retiro neto: no se dibuja en las barras ni en la línea.
-        </p>
+        <p className="tooltip-nota">Retiro neto: no se dibuja en las barras ni en la línea.</p>
       )}
       {m.aporte >= 0 && m.ratioInversionPct != null && m.ratioLinea == null && (
-        <p style={{ margin: '6px 0 0', color: 'var(--muted)', fontSize: 11 }}>
-          Aporte mayor al ingreso: no se dibuja en la línea.
-        </p>
+        <p className="tooltip-nota">Aporte mayor al ingreso: no se dibuja en la línea.</p>
       )}
       {m.cortada && (
-        <p style={{ margin: '2px 0 0', color: 'var(--muted)', fontSize: 11 }}>Barra cortada: el aporte supera la escala.</p>
+        <p className="tooltip-nota">Barra cortada: el aporte supera la escala.</p>
       )}
     </div>
   );
@@ -158,6 +148,10 @@ export default function IngresosSection({ resp, loading, error, serie, hideValue
   // mes siempre se rotula, y el anterior a él se saltea si quedarían pegados.
   const maxEtiquetas = isMobile ? 5 : 8;
   const xTickStep = chartData.length > maxEtiquetas ? Math.ceil(chartData.length / maxEtiquetas) : 1;
+  // Con los montos ocultos el eje muestra solo los puntos, sin la moneda: con el
+  // prefijo ("USD ••••") la etiqueta no entraba en el ancho y se leía "D ••••".
+  const ejeMonto = (v: number) =>
+    hideValues ? '••••' : formatMoney(v, { currency: moneda === 'ARS' ? 'ARS' : 'USD', mode: 'compact', compactShort: isMobile });
   const etiquetaMes = (value: string, index: number) => {
     const ultimo = chartData.length - 1;
     return index === ultimo || (index % xTickStep === 0 && ultimo - index >= xTickStep) ? value : '';
@@ -211,29 +205,21 @@ export default function IngresosSection({ resp, loading, error, serie, hideValue
 
   if (loading) {
     return (
-      <div style={{ padding: 40, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>
-        Cargando ingresos...
-      </div>
+      <Cargando etiqueta="Cargando ingresos" kpis={3} alto={280} />
     );
   }
 
   if (error) {
     return (
-      <div style={{
-        background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.3)',
-        borderRadius: 8, padding: '14px 18px', margin: 12,
-      }}>
-        <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--down)', margin: '0 0 4px' }}>Error</p>
-        <p style={{ fontSize: 13, color: 'var(--text)', margin: 0 }}>{error}</p>
-      </div>
+      <AvisoError titulo="No se pudieron leer los ingresos">{error}</AvisoError>
     );
   }
 
   if (!resp || resp.ingresos.length === 0) {
     return (
-      <div style={{ padding: 40, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>
-        Todavía no hay ingresos cargados. Usá &quot;Cargar&quot; → &quot;Sueldos / Haberes&quot; para subir un resumen de cuenta.
-      </div>
+      <Vacio titulo="Todavía no hay ingresos cargados">
+        Subí un resumen de cuenta desde Cargar datos, en la sección Sueldos / Haberes.
+      </Vacio>
     );
   }
 
@@ -241,14 +227,14 @@ export default function IngresosSection({ resp, loading, error, serie, hideValue
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       <div className="kpi-grid">
         <KPICard
-          label={`Total acumulado (${moneda})`}
+          label={`Total acumulado en ${moneda}`}
           value={moneda === 'ARS'
             ? formatMoney(kpis!.totalArs, { currency: 'ARS', hidden: hideValues })
             : formatMoney(kpis!.totalUsd, { currency: 'USD', hidden: hideValues })}
           sub={`${resp.empleadores.length} empleador${resp.empleadores.length !== 1 ? 'es' : ''}`}
         />
         <KPICard
-          label={`Total acumulado (${moneda === 'ARS' ? 'USD' : 'ARS'})`}
+          label={`Total acumulado en ${moneda === 'ARS' ? 'USD' : 'ARS'}`}
           value={hideValues
             ? formatMoney(null, { currency: moneda === 'ARS' ? 'USD' : 'ARS', hidden: true })
             : moneda === 'ARS'
@@ -265,21 +251,18 @@ export default function IngresosSection({ resp, loading, error, serie, hideValue
         />
       </div>
 
-      <div style={{
-        background: 'var(--card)', border: '1px solid var(--border-subtle)',
-        borderRadius: 12, padding: '16px 20px', flex: 1, minHeight: 340,
-        display: 'flex', flexDirection: 'column',
-      }}>
-        <p style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', margin: '0 0 12px', flexShrink: 0 }}>
-          Ingresos por mes y empleador ({moneda})
+      <div className="card" style={{ flex: 1, minHeight: 340, display: 'flex', flexDirection: 'column' }}>
+        <p className="card-titulo" style={{ marginBottom: 12 }}>
+          Ingresos por mes
+          <span className="dato">{moneda}</span>
         </p>
         <ResponsiveContainer width="100%" height={280} minHeight={280}>
           <BarChart data={chartData} barCategoryGap="20%">
-            <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" vertical={false} />
+            <CartesianGrid stroke="var(--border-subtle)" vertical={false} />
             <XAxis
               dataKey="mes"
               tick={{ fontSize: isMobile ? 9 : 11, fill: 'var(--muted)' }}
-              axisLine={{ stroke: 'var(--border)' }}
+              axisLine={false}
               tickLine={false}
               interval={0}
               tickFormatter={etiquetaMes}
@@ -288,26 +271,24 @@ export default function IngresosSection({ resp, loading, error, serie, hideValue
               tick={{ fontSize: isMobile ? 9 : 11, fill: 'var(--muted)' }}
               axisLine={false}
               tickLine={false}
-              tickFormatter={(v) => formatMoney(v, { currency: moneda === 'ARS' ? 'ARS' : 'USD', mode: 'compact', compactShort: isMobile, hidden: hideValues })}
-              width={isMobile ? 40 : (hideValues ? 40 : 56)}
+              tickFormatter={ejeMonto}
+              width={isMobile || hideValues ? 40 : 60}
             />
             <Tooltip content={hideValues ? () => null : <CustomTooltip moneda={moneda} />} />
-            {resp.empleadores.length > 1 && <Legend wrapperStyle={{ fontSize: 12, textTransform: 'uppercase' }} />}
+            {resp.empleadores.length > 1 && <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 12, color: 'var(--text-sec)', paddingTop: 6 }} />}
             {resp.empleadores.map((emp) => (
-              <Bar key={emp} dataKey={emp} stackId="ingresos" fill={empleadorColor.get(emp)} radius={[2, 2, 0, 0]} />
+              <Bar key={emp} dataKey={emp} stackId="ingresos" fill={empleadorColor.get(emp)} maxBarSize={56} />
             ))}
           </BarChart>
         </ResponsiveContainer>
       </div>
 
-      <div style={{
-        background: 'var(--card)', border: '1px solid var(--border-subtle)',
-        borderRadius: 12, padding: '16px 20px',
-      }}>
+      <div className="card">
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, margin: '0 0 12px' }}>
           <span className="g-etiqueta">
-            <p style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', margin: 0 }}>
-              Ratio de inversión sobre ingresos, por mes ({moneda})
+            <p className="card-titulo">
+              Cuánto del ingreso se invierte
+              <span className="dato">{moneda}</span>
             </p>
             <InfoTip label="este gráfico">
               Cada barra es el ingreso del mes; lo verde es lo que entró a la cartera (menos retiros) y
@@ -316,19 +297,19 @@ export default function IngresosSection({ resp, loading, error, serie, hideValue
               al tocar la barra.
             </InfoTip>
           </span>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 14px', fontSize: 11, color: 'var(--muted)' }}>
-            <span style={{ whiteSpace: 'nowrap' }}><span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: 2, background: 'var(--up)', marginRight: 5 }} />Invertido</span>
-            <span style={{ whiteSpace: 'nowrap' }}><span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: 2, background: 'var(--muted)', opacity: 0.35, marginRight: 5 }} />Resto del ingreso</span>
-            <span style={{ whiteSpace: 'nowrap' }}><span style={{ display: 'inline-block', width: 10, height: 2, background: 'var(--primary)', marginRight: 5, verticalAlign: 'middle' }} />Ratio (%)</span>
+          <div className="leyenda">
+            <span><span style={{ width: 8, height: 8, borderRadius: 2, background: 'var(--up)' }} />Invertido</span>
+            <span><span style={{ width: 8, height: 8, borderRadius: 2, background: 'var(--muted)', opacity: 0.35 }} />Resto del ingreso</span>
+            <span><span style={{ width: 14, height: 2, borderRadius: 1, background: 'var(--primary)' }} />Ratio (eje der.)</span>
           </div>
         </div>
         <ResponsiveContainer width="100%" height={220} minHeight={220}>
           <ComposedChart data={barras} barCategoryGap="25%">
-            <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" vertical={false} />
+            <CartesianGrid stroke="var(--border-subtle)" vertical={false} />
             <XAxis
               dataKey="fecha"
               tick={{ fontSize: isMobile ? 9 : 11, fill: 'var(--muted)' }}
-              axisLine={{ stroke: 'var(--border)' }}
+              axisLine={false}
               tickLine={false}
               interval={0}
               tickFormatter={etiquetaMes}
@@ -340,8 +321,8 @@ export default function IngresosSection({ resp, loading, error, serie, hideValue
               tick={{ fontSize: isMobile ? 9 : 11, fill: 'var(--muted)' }}
               axisLine={false}
               tickLine={false}
-              tickFormatter={(v) => formatMoney(v, { currency: moneda, mode: 'compact', compactShort: isMobile, hidden: hideValues })}
-              width={isMobile ? 40 : (hideValues ? 40 : 56)}
+              tickFormatter={ejeMonto}
+              width={isMobile || hideValues ? 40 : 60}
             />
             <YAxis
               yAxisId="ratio"
@@ -378,13 +359,8 @@ export default function IngresosSection({ resp, loading, error, serie, hideValue
         </ResponsiveContainer>
       </div>
 
-      <div style={{
-        background: 'var(--card)', border: '1px solid var(--border-subtle)',
-        borderRadius: 12, padding: '16px 20px',
-      }}>
-        <p style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', margin: '0 0 12px' }}>
-          Detalle de acreditaciones
-        </p>
+      <div className="card">
+        <p className="card-titulo" style={{ marginBottom: 6 }}>Acreditaciones</p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           {visibles.map((r, i) => (
             <div
@@ -392,19 +368,19 @@ export default function IngresosSection({ resp, loading, error, serie, hideValue
               className="ingreso-fila"
               style={{
                 display: 'flex', alignItems: 'center', gap: 12,
-                padding: '8px 4px', borderBottom: '1px solid var(--border-subtle)',
-                fontSize: 13,
+                padding: '10px 0', borderBottom: i === visibles.length - 1 ? 0 : '0.5px solid var(--border)',
+                fontSize: 14,
               }}
             >
               <span style={{
                 width: 8, height: 8, borderRadius: '50%', flexShrink: 0,
                 background: empleadorColor.get(r.empleador) ?? 'var(--primary)',
               }} />
-              <span className="ingreso-fecha" style={{ color: 'var(--muted)', width: 90, flexShrink: 0 }}>{r.fechaStr}</span>
+              <span className="ingreso-fecha" style={{ color: 'var(--text-sec)', width: 92, flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>{r.fechaStr}</span>
               {/* `minWidth:0` deja que el nombre se recorte con ellipsis en vez
                   de empujar el monto fuera de la tarjeta (ver globals.css). */}
-              <span className="ingreso-empleador" style={{ color: 'var(--text)', fontWeight: 600, flex: 1, minWidth: 0, textTransform: 'uppercase' }}>{r.empleador}</span>
-              <span style={{ color: 'var(--up)', fontWeight: 600, flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>
+              <span className="ingreso-empleador" style={{ color: 'var(--text)', fontWeight: 500, flex: 1, minWidth: 0 }}>{r.empleador}</span>
+              <span style={{ color: 'var(--text)', fontWeight: 600, flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>
                 {r.montoArs > 0
                   ? formatMoney(r.montoArs, { currency: 'ARS', hidden: hideValues })
                   : formatMoney(r.montoUsd, { currency: 'USD', hidden: hideValues })}
@@ -415,17 +391,15 @@ export default function IngresosSection({ resp, loading, error, serie, hideValue
 
         {ingresosRecientes.length > PAGE_INGRESOS && (
           <button
+            type="button"
+            className="g-btn tintado"
             onClick={() => setVerTodos((v) => !v)}
-            style={{
-              marginTop: 10, width: '100%', padding: '9px 12px',
-              background: 'transparent', border: '1px solid var(--border)',
-              borderRadius: 8, cursor: 'pointer',
-              fontSize: 12, fontWeight: 600, color: 'var(--primary)',
-            }}
+            aria-expanded={verTodos}
+            style={{ marginTop: 12, width: '100%' }}
           >
             {verTodos
               ? 'Ver menos'
-              : `Ver todos (${ingresosRecientes.length})`}
+              : `Ver las ${ingresosRecientes.length} acreditaciones`}
           </button>
         )}
       </div>

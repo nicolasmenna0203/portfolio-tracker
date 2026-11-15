@@ -15,9 +15,11 @@ interface KPICardProps {
   tooltip?: string;
   /** Contenido extra bajo el valor (ej. un selector de período). No hereda el estilo de `sub`. */
   extra?: React.ReactNode;
+  /** El valor no es un dato sino su ausencia ("N/D", "Sin posición"): va en gris y sin peso. */
+  vacio?: boolean;
 }
 
-export default function KPICard({ label, value, sub, subColor, tooltip, extra }: KPICardProps) {
+export default function KPICard({ label, value, sub, subColor, tooltip, extra, vacio = false }: KPICardProps) {
   return (
     // No overflow:hidden acá: el popover del tooltip (ⓘ) necesita poder
     // salirse del borde de la card.
@@ -28,7 +30,7 @@ export default function KPICard({ label, value, sub, subColor, tooltip, extra }:
           {tooltip && <InfoTip label={label}>{tooltip}</InfoTip>}
         </div>
 
-        <p className="kpi-value">{value}</p>
+        <p className={vacio ? 'kpi-value vacio' : 'kpi-value'}>{value}</p>
 
         {sub && (
           <p className="kpi-sub" style={subColor ? { color: subColor } : undefined}>

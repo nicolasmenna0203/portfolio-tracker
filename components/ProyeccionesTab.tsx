@@ -10,6 +10,8 @@ import { useIsMobile } from '@/lib/useIsMobile';
 import { formatMoney, formatPercent, formatNumber, formatMesKey } from '@/lib/format';
 import { toMesKey } from '@/lib/parser';
 import { tasaCartera, sumarMeses, type ResumenFlujo } from '@/lib/finanzasPersonales';
+import KPICard from './KPICard';
+import Segmented from './Segmented';
 
 interface Props {
   data: DashboardData;
@@ -71,21 +73,23 @@ function SliderRow({
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-        <span style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 600 }}>
+        <span style={{ fontSize: 13, color: 'var(--text-sec)' }}>
           {label}
         </span>
-        <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--primary)', fontVariantNumeric: 'tabular-nums' }}>
+        <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--text)', fontVariantNumeric: 'tabular-nums' }}>
           {fmt(value)}
         </span>
       </div>
       <input
         type="range" min={min} max={max} step={step} value={value}
         onChange={e => onChange(Number(e.target.value))}
+        aria-label={label}
+        aria-valuetext={fmt(value)}
         style={{ width: '100%', accentColor: 'var(--primary)', cursor: 'pointer' }}
       />
       <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-        <span style={{ fontSize: 10, color: 'var(--muted)', fontVariantNumeric: 'tabular-nums' }}>{fmt(min)}</span>
-        <span style={{ fontSize: 10, color: 'var(--muted)', fontVariantNumeric: 'tabular-nums' }}>{fmt(max)}</span>
+        <span style={{ fontSize: 11, color: 'var(--muted)', fontVariantNumeric: 'tabular-nums' }}>{fmt(min)}</span>
+        <span style={{ fontSize: 11, color: 'var(--muted)', fontVariantNumeric: 'tabular-nums' }}>{fmt(max)}</span>
       </div>
     </div>
   );
@@ -101,15 +105,13 @@ interface TooltipPayload {
 function CustomTooltip({ active, payload, label }: { active?: boolean; payload?: TooltipPayload[]; label?: string }) {
   if (!active || !payload?.length) return null;
   return (
-    <div style={{
-      background: 'var(--card)', border: '1px solid var(--border-subtle)',
-      borderRadius: 8, padding: '10px 14px', fontSize: 12,
-    }}>
-      <p style={{ margin: '0 0 6px', color: 'var(--muted)', fontWeight: 600 }}>{label}</p>
+    <div className="tooltip-panel">
+      <p className="tooltip-titulo">{label}</p>
       {payload.map((p) => (
         p.value != null && (
-          <p key={p.dataKey} style={{ margin: '2px 0', color: p.color }}>
-            {p.name}: <strong style={{ fontVariantNumeric: 'tabular-nums' }}>{formatMoney(p.value, { currency: 'USD' })}</strong>
+          <p key={p.dataKey} className="tooltip-fila">
+            <span><span className="tooltip-marca" style={{ background: p.color }} />{p.name}</span>
+            <span>{formatMoney(p.value, { currency: 'USD' })}</span>
           </p>
         )
       ))}
@@ -242,26 +244,15 @@ export default function ProyeccionesTab({ data, hideValues, flujo }: Props) {
   const textoHorizonte = horizonte >= 12 ? `${formatNumber(horizonte / 12, { decimals: 1 })} años` : `${horizonte} meses`;
 
   return (
-    <div className="proy-root scroll-y" style={{ display: 'flex', flexDirection: 'column', gap: 12, flex: 1, minHeight: 0 }}>
+    <div className="proy-root">
 
-      {/* ── Fila principal: controles + KPIs ──────────────────────────────── */}
-      <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', alignItems: 'stretch' }}>
+      {/* Parámetros a la izquierda; a la derecha el resultado y el gráfico, que
+          así se ve cambiar mientras se mueve un slider (ver .proy-layout). */}
+      <div className="proy-layout">
 
         {/* Panel de controles */}
-        <div className="proy-controles" style={{
-          background: 'var(--card)',
-          border: '1px solid var(--border-subtle)',
-          borderRadius: 12,
-          padding: '18px 20px',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 18,
-          minWidth: 240,
-          flex: '0 0 260px',
-        }}>
-          <p style={{ margin: 0, fontSize: 11, fontWeight: 600, color: 'var(--primary)' }}>
-            Parámetros
-          </p>
+        <div className="card proy-controles">
+          <p className="card-titulo">Parámetros</p>
           {/* Solo en el celular: los resultados quedan una pantalla más abajo, y mover
               un slider sin ver qué cambia no sirve de nada. */}
           <div className="proy-resultado-fijo" role="status">
@@ -281,21 +272,18 @@ export default function ProyeccionesTab({ data, hideValues, flujo }: Props) {
             {aporteRealRedondeado != null && flujo && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                 <button
+                  type="button"
+                  className="g-btn chico tintado"
                   onClick={() => updateAporte(aporteRealRedondeado)}
                   disabled={aporte === aporteRealRedondeado}
-                  style={{
-                    alignSelf: 'flex-start', padding: '3px 10px', borderRadius: 14, fontSize: 11, fontWeight: 600,
-                    border: '1px solid var(--border)', background: 'transparent',
-                    color: aporte === aporteRealRedondeado ? 'var(--muted)' : 'var(--primary)',
-                    cursor: aporte === aporteRealRedondeado ? 'default' : 'pointer',
-                  }}
+                  style={{ alignSelf: 'flex-start', whiteSpace: 'normal', textAlign: 'left', padding: '5px 11px' }}
                 >
                   {aporte === aporteRealRedondeado
                     ? 'Es tu aporte real'
-                    : `Usar mi aporte real · ${formatMoney(aporteRealRedondeado, { currency: 'USD', hidden: hideValues })}`}
+                    : `Usar mi aporte real, ${formatMoney(aporteRealRedondeado, { currency: 'USD', hidden: hideValues })}`}
                 </button>
                 {flujo.ratioInversionPct != null && flujo.ingresoProm != null && !hideValues && (
-                  <span style={{ fontSize: 10, color: 'var(--muted)', lineHeight: 1.4 }}>
+                  <span className="card-sub">
                     Invertís {formatPercent(flujo.ratioInversionPct, { sign: false, decimals: 0 })} del ingreso de{' '}
                     {formatMoney(flujo.ingresoProm, { currency: 'USD' })}/mes (prom. {flujo.mesesBase} meses cerrados).
                   </span>
@@ -306,33 +294,22 @@ export default function ProyeccionesTab({ data, hideValues, flujo }: Props) {
 
           {/* Tasa: manual o la observada de la propia cartera. */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            <span style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 600 }}>
+            <span style={{ fontSize: 13, color: 'var(--text-sec)' }}>
               Tasa anual estimada
             </span>
-            <div role="group" aria-label="Origen de la tasa" style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-              {TASA_MODOS.map(m => {
-                const disponible = m.id === 'manual' || (m.id === '12m' ? tasa12m : tasaMax) != null;
-                const activo = m.id === 'manual' ? !usaCartera : tasaModo === m.id && usaCartera;
-                return (
-                  <button
-                    key={m.id}
-                    onClick={() => updateTasaModo(m.id)}
-                    disabled={!disponible}
-                    aria-pressed={activo}
-                    style={{
-                      padding: '3px 10px', borderRadius: 14, fontSize: 11, fontWeight: 600,
-                      border: '1px solid', cursor: disponible ? 'pointer' : 'default',
-                      borderColor: activo ? 'var(--primary)' : 'var(--border)',
-                      background: activo ? 'var(--primary-dim)' : 'transparent',
-                      color: activo ? 'var(--primary)' : 'var(--muted)',
-                      opacity: disponible ? 1 : 0.5,
-                    }}
-                  >
-                    {m.label}
-                  </button>
-                );
-              })}
-            </div>
+            <Segmented
+              opciones={TASA_MODOS.map((m) => ({
+                id: m.id,
+                label: m.label,
+                disabled: m.id !== 'manual' && (m.id === '12m' ? tasa12m : tasaMax) == null,
+              }))}
+              activa={usaCartera ? tasaModo : 'manual'}
+              onChange={updateTasaModo}
+              chico
+              etiqueta="Origen de la tasa"
+              style={{ alignSelf: 'stretch', display: 'flex' }}
+              className="seg-parejo"
+            />
 
             {tasaObservada == null ? (
               <SliderRow
@@ -343,17 +320,17 @@ export default function ProyeccionesTab({ data, hideValues, flujo }: Props) {
               />
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                <span style={{ fontSize: 22, fontWeight: 700, color: 'var(--primary)', letterSpacing: '-0.02em', fontVariantNumeric: 'tabular-nums' }}>
+                <span style={{ fontFamily: 'var(--font-display)', fontSize: 24, fontWeight: 600, color: 'var(--text)', letterSpacing: '-0.02em', fontVariantNumeric: 'tabular-nums' }}>
                   {formatPercent(tasaObservada.twrAnualPct, { sign: false, hidden: hideValues })}
                 </span>
-                <span style={{ fontSize: 10, color: 'var(--muted)', lineHeight: 1.4 }}>
-                  TWR anualizado en USD · {tasaObservada.meses} meses desde {tasaObservada.desdeFecha}.
+                <span className="card-sub">
+                  TWR anualizado en USD, {tasaObservada.meses} meses desde {tasaObservada.desdeFecha}.
                   {tasaObservada.tirAnualPct != null && !hideValues && (
                     <> TIR del mismo tramo, solo de referencia: {formatPercent(tasaObservada.tirAnualPct, { sign: false })}.</>
                   )}
                 </span>
                 {(tasaObservada.meses < 12 || tasaObservada.twrAnualPct > TASA_ALTA_PCT) && (
-                  <span style={{ fontSize: 10, color: 'var(--down)', lineHeight: 1.4 }}>
+                  <span className="card-sub" style={{ color: 'var(--warn)' }}>
                     {tasaObservada.meses < 12
                       ? 'Menos de 12 meses de historia: anualizar extrapola un tramo corto.'
                       : 'Tasa alta: proyectarla a años asume que el tramo bueno se repite. Tomalo como techo.'}
@@ -377,113 +354,68 @@ export default function ProyeccionesTab({ data, hideValues, flujo }: Props) {
           />
         </div>
 
-        {/* KPIs de proyección — grilla 2×2 (1 columna en mobile: ver
-            `.proy-kpis` en globals.css, donde a dos columnas los montos de 6
-            cifras no entran y se cortan). */}
-        <div className="proy-kpis" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, flex: 1 }}>
-
-          {/* Capital proyectado */}
-          <div style={{ background: 'var(--card)', border: '1px solid var(--border-subtle)', borderRadius: 12, padding: '14px 18px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-            <p style={{ margin: '0 0 4px', fontSize: 11, fontWeight: 600, color: 'var(--muted)' }}>
-              Capital proyectado
-            </p>
-            <p style={{ margin: 0, fontSize: 22, fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.03em', fontVariantNumeric: 'tabular-nums' }}>
-              {formatMoney(finalProyectado, { currency: 'USD', hidden: hideValues })}
-            </p>
-            <p style={{ margin: '4px 0 0', fontSize: 11, color: 'var(--muted)' }}>
-              en {textoHorizonte}
-            </p>
-          </div>
-
-          {/* Ganancia total */}
-          <div style={{ background: 'var(--card)', border: '1px solid var(--border-subtle)', borderRadius: 12, padding: '14px 18px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-            <p style={{ margin: '0 0 4px', fontSize: 11, fontWeight: 600, color: 'var(--muted)' }}>
-              Ganancia total
-            </p>
-            <p style={{ margin: 0, fontSize: 22, fontWeight: 700, color: interesGenerado >= 0 ? 'var(--up)' : 'var(--down)', letterSpacing: '-0.03em', fontVariantNumeric: 'tabular-nums' }}>
-              {formatMoney(interesGenerado, { currency: 'USD', sign: true, hidden: hideValues })}
-            </p>
-            <p style={{ margin: '4px 0 0', fontSize: 11, color: 'var(--muted)' }}>
-              {hideValues
+        <div className="proy-resultado">
+          {/* En mobile la primera y la última van a todo el ancho (.kpi-grid): el
+              capital proyectado es la cifra principal y la ganancia lleva el
+              desglose, que en media tarjeta se cortaba. */}
+          <div className="kpi-grid proy-kpis">
+            <KPICard
+              label="Capital proyectado"
+              value={formatMoney(finalProyectado, { currency: 'USD', hidden: hideValues })}
+              sub={`en ${textoHorizonte}`}
+            />
+            <KPICard
+              label={`Objetivo${hideValues ? '' : ` de ${formatMoney(objetivo, { currency: 'USD' })}`}`}
+              value={objetivo <= totalActual ? 'Alcanzado' : labelMesObj ?? 'Fuera del horizonte'}
+              vacio={objetivo > totalActual && !labelMesObj}
+              sub={objetivo <= totalActual
+                ? 'la cartera ya lo supera'
+                : labelMesObj
+                  ? `en ${mesObjetivo! >= 12 ? `${formatNumber(mesObjetivo! / 12, { decimals: 1 })} años` : `${mesObjetivo} meses`}`
+                  : 'probá con más plazo o más aporte'}
+              subColor={objetivo <= totalActual ? 'var(--up)' : undefined}
+            />
+            <KPICard
+              label="Cartera hoy"
+              value={formatMoney(totalActual, { currency: 'USD', hidden: hideValues })}
+              sub={`al ${kpis.fechaStr}`}
+            />
+            <KPICard
+              label="Ganancia proyectada"
+              tooltip="Solo el interés generado. Lo que aportás es plata tuya que cambia de lugar, no una ganancia: capital proyectado = cartera de hoy + aportes + interés."
+              value={formatMoney(interesGenerado, { currency: 'USD', sign: true, hidden: hideValues })}
+              sub={hideValues
                 ? '••••'
-                : `cartera hoy ${formatMoney(totalActual, { currency: 'USD' })} + aportes ${formatMoney(aportesTotales, { currency: 'USD' })} + interés ${formatMoney(interesGenerado, { currency: 'USD' })}`}
-            </p>
+                : `más ${formatMoney(aportesTotales, { currency: 'USD' })} de aportes`}
+            />
           </div>
 
-          {/* Objetivo */}
-          <div style={{
-            background: 'var(--card)',
-            border: `1px solid ${labelMesObj ? 'var(--primary)' : 'var(--border)'}`,
-            borderRadius: 12, padding: '14px 18px',
-            display: 'flex', flexDirection: 'column', justifyContent: 'center',
-          }}>
-            <p style={{ margin: '0 0 4px', fontSize: 11, fontWeight: 600, color: 'var(--muted)', fontVariantNumeric: 'tabular-nums' }}>
-              Objetivo {hideValues ? '' : formatMoney(objetivo, { currency: 'USD' })}
-            </p>
-            {objetivo <= totalActual ? (
-              <p style={{ margin: 0, fontSize: 18, fontWeight: 700, color: 'var(--up)' }}>¡Ya alcanzado!</p>
-            ) : labelMesObj ? (
-              <>
-                <p style={{ margin: 0, fontSize: 20, fontWeight: 700, color: 'var(--primary)', letterSpacing: '-0.03em' }}>
-                  {labelMesObj}
-                </p>
-                <p style={{ margin: '4px 0 0', fontSize: 11, color: 'var(--muted)' }}>
-                  en {mesObjetivo! >= 12 ? `${formatNumber(mesObjetivo! / 12, { decimals: 1 })} años` : `${mesObjetivo} meses`}
-                </p>
-              </>
-            ) : (
-              <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: 'var(--muted)' }}>Fuera del horizonte</p>
-            )}
-          </div>
+          {/* ── Gráfico histórico + proyección ──────────────────────────────── */}
+          <div className="card" style={{ paddingBottom: 8 }}>
+            <div className="card-cabecera" style={{ justifyContent: 'space-between' }}>
+              <p className="card-titulo">Evolución y proyección</p>
+              <div className="leyenda">
+                <span><span style={{ width: 14, height: 2, borderRadius: 1, background: 'var(--primary)' }} />Cartera real</span>
+                <span><span style={{ width: 14, height: 0, borderTop: '2px dashed #5e5ce6' }} />Proyección</span>
+              </div>
+            </div>
 
-          {/* Hoy */}
-          <div style={{ background: 'var(--card)', border: '1px solid var(--border-subtle)', borderRadius: 12, padding: '14px 18px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-            <p style={{ margin: '0 0 4px', fontSize: 11, fontWeight: 600, color: 'var(--muted)' }}>
-              Cartera hoy
-            </p>
-            <p style={{ margin: 0, fontSize: 22, fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.03em', fontVariantNumeric: 'tabular-nums' }}>
-              {formatMoney(totalActual, { currency: 'USD', hidden: hideValues })}
-            </p>
-            <p style={{ margin: '4px 0 0', fontSize: 11, color: 'var(--muted)' }}>
-              al {kpis.fechaStr}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* ── Gráfico histórico + proyección ────────────────────────────────── */}
-      <div style={{
-        background: 'var(--card)',
-        border: '1px solid var(--border-subtle)',
-        borderRadius: 12,
-        padding: '18px 20px 10px',
-      }}>
-        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '4px 12px', marginBottom: 4 }}>
-          <p style={{ margin: 0, fontSize: 11, fontWeight: 600, color: 'var(--primary)' }}>
-            Evolución histórica + Proyección
-          </p>
-          <div style={{ display: 'flex', gap: 14, fontSize: 11, color: 'var(--muted)' }}>
-            <span style={{ whiteSpace: 'nowrap' }}><span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: 'var(--primary)', marginRight: 5 }} />Cartera real</span>
-            <span style={{ whiteSpace: 'nowrap' }}><span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: '#5e5ce6', marginRight: 5 }} />Proyección</span>
-          </div>
-        </div>
-
-        <ResponsiveContainer width="100%" height={260}>
+        <ResponsiveContainer width="100%" height={isMobile ? 260 : 300}>
           <ComposedChart data={chartData} margin={{ top: 8, right: 16, left: 0, bottom: 4 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+            <CartesianGrid stroke="var(--border-subtle)" vertical={false} />
             <XAxis
               dataKey="label"
-              tick={{ fontSize: 10, fill: 'var(--muted)' }}
+              tick={{ fontSize: 11, fill: 'var(--muted)' }}
               tickLine={false}
               axisLine={false}
               interval={cadaNPuntos - 1}
             />
             <YAxis
-              tick={{ fontSize: 10, fill: 'var(--muted)' }}
+              tick={{ fontSize: 11, fill: 'var(--muted)' }}
               tickLine={false}
               axisLine={false}
-              tickFormatter={v => formatMoney(v, { currency: 'USD', mode: 'compact', compactShort: isMobile, hidden: hideValues })}
-              width={isMobile ? 40 : 52}
+              tickFormatter={v => (hideValues ? '••••' : formatMoney(v, { currency: 'USD', mode: 'compact', compactShort: isMobile }))}
+              width={isMobile || hideValues ? 40 : 60}
             />
             <Tooltip content={hideValues ? () => null : <CustomTooltip />} />
 
@@ -532,6 +464,8 @@ export default function ProyeccionesTab({ data, hideValues, flujo }: Props) {
             )}
           </ComposedChart>
         </ResponsiveContainer>
+          </div>
+        </div>
       </div>
 
     </div>

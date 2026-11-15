@@ -23,6 +23,7 @@ import {
   PALETA_TIPO, RIESGO_COLOR, MONEDA_COLOR, RENTA_COLOR, GEO_COLOR,
   colorPorCategoria,
 } from '@/lib/constants';
+import { AvisoError, Vacio } from './Estados';
 
 interface Props {
   tenenciasPorMes: Record<string, TenenciaActual[]>;
@@ -78,7 +79,7 @@ function DimChips({ rows, moneda, hideValues, hayAnterior, objetivos, editando, 
   const fmt = (n: number) => formatMoney(n, { currency: moneda, hidden: hideValues });
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+    <div className="card reb-lista">
       {rows.map((r) => {
         const delta    = r.actual - r.anterior;
         const deltaPct = r.anterior > 0 ? (delta / r.anterior) * 100 : 0;
@@ -109,36 +110,31 @@ function DimChips({ rows, moneda, hideValues, hayAnterior, objetivos, editando, 
         const diffColor = enRango ? 'var(--up)' : Math.abs(diffObj) <= 8 ? 'var(--warn)' : 'var(--down)';
 
         return (
-          <div key={r.label} style={{
-            background: `color-mix(in srgb, ${r.color} 6%, var(--card))`,
-            border: `1px solid color-mix(in srgb, ${r.color} 20%, var(--border))`,
-            borderRadius: 8,
-            padding: '8px 14px 9px',
-          }}>
+          <div key={r.label} className="reb-fila">
             {/* header: categoría y variación a la izquierda, objetivo a la derecha */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 7, rowGap: 4, flexWrap: 'wrap', marginBottom: 8 }}>
-              <div style={{ width: 7, height: 7, borderRadius: '50%', background: r.color, flexShrink: 0 }} />
-              <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-sec)' }}>{r.label}</span>
-              <span style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>{fmt(r.actual)}</span>
-              <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-sec)', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>{formatPercent(r.pctAct, { sign: false })}</span>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, rowGap: 4, flexWrap: 'wrap', marginBottom: 10 }}>
+              <span style={{ width: 8, height: 8, borderRadius: '50%', background: r.color, flexShrink: 0, alignSelf: 'center' }} />
+              <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--text)' }}>{r.label}</span>
+              <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--text)', fontVariantNumeric: 'tabular-nums', fontFamily: 'var(--font-display)' }}>{fmt(r.actual)}</span>
+              <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-sec)', fontVariantNumeric: 'tabular-nums' }}>{formatPercent(r.pctAct, { sign: false })}</span>
               {hayAnterior && r.anterior > 0 && (
-                <span style={{ fontSize: 10, fontWeight: 600, color: ppColor, lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>
+                <span style={{ fontSize: 12, fontWeight: 600, color: ppColor, fontVariantNumeric: 'tabular-nums' }}>
                   {formatPercent(deltaPp, { pp: true })}
                 </span>
               )}
               {objetivos != null && (
-                <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--muted)', whiteSpace: 'nowrap' }}>
-                  Obj: <strong style={{ color: tieneObjetivo ? 'var(--text)' : 'var(--muted)', fontVariantNumeric: 'tabular-nums' }}>
+                <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--muted)', whiteSpace: 'nowrap' }}>
+                  Objetivo <strong style={{ fontWeight: 600, color: tieneObjetivo ? 'var(--text)' : 'var(--muted)', fontVariantNumeric: 'tabular-nums' }}>
                     {tieneObjetivo ? formatPercent(pctObj, { sign: false, decimals: 0 }) : '—'}
                   </strong>
                   {tieneObjetivo && (
                     <span style={{
-                      fontSize: 10, fontWeight: 700, color: diffColor,
-                      background: enRango ? 'rgba(45,198,83,0.12)' : 'transparent',
-                      padding: '1px 5px', borderRadius: 4,
+                      fontSize: 12, fontWeight: 600, color: diffColor,
+                      background: enRango ? 'var(--up-dim)' : Math.abs(diffObj) <= 8 ? 'var(--warn-dim)' : 'var(--down-dim)',
+                      padding: '2px 7px', borderRadius: 6,
                       fontVariantNumeric: 'tabular-nums',
                     }}>
-                      {enRango ? '✓' : formatPercent(diffObj, { pp: true })}
+                      {enRango ? 'En rango' : formatPercent(diffObj, { pp: true })}
                     </span>
                   )}
                 </span>
@@ -146,7 +142,7 @@ function DimChips({ rows, moneda, hideValues, hayAnterior, objetivos, editando, 
             </div>
 
             {/* barra única */}
-            <div style={{ position: 'relative', height: 8, borderRadius: 4, overflow: 'hidden', background: `color-mix(in srgb, ${r.color} 8%, var(--border))` }}>
+            <div style={{ position: 'relative', height: 8, borderRadius: 4, overflow: 'hidden', background: 'var(--track)' }}>
               {/* sólido: hasta wAct menos el delta (sin mes anterior, toda la barra) */}
               {(r.anterior > 0 || !hayAnterior) && (
                 <div style={{
@@ -160,7 +156,7 @@ function DimChips({ rows, moneda, hideValues, hayAnterior, objetivos, editando, 
                 <div style={{
                   position: 'absolute', left: `${r.anterior > 0 ? wAct : 0}%`, top: 0, height: '100%',
                   width: `${wSegWidth}%`,
-                  background: 'rgba(34,211,160,0.6)',
+                  background: 'color-mix(in srgb, var(--up) 65%, transparent)',
                 }} />
               )}
               {/* semitransparente rojo: reducción al final de la barra */}
@@ -168,7 +164,7 @@ function DimChips({ rows, moneda, hideValues, hayAnterior, objetivos, editando, 
                 <div style={{
                   position: 'absolute', left: `${Math.max(wAct - wDelta, 0)}%`, top: 0, height: '100%',
                   width: `${wDelta}%`,
-                  background: 'rgba(244,63,94,0.6)',
+                  background: 'color-mix(in srgb, var(--down) 65%, transparent)',
                 }} />
               )}
               {/* marca del objetivo: línea vertical sobre la barra */}
@@ -198,14 +194,14 @@ function DimChips({ rows, moneda, hideValues, hayAnterior, objetivos, editando, 
                 `left`/`right`/`margin:auto` descentraba: al clamparse un solo
                 inset a 0 la caja dejaba de estar centrada en el segmento. */}
             {hayAnterior && (
-              <div style={{ position: 'relative', height: 16, marginTop: 3, overflowX: 'clip', containerType: 'inline-size' }}>
+              <div style={{ position: 'relative', height: 16, marginTop: 5, overflowX: 'clip', containerType: 'inline-size' }}>
                 <span style={{
                   position: 'absolute',
                   top: 0,
                   left: 0,
                   transform: `translateX(clamp(0px, ${labelAt}cqw - 50%, 100cqw - 100%))`,
                   width: 'max-content',
-                  fontSize: 10, fontWeight: 700, color: varColor,
+                  fontSize: 12, fontWeight: 500, color: varColor,
                   whiteSpace: 'nowrap', lineHeight: '16px', fontVariantNumeric: 'tabular-nums',
                 }}>
                   {formatMoney(delta, { currency: moneda, sign: true, hidden: hideValues })}{r.anterior > 0 ? ` (${formatPercent(deltaPct)})` : ''}
@@ -248,13 +244,13 @@ export default function RebalanceoTab({ tenenciasPorMes, hideValues, moneda, mes
   const sumaColor = suma > 100 ? 'var(--down)' : suma === 100 ? 'var(--up)' : 'var(--muted)';
 
   return (
-    <div className="rebalanceo-root scroll-y" style={{ display: 'flex', flexDirection: 'column', gap: 12, flex: 1, minHeight: 0, paddingBottom: 24 }}>
+    <div className="rebalanceo-root" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
 
       {/* ── Objetivos: edición y estado del guardado ─────────────────────────── */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
         <button
           type="button"
-          className={`g-btn chico${editando ? ' primario' : ''}`}
+          className={`g-btn chico${editando ? ' primario' : ' tintado'}`}
           onClick={() => setEditando(e => !e)}
           disabled={!objetivosPorDim}
           aria-pressed={editando}
@@ -262,35 +258,34 @@ export default function RebalanceoTab({ tenenciasPorMes, hideValues, moneda, mes
           {editando ? 'Listo' : 'Editar objetivos'}
         </button>
         {objetivosPorDim && (
-          <span style={{ fontSize: 11, fontWeight: 700, color: sumaColor, fontVariantNumeric: 'tabular-nums' }}>
+          <span style={{ fontSize: 13, fontWeight: 500, color: sumaColor, fontVariantNumeric: 'tabular-nums' }}>
             {suma > 100
-              ? `Objetivos: excede ${formatPercent(suma - 100, { sign: false, decimals: 0 })}`
+              ? `Los objetivos se pasan ${formatPercent(suma - 100, { sign: false, decimals: 0 })} del 100%`
               : suma === 100
-              ? 'Objetivos: suman 100% ✓'
-              : `Objetivos: disponible ${formatPercent(resta, { sign: false, decimals: 0 })}`}
+              ? 'Los objetivos suman 100%'
+              : `Queda ${formatPercent(resta, { sign: false, decimals: 0 })} sin asignar`}
           </span>
         )}
         {estado !== 'inicial' && (
-          <span style={{ fontSize: 10, color: estado === 'error' ? 'var(--down)' : 'var(--muted)' }}>
+          <span role="status" style={{ fontSize: 13, color: estado === 'error' ? 'var(--down)' : 'var(--muted)' }}>
             {estado === 'guardando' ? 'Guardando…'
-              : estado === 'guardado' ? 'Guardado ✓'
+              : estado === 'guardado' ? 'Guardado'
               : 'No se pudo guardar'}
           </span>
         )}
       </div>
 
       {errorCarga && (
-        <div role="alert" style={{ fontSize: 12, color: 'var(--down)', lineHeight: 1.45 }}>
-          No se pudieron leer los objetivos: la edición queda desactivada para no pisar lo que hay en el Sheet.{' '}
-          <button type="button" className="g-btn chico" onClick={reintentar}>Reintentar</button>
-        </div>
+        <AvisoError titulo="No se pudieron leer los objetivos" onReintentar={reintentar}>
+          La edición queda desactivada para no pisar lo que hay en el Sheet.
+        </AvisoError>
       )}
 
       {/* En el primer mes de la serie no hay contra qué comparar: sin este corte
           toda la posición se mostraba como ganancia del mes. Las filas se
           muestran igual, sin variación, porque los objetivos sí aplican. */}
       {!hayAnterior && rows.length > 0 && (
-        <p style={{ margin: 0, fontSize: 12, color: 'var(--muted)' }}>
+        <p className="nota">
           Es el primer mes de la serie: no hay un mes anterior para comparar.
         </p>
       )}
@@ -306,9 +301,7 @@ export default function RebalanceoTab({ tenenciasPorMes, hideValues, moneda, mes
           onObjetivo={(cat, val) => setObjetivo(dim, cat, val)}
         />
       ) : (
-        <p style={{ margin: 0, fontSize: 12, color: 'var(--muted)', textAlign: 'center' }}>
-          No hay tenencias disponibles para este mes.
-        </p>
+        <Vacio>No hay tenencias cargadas para este mes.</Vacio>
       )}
 
     </div>

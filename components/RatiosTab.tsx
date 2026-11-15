@@ -21,8 +21,10 @@ import type { DashboardData, RangoHistorico, RatioResponse } from '@/types';
 import type { RatioGuardado } from '@/lib/ratiosGuardados';
 import { tickersDeCartera } from '@/lib/tickersElegibles';
 import { sma, ema, bollinger, retornos, correlacionMovil } from '@/lib/ratios';
-import { formatNumber, formatPercent } from '@/lib/format';
+import { formatNumber, formatPercent, formatFechaEje } from '@/lib/format';
 import Segmented from './Segmented';
+import InfoTip from './InfoTip';
+import { AvisoError } from './Estados';
 
 // Referencias de mercado que no están en la cartera pero son el denominador
 // natural de casi cualquier análisis: medir una posición contra el mercado, el
@@ -81,17 +83,13 @@ interface TooltipPayload {
 function CustomTooltip({ active, payload, label }: { active?: boolean; payload?: TooltipPayload[]; label?: string }) {
   if (!active || !payload?.length) return null;
   return (
-    <div style={{
-      background: 'var(--card)', border: '1px solid var(--border-subtle)',
-      borderRadius: 8, padding: '10px 14px', fontSize: 12,
-      boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
-    }}>
-      <p style={{ margin: '0 0 6px', color: 'var(--muted)', fontWeight: 600 }}>{label}</p>
+    <div className="tooltip-panel">
+      <p className="tooltip-titulo">{label ? formatFechaEje(label, true, true) : ''}</p>
       {payload.map((p) => (
         p.value != null && (
-          <p key={p.dataKey} style={{ margin: '2px 0', color: p.color, display: 'flex', justifyContent: 'space-between', gap: 12 }}>
-            <span>{p.name}</span>
-            <strong style={{ fontVariantNumeric: 'tabular-nums' }}>{formatNumber(p.value, { decimals: 4 })}</strong>
+          <p key={p.dataKey} className="tooltip-fila">
+            <span><span className="tooltip-marca" style={{ background: p.color }} />{p.name}</span>
+            <span>{formatNumber(p.value, { decimals: 4 })}</span>
           </p>
         )
       ))}
@@ -103,59 +101,13 @@ function CustomTooltip({ active, payload, label }: { active?: boolean; payload?:
 
 function Metrica({ label, valor, color, hint }: { label: string; valor: string; color?: string; hint?: string }) {
   return (
-    <div style={{
-      background: 'var(--card)', border: '1px solid var(--border-subtle)',
-      borderRadius: 10, padding: '10px 14px', minWidth: 0,
-    }}>
-      <p style={{
-        display: 'flex', alignItems: 'center', gap: 4,
-        fontSize: 11, fontWeight: 600,
-        color: 'var(--muted)', margin: 0,
-      }}>
-        {label}
-        {hint && <InfoHint texto={hint} />}
-      </p>
-      <p style={{ fontSize: 17, fontWeight: 700, color: color ?? 'var(--text)', margin: '3px 0 0', fontVariantNumeric: 'tabular-nums' }}>
-        {valor}
-      </p>
+    <div className="kpi-card" style={{ padding: '12px 14px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+        <p className="kpi-label">{label}</p>
+        {hint && <InfoTip label={label}>{hint}</InfoTip>}
+      </div>
+      <p className="kpi-value" style={{ fontSize: 20, ...(color ? { color } : null) }}>{valor}</p>
     </div>
-  );
-}
-
-// Ícono de info con tooltip propio: un `title` nativo no tiene ningún
-// indicio visual de que existe, así que nadie hace hover para descubrirlo.
-// El ícono hace explícito que hay una explicación disponible.
-function InfoHint({ texto }: { texto: string }) {
-  const [visible, setVisible] = useState(false);
-  return (
-    <span
-      tabIndex={0}
-      role="button"
-      aria-label={texto}
-      onMouseEnter={() => setVisible(true)}
-      onMouseLeave={() => setVisible(false)}
-      onFocus={() => setVisible(true)}
-      onBlur={() => setVisible(false)}
-      style={{ position: 'relative', display: 'inline-flex', cursor: 'help' }}
-    >
-      <svg width="11" height="11" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-        <circle cx="8" cy="8" r="7" stroke="var(--muted)" strokeWidth="1.3" />
-        <circle cx="8" cy="4.6" r="0.9" fill="var(--muted)" />
-        <path d="M8 7.2v4.6" stroke="var(--muted)" strokeWidth="1.3" strokeLinecap="round" />
-      </svg>
-      {visible && (
-        <span style={{
-          position: 'absolute', bottom: 'calc(100% + 6px)', left: '50%', transform: 'translateX(-50%)',
-          background: 'var(--card)', border: '1px solid var(--border-subtle)', borderRadius: 8,
-          padding: '8px 10px', fontSize: 11, fontWeight: 400, letterSpacing: 'normal', textTransform: 'none',
-          color: 'var(--text-sec)', width: 200, maxWidth: 'min(200px, calc(100vw - 48px))',
-          boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
-          zIndex: 10, pointerEvents: 'none',
-        }}>
-          {texto}
-        </span>
-      )}
-    </span>
   );
 }
 
@@ -170,19 +122,9 @@ function SelectorActivo({
   label: string;
 }) {
   return (
-    <label style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 150 }}>
-      <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)' }}>
-        {label}
-      </span>
-      <select
-        value={valor}
-        onChange={(e) => onChange(e.target.value)}
-        style={{
-          padding: '7px 10px', borderRadius: 8, fontSize: 13,
-          background: 'var(--card)', color: 'var(--text)',
-          border: '1px solid var(--border)', cursor: 'pointer',
-        }}
-      >
+    <label className="campo-etiqueta columna" style={{ flex: '1 1 150px', maxWidth: 240 }}>
+      {label}
+      <select className="campo" value={valor} onChange={(e) => onChange(e.target.value)}>
         <optgroup label="Mi cartera">
           {cartera.map((t) => <option key={t} value={t}>{t}</option>)}
         </optgroup>
@@ -370,29 +312,29 @@ export default function RatiosTab({ data }: Props) {
         flexShrink: 0,
       }}>
         <SelectorActivo label="Activo" valor={activoA} onChange={setActivoA} cartera={tickersCartera} />
-        <span style={{ fontSize: 20, color: 'var(--muted)', paddingBottom: 6 }}>/</span>
+        <span aria-hidden="true" style={{ fontSize: 20, color: 'var(--muted)', paddingBottom: 5 }}>/</span>
         <SelectorActivo label="Contra" valor={activoB} onChange={setActivoB} cartera={tickersCartera} />
 
         <button
+          type="button"
+          className="app-bar-btn"
           onClick={() => { setActivoA(activoB); setActivoB(activoA); }}
           title="Invertir el par"
-          style={{
-            padding: '7px 12px', borderRadius: 8, fontSize: 13, cursor: 'pointer',
-            background: 'transparent', color: 'var(--muted)',
-            border: '1px solid var(--border)',
-          }}
-        >⇄</button>
-
-        <div style={{ width: 1, height: 32, background: 'var(--border)' }} />
+          aria-label="Invertir el par"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M4 8h15M15 4l4 4-4 4M20 16H5M9 12l-4 4 4 4" />
+          </svg>
+        </button>
 
         {/* Rango */}
-        <Segmented opciones={RANGOS} activa={rango} onChange={setRango} chico etiqueta="Rango" />
+        <Segmented opciones={RANGOS} activa={rango} onChange={setRango} chico etiqueta="Rango" style={{ alignSelf: 'flex-end', marginBottom: 2 }} />
       </div>
 
       {/* ── Indicadores ───────────────────────────────────────────────────── */}
       <div style={{
-        display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
-        flexShrink: 0, fontSize: 11, color: 'var(--muted)',
+        display: 'flex', alignItems: 'center', gap: '10px 16px', flexWrap: 'wrap',
+        flexShrink: 0,
       }}>
         <Segmented
           opciones={[{ id: 'sma' as TipoMedia, label: 'SMA' }, { id: 'ema' as TipoMedia, label: 'EMA' }]}
@@ -402,52 +344,38 @@ export default function RatiosTab({ data }: Props) {
           etiqueta="Tipo de media"
         />
 
-        <label style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-          <span style={{ color: COLOR.sma1, fontWeight: 700 }}>▬</span> Media 1
-          <select
-            value={periodo1}
-            onChange={(e) => setPeriodo1(Number(e.target.value))}
-            style={{
-              padding: '3px 6px', borderRadius: 6, fontSize: 11,
-              background: 'var(--card)', color: 'var(--text)',
-              border: '1px solid var(--border)', cursor: 'pointer',
-            }}
-          >
-            {PERIODOS.map((n) => <option key={n} value={n}>{n === 0 ? 'off' : n}</option>)}
+        <label className="campo-etiqueta">
+          <span aria-hidden="true" style={{ width: 12, height: 3, borderRadius: 2, background: COLOR.sma1 }} />
+          Media 1
+          <select className="campo chico" value={periodo1} onChange={(e) => setPeriodo1(Number(e.target.value))}>
+            {PERIODOS.map((n) => <option key={n} value={n}>{n === 0 ? 'No' : `${n} días`}</option>)}
           </select>
         </label>
 
-        <label style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-          <span style={{ color: COLOR.sma2, fontWeight: 700 }}>▬</span> Media 2
-          <select
-            value={periodo2}
-            onChange={(e) => setPeriodo2(Number(e.target.value))}
-            style={{
-              padding: '3px 6px', borderRadius: 6, fontSize: 11,
-              background: 'var(--card)', color: 'var(--text)',
-              border: '1px solid var(--border)', cursor: 'pointer',
-            }}
-          >
-            {PERIODOS.map((n) => <option key={n} value={n}>{n === 0 ? 'off' : n}</option>)}
+        <label className="campo-etiqueta">
+          <span aria-hidden="true" style={{ width: 12, height: 3, borderRadius: 2, background: COLOR.sma2 }} />
+          Media 2
+          <select className="campo chico" value={periodo2} onChange={(e) => setPeriodo2(Number(e.target.value))}>
+            {PERIODOS.map((n) => <option key={n} value={n}>{n === 0 ? 'No' : `${n} días`}</option>)}
           </select>
         </label>
 
-        <label style={{ display: 'flex', alignItems: 'center', gap: 5, cursor: 'pointer' }}>
-          <input type="checkbox" checked={verBandas} onChange={(e) => setVerBandas(e.target.checked)} />
+        <button type="button" role="switch" aria-checked={verBandas} onClick={() => setVerBandas((v) => !v)} className="switch chico">
+          <span className="switch-pista" aria-hidden="true" />
           Bandas de Bollinger
-        </label>
+        </button>
 
-        <label style={{ display: 'flex', alignItems: 'center', gap: 5, cursor: 'pointer' }}>
-          <input type="checkbox" checked={verCorrel} onChange={(e) => setVerCorrel(e.target.checked)} />
+        <button type="button" role="switch" aria-checked={verCorrel} onClick={() => setVerCorrel((v) => !v)} className="switch chico">
+          <span className="switch-pista" aria-hidden="true" />
           Correlación móvil
-        </label>
+        </button>
       </div>
 
       {/* ── Métricas del par ──────────────────────────────────────────────── */}
       {est && (
         <div style={{
-          display: 'grid', gap: 8, flexShrink: 0,
-          gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
+          display: 'grid', gap: 10, flexShrink: 0,
+          gridTemplateColumns: 'repeat(auto-fit, minmax(132px, 1fr))',
         }}>
           <Metrica
             label="Ratio actual"
@@ -485,25 +413,23 @@ export default function RatiosTab({ data }: Props) {
       )}
 
       {/* ── Gráfico ───────────────────────────────────────────────────────── */}
-      <div style={{
-        flex: 1, minHeight: 280,
-        background: 'var(--card)', border: '1px solid var(--border-subtle)',
-        borderRadius: 12, padding: '14px 10px 6px',
-        display: 'flex', flexDirection: 'column',
-      }}>
-        <p style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-sec)', margin: '0 0 6px 10px' }}>
-          {par} · evolución del ratio
+      <div className="card" style={{ flex: 1, minHeight: 300, paddingBottom: 8, display: 'flex', flexDirection: 'column' }}>
+        <div className="card-cabecera" style={{ display: 'block' }}>
+          <p className="card-titulo">
+            Evolución del ratio
+            <span className="dato">{par}</span>
+          </p>
           {est && (
-            <span style={{ color: 'var(--muted)', fontWeight: 400, fontVariantNumeric: 'tabular-nums' }}>
-              {' '}· mín {formatNumber(est.minimo, { decimals: 3 })} · prom {formatNumber(est.promedio, { decimals: 3 })} · máx {formatNumber(est.maximo, { decimals: 3 })}
-            </span>
+            <p className="card-sub" style={{ fontVariantNumeric: 'tabular-nums' }}>
+              Mínimo {formatNumber(est.minimo, { decimals: 3 })}, promedio {formatNumber(est.promedio, { decimals: 3 })}, máximo {formatNumber(est.maximo, { decimals: 3 })}
+            </p>
           )}
-        </p>
+        </div>
 
-        {loading && <p style={{ color: 'var(--muted)', fontSize: 13, margin: 'auto' }}>Cargando…</p>}
-        {error && <p style={{ color: 'var(--down)', fontSize: 13, margin: 'auto' }}>{error}</p>}
+        {loading && <span className="skeleton" role="status" aria-label="Cargando el ratio" style={{ flex: 1, minHeight: 200, borderRadius: 10, marginBottom: 8 }} />}
+        {error && <div style={{ margin: 'auto' }}><AvisoError titulo="No se pudo calcular el ratio">{error}</AvisoError></div>}
         {!loading && !error && serieChart.length === 0 && (
-          <p style={{ color: 'var(--muted)', fontSize: 13, margin: 'auto' }}>
+          <p className="vacio" style={{ margin: 'auto' }}>
             {activoA === activoB
               ? 'Elegí dos activos distintos.'
               : 'Sin datos en común para este par en el rango elegido.'}
@@ -516,16 +442,20 @@ export default function RatiosTab({ data }: Props) {
               <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
               <XAxis
                 dataKey="fecha"
-                tick={{ fontSize: 10, fill: 'var(--muted)' }}
+                tick={{ fontSize: 11, fill: 'var(--muted)' }}
+                tickFormatter={(f) => formatFechaEje(f, rango === '1m' || rango === '6m')}
                 minTickGap={40}
-                stroke="var(--border)"
+                tickLine={false}
+                axisLine={false}
               />
               <YAxis
                 yAxisId="ratio"
-                tick={{ fontSize: 10, fill: 'var(--muted)' }}
+                tick={{ fontSize: 11, fill: 'var(--muted)' }}
                 domain={['auto', 'auto']}
-                stroke="var(--border)"
-                width={58}
+                tickFormatter={(v) => formatNumber(v, { decimals: 2 })}
+                tickLine={false}
+                axisLine={false}
+                width={48}
               />
               {verCorrel && (
                 // Eje propio y fijo en -1..1: la correlación no comparte escala
@@ -535,13 +465,14 @@ export default function RatiosTab({ data }: Props) {
                   orientation="right"
                   domain={[-1, 1]}
                   ticks={[-1, 0, 1]}
-                  tick={{ fontSize: 10, fill: 'var(--muted)' }}
-                  stroke="var(--border)"
-                  width={32}
+                  tick={{ fontSize: 11, fill: 'var(--muted)' }}
+                  tickLine={false}
+                  axisLine={false}
+                  width={28}
                 />
               )}
               <Tooltip content={<CustomTooltip />} />
-              <Legend wrapperStyle={{ fontSize: 11 }} />
+              <Legend iconType="plainline" wrapperStyle={{ fontSize: 12, color: 'var(--text-sec)', paddingTop: 6 }} />
 
               {est?.promedio != null && (
                 <ReferenceLine
@@ -591,28 +522,23 @@ export default function RatiosTab({ data }: Props) {
           onChange={(e) => setNota(e.target.value)}
           placeholder={`Por qué seguís ${par}…`}
           maxLength={200}
-          style={{
-            flex: 1, minWidth: 200, padding: '7px 12px', borderRadius: 8, fontSize: 12,
-            background: 'var(--card)', color: 'var(--text)', border: '1px solid var(--border)',
-          }}
+          aria-label={`Nota sobre el par ${par}`}
+          className="campo"
+          style={{ flex: 1, minWidth: 200 }}
         />
         <button
+          type="button"
+          className="g-btn tintado"
           onClick={guardarActual}
           disabled={guardando || estadoLista !== 'ok' || !activoA || !activoB || activoA === activoB}
-          style={{
-            padding: '7px 16px', borderRadius: 8, fontSize: 12, fontWeight: 600,
-            cursor: guardando || estadoLista !== 'ok' ? 'default' : 'pointer',
-            background: 'var(--primary-dim)', color: 'var(--primary)',
-            border: '1px solid var(--primary)', opacity: guardando || estadoLista !== 'ok' ? 0.6 : 1,
-          }}
         >
           {guardando ? 'Guardando…' : yaGuardado ? 'Actualizar par' : 'Guardar par'}
         </button>
         {errorGuardar && (
-          <span style={{ fontSize: 11, color: 'var(--down)' }}>{errorGuardar}</span>
+          <span role="alert" style={{ fontSize: 13, color: 'var(--down)' }}>No se pudo guardar: {errorGuardar}</span>
         )}
         {estadoLista === 'error' && (
-          <span role="alert" style={{ fontSize: 11, color: 'var(--down)' }}>
+          <span role="alert" style={{ fontSize: 13, color: 'var(--down)' }}>
             No se pudieron leer los pares guardados: guardar queda desactivado para no pisarlos.{' '}
             <button type="button" className="g-btn chico" onClick={() => setIntentoLista((n) => n + 1)}>Reintentar</button>
           </span>
@@ -622,44 +548,42 @@ export default function RatiosTab({ data }: Props) {
       {/* ── Pares guardados ───────────────────────────────────────────────── */}
       {guardados.length > 0 && (
         <div style={{ flexShrink: 0 }}>
-          <p style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', margin: '0 0 6px' }}>
-            Pares guardados
-          </p>
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          <p className="card-titulo" style={{ margin: '4px 0 8px' }}>Pares guardados</p>
+          <div className="chips">
             {guardados.map((g) => {
               const activo = g.activoA === activoA && g.activoB === activoB;
               return (
-                <div
+                <span
                   key={`${g.activoA}/${g.activoB}`}
                   title={g.nota || undefined}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 6,
-                    padding: '4px 6px 4px 12px', borderRadius: 20,
-                    border: '1px solid', fontSize: 11, fontWeight: 600,
-                    borderColor: activo ? 'var(--primary)' : 'var(--border)',
-                    background: activo ? 'var(--primary-dim)' : 'transparent',
-                    color: activo ? 'var(--primary)' : 'var(--text-sec)',
-                  }}
+                  className="chip"
+                  aria-pressed={activo}
+                  style={{ padding: '0 4px 0 0', cursor: 'default' }}
                 >
                   <button
+                    type="button"
                     onClick={() => cargar(g)}
+                    aria-pressed={activo}
                     style={{
-                      background: 'none', border: 'none', cursor: 'pointer',
-                      color: 'inherit', fontSize: 11, fontWeight: 600, padding: 0,
+                      alignSelf: 'stretch', background: 'none', border: 'none', cursor: 'pointer',
+                      color: 'inherit', font: 'inherit', padding: '0 4px 0 12px', borderRadius: 999,
                     }}
                   >
                     {g.activoA}/{g.activoB}
-                    <span style={{ color: 'var(--muted)', fontWeight: 400 }}> · {g.rango}</span>
+                    <span style={{ color: 'var(--muted)', fontWeight: 400 }}> {g.rango.toUpperCase()}</span>
                   </button>
                   <button
+                    type="button"
                     onClick={() => borrar(g)}
                     aria-label={`Borrar ${g.activoA}/${g.activoB}`}
-                    style={{
-                      background: 'none', border: 'none', cursor: 'pointer',
-                      color: 'var(--muted)', fontSize: 13, lineHeight: 1, padding: '0 2px',
-                    }}
-                  >×</button>
-                </div>
+                    className="cerrar-btn"
+                    style={{ width: 22, height: 22, background: 'transparent' }}
+                  >
+                    <svg width="9" height="9" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
+                      <path d="M2 2l8 8M10 2l-8 8" />
+                    </svg>
+                  </button>
+                </span>
               );
             })}
           </div>

@@ -9,6 +9,9 @@ import type { GrupoBono, BondPerformance } from '@/types';
 import { usePerformance } from '@/lib/usePerformance';
 import { formatPercent, formatNumber } from '@/lib/format';
 import KPICard from './KPICard';
+import ThOrden from './ThOrden';
+import InfoTip from './InfoTip';
+import { Cargando, AvisoError, Vacio } from './Estados';
 
 interface Props {
   tenencias: Record<string, number>;
@@ -340,80 +343,71 @@ export default function RentaFijaSection({ tenencias }: Props) {
     else { setSortKey(key); setSortDesc(true); }
   }
 
-  const cabecera = (key: SortKey, label: string) => (
-    <th
-      onClick={() => toggleSort(key)}
-      style={{
-        cursor: 'pointer', textAlign: 'right', padding: '8px 10px',
-        fontSize: 11, fontWeight: 600,
-        color: sortKey === key ? 'var(--primary)' : 'var(--muted)', whiteSpace: 'nowrap',
-      }}
-    >
-      {label}{sortKey === key ? (sortDesc ? ' ▼' : ' ▲') : ''}
-    </th>
+  const cabecera = (key: SortKey, label: string, align: 'left' | 'right' = 'right') => (
+    <ThOrden clave={key} label={label} activa={sortKey} desc={sortDesc} onOrden={toggleSort} align={align} />
   );
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, flex: 1 }}>
-        <p style={{ margin: 0, fontSize: 12, color: 'var(--muted)' }}>Cargando métricas de bonos…</p>
-      </div>
+      <Cargando etiqueta="Cargando métricas de bonos" kpis={3} alto={320} />
     );
   }
 
   if (error) {
     return (
-      <div style={{
-        background: 'var(--card)', border: '1px solid var(--down)', borderRadius: 10,
-        padding: '10px 14px', fontSize: 12, color: 'var(--down)',
-      }}>
-        Error cargando performance: {error}
-      </div>
+      <AvisoError titulo="No se pudieron cargar las métricas de bonos">{error}</AvisoError>
     );
   }
+
+  // Nunca mezclados: cada tasa vive en su propia moneda o índice.
+  const kpiDe = (g: GrupoBono) => perf?.carteraPorGrupo.find((c) => c.grupo === g);
+  const gruposConPosicion = GRUPO_ORDEN.flatMap((grupo) => {
+    const kpi = kpiDe(grupo);
+    return kpi ? [{ grupo, kpi }] : [];
+  });
+  const gruposSinPosicion = GRUPO_ORDEN.filter((g) => !kpiDe(g));
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
 
       {/* ── KPIs por grupo — nunca mezclados, cada tasa vive en su propia moneda/índice ── */}
-      <div className="kpi-grid">
-        {GRUPO_ORDEN.map((g) => {
-          const kpi = perf?.carteraPorGrupo.find((c) => c.grupo === g);
-          const meta = GRUPO_META[g];
-          return (
+      {/* Una tarjeta por grupo con posición. Los grupos sin posición iban cada uno
+          en su tarjeta con un "Sin posición" del tamaño de una cifra: cuatro de
+          seis tarjetas no decían nada. Ahora se nombran en una línea. */}
+      {gruposConPosicion.length > 0 && (
+        <div className="kpi-grid">
+          {gruposConPosicion.map(({ grupo, kpi }) => (
             <KPICard
-              key={g}
-              label={`TIR cartera · ${meta.label}`}
-              value={kpi ? fmtPct1(kpi.tirPonderada) : 'Sin posición'}
-              sub={kpi ? `Duration ponderada: ${fmtDuration(kpi.durationPonderada)}` : undefined}
-              subColor={meta.color}
+              key={grupo}
+              label={`TIR de la cartera, ${GRUPO_META[grupo].label}`}
+              value={fmtPct1(kpi.tirPonderada)}
+              sub={`Duration ponderada ${fmtDuration(kpi.durationPonderada)}`}
             />
-          );
-        })}
-      </div>
+          ))}
+        </div>
+      )}
+      {gruposSinPosicion.length > 0 && (
+        <p className="nota">
+          {gruposConPosicion.length === 0 ? 'Sin bonos en cartera. ' : ''}
+          Sin posición en {gruposSinPosicion.map((g) => GRUPO_META[g].label).join(', ')}.
+        </p>
+      )}
 
       {/* ── Selector de grupo — siempre uno activo, nunca todos juntos:       */}
       {/*    sus TIR no son comparables entre sí (monedas/índices distintos). */}
-      <div className="pill-row" style={{ display: 'flex', gap: 6, flexWrap: 'wrap', flexShrink: 0 }}>
+      <div className="chips" role="group" aria-label="Grupo de tasa">
         {GRUPO_ORDEN.map((g) => {
           const meta = GRUPO_META[g];
-          const activo = filtroGrupo === g;
           return (
             <button
               key={g}
+              type="button"
               onClick={() => setFiltroGrupo(g)}
-              className="pill-touch"
-              aria-pressed={activo}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 6,
-                padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600,
-                cursor: 'pointer', border: '1px solid',
-                borderColor: activo ? meta.color : 'var(--border)',
-                background: activo ? `${meta.color}22` : 'transparent',
-                color: activo ? meta.color : 'var(--muted)',
-              }}
+              className="chip"
+              aria-pressed={filtroGrupo === g}
+              style={{ '--chip-color': meta.color } as React.CSSProperties}
             >
-              <span style={{ width: 8, height: 8, borderRadius: '50%', background: meta.color, flexShrink: 0 }} />
+              <span className="chip-punto" />
               {meta.label}
             </button>
           );
@@ -421,28 +415,30 @@ export default function RentaFijaSection({ tenencias }: Props) {
       </div>
 
       {/* ── Curva TIR vs Duration ─────────────────────────────────────────── */}
-      <div style={{
-        background: 'var(--card)', border: '1px solid var(--border-subtle)', borderRadius: 12,
-        padding: '14px 16px 8px', minHeight: 320, display: 'flex', flexDirection: 'column', flexShrink: 0,
-      }}>
-        <div style={{ marginBottom: 10, flexShrink: 0 }}>
-          <p style={{ fontSize: 13, fontWeight: 700, letterSpacing: '0.04em', color: 'var(--text-sec)', margin: 0 }}>
-            Curva de Rendimientos (TIR vs Duration) · {GRUPO_META[filtroGrupo].label}
-          </p>
-          <span style={{ fontSize: 10, color: 'var(--muted)' }}>
-            Un punto por bono · puntos grandes = posición en tu cartera · línea = tendencia del grupo (ajuste cuadrático) · acotado al rango de duration seleccionado
-          </span>
+      <div className="card" style={{ paddingBottom: 10, minHeight: 320, display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
+        <div className="card-cabecera" style={{ display: 'block' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <p className="card-titulo">
+              Curva de rendimientos
+              <span className="dato">{GRUPO_META[filtroGrupo].label}</span>
+            </p>
+            <InfoTip label="cómo leer la curva" ancho={280}>
+              Cada punto es un bono: TIR contra duration. Los puntos grandes son los que tenés en cartera
+              y la línea punteada es la tendencia del grupo (ajuste cuadrático), dentro del rango de
+              duration elegido abajo.
+            </InfoTip>
+          </div>
           {bonosDelGrupo.some((b) => b.calculoPropio) && (
-            <span style={{ fontSize: 10, color: 'var(--muted)' }}>
+            <p className="card-sub">
               † Provinciales y Bonos de Consolidación: bonistas.com no los cubre, así que su TIR y duration las calcula el dashboard desde el flujo de fondos.
-              Los de tasa variable (TAMAR/Badlar) proyectan la tasa actual hasta el vencimiento — ubican el bono en la curva, no son una valuación exacta.
-            </span>
+              Los de tasa variable (TAMAR/Badlar) proyectan la tasa actual hasta el vencimiento: ubican el bono en la curva, no son una valuación exacta.
+            </p>
           )}
         </div>
         <div ref={chartWrapRef} style={{ height: 320 }}>
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart margin={{ top: 5, right: 16, left: 0, bottom: 20 }}>
-              <CartesianGrid strokeDasharray="2 4" stroke="var(--border-subtle)" />
+              <CartesianGrid stroke="var(--border-subtle)" />
               <XAxis
                 type="number" dataKey="modifiedDuration" name="Duration"
                 domain={[0, rangoDuration[1] * 1.08]} allowDataOverflow
@@ -491,10 +487,10 @@ export default function RentaFijaSection({ tenencias }: Props) {
         {/* ── Selector de rango de duration — acota el scatter y la tabla ──── */}
         <div style={{ padding: '10px 4px 4px', flexShrink: 0 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-            <span style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 600 }}>
+            <span style={{ fontSize: 13, color: 'var(--text-sec)' }}>
               Rango de duration
             </span>
-            <span style={{ fontSize: 11, color: 'var(--text-sec)', fontWeight: 600 }}>
+            <span style={{ fontSize: 13, color: 'var(--text)', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>
               {fmtDuration(rangoDuration[0])} – {fmtDuration(rangoDuration[1])}
             </span>
           </div>
@@ -518,7 +514,7 @@ export default function RentaFijaSection({ tenencias }: Props) {
                   extremo se queda unos px antes — se ve desalineado. */}
               <div style={{
                 position: 'absolute', left: 7, right: 7, height: 4, borderRadius: 2,
-                background: 'var(--border)', pointerEvents: 'none',
+                background: 'var(--track)', pointerEvents: 'none',
               }} />
               <div style={{
                 position: 'absolute', height: 4, borderRadius: 2,
@@ -554,15 +550,8 @@ export default function RentaFijaSection({ tenencias }: Props) {
               />
             </div>
             {(rangoDuration[0] !== rangoActivo[0] || rangoDuration[1] !== rangoActivo[1]) && (
-              <button
-                onClick={() => setRangoDuration(rangoActivo)}
-                className="pill-touch"
-                style={{
-                  fontSize: 10, fontWeight: 600, color: 'var(--muted)', background: 'transparent',
-                  border: '1px solid var(--border)', borderRadius: 20, padding: '3px 10px', cursor: 'pointer', flexShrink: 0,
-                }}
-              >
-                Reset
+              <button type="button" onClick={() => setRangoDuration(rangoActivo)} className="g-btn chico" style={{ flexShrink: 0 }}>
+                Todo el rango
               </button>
             )}
           </div>
@@ -570,24 +559,22 @@ export default function RentaFijaSection({ tenencias }: Props) {
       </div>
 
       {/* ── Tabla de métricas por bono ────────────────────────────────────── */}
-      <div className="tabla-wrap" style={{
-        background: 'var(--card)', border: '1px solid var(--border-subtle)', borderRadius: 12,
-        overflowX: 'auto',
-      }}>
-        <table className="tabla-datos" style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+      {bonosOrdenados.length === 0 && (
+        <Vacio>No hay bonos de este grupo en el rango de duration elegido.</Vacio>
+      )}
+      <div className="tabla-wrap" hidden={bonosOrdenados.length === 0}>
+        <table className="tabla-datos" style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
           <thead style={{ position: 'sticky', top: 0, background: 'var(--card)', zIndex: 1 }}>
             <tr style={{ borderBottom: '1px solid var(--border)' }}>
-              <th onClick={() => toggleSort('ticker')} style={{ cursor: 'pointer', textAlign: 'left', padding: '8px 10px', fontSize: 11, fontWeight: 600, color: sortKey === 'ticker' ? 'var(--primary)' : 'var(--muted)' }}>
-                Ticker{sortKey === 'ticker' ? (sortDesc ? ' ▼' : ' ▲') : ''}
-              </th>
+              {cabecera('ticker', 'Ticker', 'left')}
               {cabecera('tir', 'TIR')}
-              <th style={{ textAlign: 'right', padding: '8px 10px', fontSize: 11, fontWeight: 600, color: 'var(--muted)' }}>TNA</th>
+              <th style={{ textAlign: 'right', padding: '10px 12px', fontSize: 12, fontWeight: 600, color: 'var(--muted)' }}>TNA</th>
               {cabecera('modifiedDuration', 'Duration')}
               {cabecera('parity', 'Paridad')}
               <th
                 title="Aproximación de primer orden vía duration modificada: TIR ± 5%/duration. No incluye convexidad."
-                style={{ textAlign: 'right', padding: '8px 10px', fontSize: 11, fontWeight: 600, color: 'var(--muted)', cursor: 'help' }}
-              >TIR si precio -5% / +5%</th>
+                style={{ textAlign: 'right', padding: '10px 12px', fontSize: 12, fontWeight: 600, color: 'var(--muted)', cursor: 'help' }}
+              >TIR si el precio cae o sube 5%</th>
             </tr>
           </thead>
           <tbody>
@@ -602,7 +589,7 @@ export default function RentaFijaSection({ tenencias }: Props) {
                     background: b.tenenciaUsd ? `${meta.color}11` : 'transparent',
                   }}
                 >
-                  <td style={{ padding: '7px 10px', fontWeight: 700, color: 'var(--text)' }}>
+                  <td style={{ padding: '10px 12px', fontWeight: 700, color: 'var(--text)' }}>
                     {b.ticker}{b.tenenciaUsd ? ' ★' : ''}
                     {b.calculoPropio && (
                       <span
@@ -621,11 +608,11 @@ export default function RentaFijaSection({ tenencias }: Props) {
                       </span>
                     )}
                   </td>
-                  <td style={{ padding: '7px 10px', textAlign: 'right', fontWeight: 700, color: 'var(--text)', fontVariantNumeric: 'tabular-nums' }}>{fmtPct1(b.tir)}</td>
-                  <td style={{ padding: '7px 10px', textAlign: 'right', color: 'var(--text-sec)', fontVariantNumeric: 'tabular-nums' }}>{fmtPct1(b.tna)}</td>
-                  <td style={{ padding: '7px 10px', textAlign: 'right', color: 'var(--text-sec)', fontVariantNumeric: 'tabular-nums' }}>{fmtDuration(b.modifiedDuration)}</td>
-                  <td style={{ padding: '7px 10px', textAlign: 'right', color: 'var(--text-sec)', fontVariantNumeric: 'tabular-nums' }}>{b.parity != null ? fmtPct1(b.parity) : '—'}</td>
-                  <td style={{ padding: '7px 10px', textAlign: 'right', color: 'var(--muted)', fontSize: 11, whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>
+                  <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 700, color: 'var(--text)', fontVariantNumeric: 'tabular-nums' }}>{fmtPct1(b.tir)}</td>
+                  <td style={{ padding: '10px 12px', textAlign: 'right', color: 'var(--text-sec)', fontVariantNumeric: 'tabular-nums' }}>{fmtPct1(b.tna)}</td>
+                  <td style={{ padding: '10px 12px', textAlign: 'right', color: 'var(--text-sec)', fontVariantNumeric: 'tabular-nums' }}>{fmtDuration(b.modifiedDuration)}</td>
+                  <td style={{ padding: '10px 12px', textAlign: 'right', color: 'var(--text-sec)', fontVariantNumeric: 'tabular-nums' }}>{b.parity != null ? fmtPct1(b.parity) : '—'}</td>
+                  <td style={{ padding: '10px 12px', textAlign: 'right', color: 'var(--muted)', fontSize: 11, whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>
                     {sens5?.tirDown != null ? fmtPct1(sens5.tirDown) : '—'} / {sens5?.tirUp != null ? fmtPct1(sens5.tirUp) : '—'}
                   </td>
                 </tr>

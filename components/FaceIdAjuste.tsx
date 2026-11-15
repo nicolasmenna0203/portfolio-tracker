@@ -58,18 +58,17 @@ export default function FaceIdAjuste() {
 
   return (
     <div style={{
-      background: 'var(--card)', border: '1px solid var(--border-subtle)',
-      borderRadius: 12, padding: '20px 24px',
+      background: 'var(--card)', borderRadius: 'var(--radio-card)', padding: '20px 24px',
       display: 'flex', flexDirection: 'column', gap: 12,
     }}>
       <div>
-        <p style={{ fontSize: 11, fontWeight: 600, color: 'var(--primary)', marginBottom: 3 }}>
+        <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--primary)', marginBottom: 3 }}>
           Seguridad
         </p>
         <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)', margin: 0 }}>
           Bloqueo con Face ID
         </p>
-        <p style={{ fontSize: 11, color: 'var(--muted)', margin: '4px 0 0' }}>
+        <p className="card-sub" style={{ marginTop: 4 }}>
           {estado === 'activo'
             ? 'Activo en este dispositivo: la app pide Face ID cada vez que se abre, o al volver después de un par de minutos.'
             : estado === 'confianza'
@@ -84,21 +83,17 @@ export default function FaceIdAjuste() {
         </p>
       ) : (
         <button
+          type="button"
+          className="g-btn primario"
           onClick={activar}
           disabled={estado === 'registrando'}
-          style={{
-            alignSelf: 'flex-start',
-            minHeight: 44, padding: '9px 20px', borderRadius: 10, border: 'none',
-            background: 'var(--primary)', color: '#fff',
-            fontWeight: 600, fontSize: 14, cursor: 'pointer',
-            opacity: estado === 'registrando' ? 0.5 : 1,
-          }}
+          style={{ alignSelf: 'flex-start', minHeight: 44, padding: '0 20px' }}
         >
           {estado === 'registrando' ? 'Esperando Face ID…' : 'Activar Face ID'}
         </button>
       )}
 
-      {error && <p style={{ fontSize: 12, color: 'var(--down)', margin: 0 }}>{error}</p>}
+      {error && <p className="nota" role="alert" style={{ color: 'var(--down)' }}>{error}</p>}
     </div>
   );
 }

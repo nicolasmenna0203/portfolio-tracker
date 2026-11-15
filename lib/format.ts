@@ -149,6 +149,21 @@ export function niceTicks(min: number, max: number, count = 5): number[] {
   return ticks;
 }
 
+/**
+ * Fecha ISO ("2026-03-20") para el eje o el tooltip de un gráfico diario.
+ * Con `conDia` da "20 mar" (rangos cortos, donde el día importa) y sin él
+ * "mar-26", el mismo formato de mes del resto del dashboard. `conAnio` agrega
+ * el año al formato con día, para el tooltip. Devuelve el texto tal cual si no
+ * es una fecha ISO.
+ */
+export function formatFechaEje(fecha: string, conDia = false, conAnio = false): string {
+  const m = /^(\d{4})-(0[1-9]|1[0-2])-(\d{2})/.exec(fecha);
+  if (!m) return fecha;
+  const mes = MESES_CORTOS[Number(m[2]) - 1];
+  if (!conDia) return `${mes}-${m[1].slice(2)}`;
+  return `${Number(m[3])} ${mes}${conAnio ? ` ${m[1]}` : ''}`;
+}
+
 /** Convierte y formatea un monto que solo existe en USD (ej. aportes), usando el MEP del mes. */
 export function formatMonto(usd: number, moneda: Moneda, mepValor: number | null | undefined, options: Omit<FormatMoneyOptions, 'currency'> = {}): string {
   if (moneda === 'USD') return formatMoney(usd, { ...options, currency: 'USD' });

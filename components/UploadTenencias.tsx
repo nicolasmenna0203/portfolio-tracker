@@ -328,13 +328,12 @@ function Uploader({
 
   return (
     <div style={{
-      background: 'var(--card)', border: '1px solid var(--border-subtle)',
-      borderRadius: 12, padding: '20px 24px',
+      background: 'var(--card)', borderRadius: 'var(--radio-card)', padding: '20px 24px',
       display: 'flex', flexDirection: 'column', gap: 14,
     }}>
       {/* Header */}
       <div>
-        <p style={{ fontSize: 11, fontWeight: 600, color: 'var(--primary)', marginBottom: 3 }}>
+        <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--primary)', marginBottom: 3 }}>
           {title}
         </p>
         <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)', margin: 0 }}>
@@ -354,7 +353,7 @@ function Uploader({
         >
           <span style={{ fontSize: 26 }}>📄</span>
           <p style={{ fontSize: 13, color: 'var(--text)', margin: 0, fontWeight: 600 }}>Arrastrá el PDF acá</p>
-          <p style={{ fontSize: 11, color: 'var(--muted)', margin: 0 }}>o hacé click para seleccionarlo</p>
+          <p style={{ fontSize: 11, color: 'var(--muted)', margin: 0 }}>o tocá para elegirlo</p>
           <input ref={inputRef} type="file" accept=".pdf" style={{ display: 'none' }}
             onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
         </div>
@@ -375,7 +374,7 @@ function Uploader({
             background: 'rgba(99,102,241,0.07)', border: '1px solid rgba(99,102,241,0.25)',
             borderRadius: 8, padding: '14px 18px', display: 'flex', flexDirection: 'column', gap: 10,
           }}>
-            <p style={{ fontSize: 11, fontWeight: 600, color: 'var(--primary)', margin: 0 }}>
+            <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--primary)', margin: 0 }}>
               Vista previa — revisá antes de confirmar
             </p>
             {renderPreview(state.preview, actualizarPreview)}
@@ -934,12 +933,11 @@ function UploaderHaberes({ onCargado }: { onCargado?: () => void }) {
 
   return (
     <div style={{
-      background: 'var(--card)', border: '1px solid var(--border-subtle)',
-      borderRadius: 12, padding: '20px 24px',
+      background: 'var(--card)', borderRadius: 'var(--radio-card)', padding: '20px 24px',
       display: 'flex', flexDirection: 'column', gap: 14,
     }}>
       <div>
-        <p style={{ fontSize: 11, fontWeight: 600, color: 'var(--primary)', marginBottom: 3 }}>
+        <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--primary)', marginBottom: 3 }}>
           Sueldos / Haberes
         </p>
         <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)', margin: 0 }}>
@@ -960,7 +958,7 @@ function UploaderHaberes({ onCargado }: { onCargado?: () => void }) {
         >
           <span style={{ fontSize: 26 }}>📄</span>
           <p style={{ fontSize: 13, color: 'var(--text)', margin: 0, fontWeight: 600 }}>Arrastrá uno o varios PDFs acá</p>
-          <p style={{ fontSize: 11, color: 'var(--muted)', margin: 0 }}>o hacé click para seleccionarlos</p>
+          <p style={{ fontSize: 11, color: 'var(--muted)', margin: 0 }}>o tocá para elegirlos</p>
           <input ref={inputRef} type="file" accept=".pdf" multiple style={{ display: 'none' }}
             onChange={(e) => { if (e.target.files?.length) handleFiles(e.target.files); }} />
         </div>
@@ -990,7 +988,7 @@ function UploaderHaberes({ onCargado }: { onCargado?: () => void }) {
             background: 'rgba(99,102,241,0.07)', border: '1px solid rgba(99,102,241,0.25)',
             borderRadius: 8, padding: '14px 18px', display: 'flex', flexDirection: 'column', gap: 10,
           }}>
-            <p style={{ fontSize: 11, fontWeight: 600, color: 'var(--primary)', margin: 0 }}>
+            <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--primary)', margin: 0 }}>
               Vista previa combinada — revisá antes de confirmar
             </p>
             <PreviewHaberes p={state.preview} />

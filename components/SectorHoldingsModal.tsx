@@ -27,65 +27,56 @@ export default function SectorHoldingsModal({ ticker, label, onClose }: Props) {
   }, [onClose]);
 
   return (
-    <div
-      onClick={onClose}
-      style={{
-        position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        zIndex: 100, padding: 16,
-      }}
-    >
+    <div className="modal-velo" onClick={onClose}>
       <div
+        className="modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="sector-titulo"
         onClick={(e) => e.stopPropagation()}
-        style={{
-          background: 'var(--card)', border: '1px solid var(--border-subtle)', borderRadius: 12,
-          padding: '16px 18px', maxWidth: 420, width: '100%', maxHeight: '80vh', overflowY: 'auto',
-        }}
       >
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10, marginBottom: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10, marginBottom: 14 }}>
           <div>
-            <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', margin: 0 }}>{label}</p>
-            <span style={{ fontSize: 11, color: 'var(--muted)' }}>{ticker} · composición</span>
+            <h2 id="sector-titulo" className="sheet-titulo">{label}</h2>
+            <p className="card-sub">Composición de {ticker}</p>
           </div>
-          <button
-            onClick={onClose}
-            aria-label="Cerrar"
-            style={{
-              border: 'none', background: 'transparent', color: 'var(--muted)',
-              fontSize: 18, lineHeight: 1, cursor: 'pointer', padding: 4,
-            }}
-          >×</button>
+          {/* Foco inicial acá: Enter o Esc cierran sin buscar el botón. */}
+          <button type="button" onClick={onClose} aria-label="Cerrar" className="cerrar-btn" autoFocus>
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
+              <path d="M2 2l8 8M10 2l-8 8" />
+            </svg>
+          </button>
         </div>
 
         {loading && (
-          <p style={{ margin: 0, fontSize: 12, color: 'var(--muted)' }}>Cargando composición…</p>
+          <span className="skeleton" role="status" aria-label="Cargando composición" style={{ height: 220, borderRadius: 10 }} />
         )}
         {error && (
-          <p style={{ margin: 0, fontSize: 12, color: 'var(--down)' }}>Error cargando composición: {error}</p>
+          <p className="nota" role="alert" style={{ color: 'var(--down)' }}>No se pudo cargar la composición: {error}</p>
         )}
 
         {!loading && !error && data && (
           <>
-            <div style={{ display: 'flex', gap: 16, marginBottom: 12, fontSize: 11, color: 'var(--muted)' }}>
-              {data.gestora && <span>Gestora: <strong style={{ color: 'var(--text-sec)' }}>{data.gestora}</strong></span>}
-              {data.expenseRatio != null && <span>Expense ratio: <strong style={{ color: 'var(--text-sec)', fontVariantNumeric: 'tabular-nums' }}>{fmtPct1(data.expenseRatio)}</strong></span>}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 16px', marginBottom: 10, fontSize: 13, color: 'var(--muted)' }}>
+              {data.gestora && <span>Gestora <strong style={{ fontWeight: 600, color: 'var(--text)' }}>{data.gestora}</strong></span>}
+              {data.expenseRatio != null && <span>Costo anual <strong style={{ fontWeight: 600, color: 'var(--text)', fontVariantNumeric: 'tabular-nums' }}>{fmtPct1(data.expenseRatio)}</strong></span>}
             </div>
 
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
               <thead>
-                <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                  <th style={{ textAlign: 'left', padding: '4px 6px', fontSize: 11, fontWeight: 600, color: 'var(--muted)' }}>Holding</th>
-                  <th style={{ textAlign: 'right', padding: '4px 6px', fontSize: 11, fontWeight: 600, color: 'var(--muted)' }}>Peso</th>
+                <tr style={{ borderBottom: '0.5px solid var(--border)' }}>
+                  <th style={{ textAlign: 'left', padding: '6px 0', fontSize: 12, fontWeight: 600, color: 'var(--muted)' }}>Empresa</th>
+                  <th style={{ textAlign: 'right', padding: '6px 0', fontSize: 12, fontWeight: 600, color: 'var(--muted)' }}>Peso</th>
                 </tr>
               </thead>
               <tbody>
                 {data.holdings.map((h) => (
-                  <tr key={h.symbol} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-                    <td style={{ padding: '6px 6px' }}>
-                      <div style={{ fontWeight: 700, color: 'var(--text)' }}>{h.symbol}</div>
-                      <div style={{ fontSize: 10, color: 'var(--muted)' }}>{h.nombre}</div>
+                  <tr key={h.symbol} style={{ borderBottom: '0.5px solid var(--border)' }}>
+                    <td style={{ padding: '8px 0' }}>
+                      <div style={{ fontWeight: 600, color: 'var(--text)' }}>{h.symbol}</div>
+                      <div style={{ fontSize: 12, color: 'var(--muted)' }}>{h.nombre}</div>
                     </td>
-                    <td style={{ padding: '6px 6px', textAlign: 'right', color: 'var(--text-sec)', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>
+                    <td style={{ padding: '8px 0', textAlign: 'right', color: 'var(--text)', fontWeight: 500, fontVariantNumeric: 'tabular-nums' }}>
                       {fmtPct1(h.peso)}
                     </td>
                   </tr>
@@ -93,7 +84,7 @@ export default function SectorHoldingsModal({ ticker, label, onClose }: Props) {
               </tbody>
             </table>
             {data.holdings.length === 0 && (
-              <p style={{ margin: 0, fontSize: 12, color: 'var(--muted)' }}>Sin holdings publicados para este ETF.</p>
+              <p className="card-sub">Este ETF no publica su composición.</p>
             )}
           </>
         )}
