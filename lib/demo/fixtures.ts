@@ -311,7 +311,7 @@ export function buildPerformance(tenencias: Record<string, number>): Performance
       tir: Math.round(tir * 10000) / 10000,
       tna: Math.round(b.tnaBase * 10000) / 10000,
       modifiedDuration: Math.round(duration * 100) / 100,
-      parity: b.grupo === 'USD' || b.grupo === 'ONS_USD' ? Math.round((70 + rng() * 20) * 100) / 100 : null,
+      parity: b.grupo === 'USD' || b.grupo === 'ONS_USD' ? Math.round((0.7 + rng() * 0.2) * 10000) / 10000 : null,
       fairValue: null,
       lastPrice: Math.round((100 - duration * 3 + rng() * 5) * 100) / 100,
       vencimiento: b.vencimiento,
