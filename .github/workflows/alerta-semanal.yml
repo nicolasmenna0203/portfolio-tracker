@@ -2,6 +2,8 @@ name: Alerta semanal de cobros
 
 # Por qué GitHub Actions, por qué dos disparos el domingo y cómo se evita el
 # mail repetido: docs/decisiones/0033-alerta-semanal-con-disparo-de-respaldo-el-domingo.md
+# Por qué el brief y los niveles técnicos viajan desde la rama datos-semanales:
+# docs/decisiones/0040-brief-de-noticias-y-fundamentales-escrito-por-una-sesion-programada.md
 
 on:
   schedule:
@@ -49,12 +51,36 @@ jobs:
             echo "accion=enviar" >> "$GITHUB_OUTPUT"
           fi
 
+      # El brief de noticias y los niveles técnicos no están en el Sheet: los
+      # deja una sesión programada en la rama datos-semanales de este repo, que
+      # no se publica ni se deploya. Si falta un archivo o no es JSON, va null y
+      # el mail sale sin ese bloque.
+      - name: Leer datos semanales
+        if: steps.decidir.outputs.accion != 'nada'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          leer() {
+            if gh api -H "Accept: application/vnd.github.raw" \
+                "repos/$GITHUB_REPOSITORY/contents/$1?ref=datos-semanales" > /tmp/$1 2>/dev/null \
+                && jq empty /tmp/$1 2>/dev/null; then
+              echo "$1: ok"
+            else
+              echo "$1: no disponible"; echo 'null' > /tmp/$1
+            fi
+          }
+          leer brief.json
+          leer niveles.json
+          jq -n --slurpfile b /tmp/brief.json --slurpfile n /tmp/niveles.json \
+            '{brief: $b[0], niveles: $n[0]}' > /tmp/cuerpo.json
+
       - name: Llamar a /api/alertas/semanal
         if: steps.decidir.outputs.accion != 'nada'
         run: |
           query=""
           if [ "${{ steps.decidir.outputs.accion }}" = "registrar" ]; then query="?mail=0"; fi
           status=$(curl -s -o /tmp/respuesta.json -w "%{http_code}" \
+            -X POST -H "Content-Type: application/json" --data @/tmp/cuerpo.json \
             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
             "${{ vars.DASHBOARD_URL }}/api/alertas/semanal$query")
           echo "HTTP $status"

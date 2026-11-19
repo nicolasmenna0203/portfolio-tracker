@@ -15,6 +15,12 @@ vi.mock('./variacionSemanal', () => ({
   calcularVariacionSemanal: (...args: unknown[]) => calcularVariacionSemanalMock(...args),
 }));
 
+// La revisión técnica lee el Sheet y Yahoo: se mockea por la misma razón.
+const calcularRevisionTecnicaMock = vi.fn();
+vi.mock('./revisionTecnica', () => ({
+  calcularRevisionTecnica: (...args: unknown[]) => calcularRevisionTecnicaMock(...args),
+}));
+
 // Import dinámico después del mock para que vitest lo intercepte correctamente.
 const { calcularAlertaSemanal, armarContenidoMail, enviarAlertaSemanal, inicioVentana } = await import('./alertas');
 
@@ -49,6 +55,8 @@ function dataConTenencia(ticker: string, tenenciaUsd: number, extra: Partial<Das
 beforeEach(() => {
   fetchCalendarioFinancieroMock.mockReset();
   calcularVariacionSemanalMock.mockReset();
+  calcularRevisionTecnicaMock.mockReset();
+  calcularRevisionTecnicaMock.mockResolvedValue(null);
   calcularVariacionSemanalMock.mockResolvedValue({
     desde: '2026-07-20', hasta: '2026-07-27', grupos: [],
     mepActual: null, mepPrevio: null, variacionMep: null, errores: [],
@@ -219,6 +227,86 @@ describe('armarContenidoMail', () => {
       expect(html).toContain('Fuentes con error');
       expect(html).toContain('MEP: HTTP 503');
     });
+  });
+});
+
+describe('revisión técnica en el mail (ADR 0039)', () => {
+  const base = { desde: '2026-07-27', hasta: '2026-08-02', eventos: [], totalUsdEstimado: 0 };
+  const activo = (eventos: { tipo: 'toco_compra'; nivel: string; precio: number; mensaje: string }[]) => ({
+    ticker: 'ZZZ', rol: 'SATELITE' as const, cierre: 50, cierrePrevio: 55,
+    compraCercana: { nivel: 'S2', precio: 45, distancia: -0.1 },
+    ventaCercana: { nivel: 'R1', precio: 60, distancia: 0.2 },
+    tendencia: 'rota' as const, eventos,
+  });
+
+  it('sin la hoja de niveles, el mail sale sin el bloque', () => {
+    const { html, texto } = armarContenidoMail({ ...base });
+    expect(html).not.toContain('Revisión técnica');
+    expect(texto).not.toContain('REVISIÓN TÉCNICA');
+  });
+
+  it('sin niveles tocados dice que no hace falta hacer nada', () => {
+    const { html, texto, asunto } = armarContenidoMail({ ...base, tecnica: { activos: [activo([])], avisos: [] } });
+    expect(html).toContain('Revisión técnica');
+    expect(html).toContain('no hace falta hacer nada');
+    expect(texto).toContain('ZZZ');
+    expect(asunto).not.toContain('técnico');
+  });
+
+  it('lista el mensaje de cada evento y lo cuenta en el asunto', () => {
+    const ev = { tipo: 'toco_compra' as const, nivel: 'S1', precio: 50, mensaje: 'llegó a su nivel de compra S1 (USD 50): según el plan, corresponde comprar el tramo de ese nivel.' };
+    const { html, texto, asunto } = armarContenidoMail({ ...base, tecnica: { activos: [activo([ev])], avisos: [] } });
+    expect(html).toContain('Llegó a su nivel de compra S1');
+    expect(texto).toContain('ZZZ (Satélite): llegó a su nivel de compra S1');
+    expect(asunto).toContain('1 aviso técnico');
+  });
+
+  it('si la revisión falla, calcularAlertaSemanal sigue y devuelve los cobros', async () => {
+    fetchCalendarioFinancieroMock.mockResolvedValue({ eventos: [], yields: [], errores: [], generatedAt: Date.now() });
+    calcularRevisionTecnicaMock.mockRejectedValue(new Error('Yahoo caído'));
+    const alerta = await calcularAlertaSemanal(dataConTenencia('AAPL', 1000), 7);
+    expect(alerta.tecnica).toBeUndefined();
+    expect(alerta.eventos).toEqual([]);
+  });
+});
+
+describe('brief de noticias en el mail (ADR 0040)', () => {
+  const base = { desde: '2026-07-27', hasta: '2026-08-02', eventos: [], totalUsdEstimado: 0 };
+  const brief = {
+    fecha: '2026-07-25',
+    resumen: 'Semana tranquila <b>para</b> la cartera.',
+    activos: [{
+      ticker: 'ZZZ', rol: 'SATELITE', noticia: 'Presentó resultados.', fundamentales: 'Ganancia por acción arriba de lo esperado.',
+      lectura: 'No cambia el plan.', fuentes: [{ titulo: 'Nota', url: 'https://example.com/nota' }],
+    }],
+    aVigilar: ['Balance de YYY el jueves'],
+  };
+
+  it('va primero en el mail, escapado y con la aclaración de que no es asesoramiento', () => {
+    const { html, texto } = armarContenidoMail({ ...base, brief });
+    expect(html).toContain('Lo importante de la semana');
+    expect(html).toContain('Semana tranquila &lt;b&gt;para&lt;/b&gt; la cartera.');
+    expect(html).toContain('href="https://example.com/nota"');
+    expect(html).toContain('no asesoramiento financiero');
+    expect(texto.indexOf('LO IMPORTANTE DE LA SEMANA')).toBe(0);
+    expect(texto).toContain('Para tu plan: No cambia el plan.');
+  });
+
+  it('toma el brief y los niveles del POST, y descarta un brief de otra semana', async () => {
+    fetchCalendarioFinancieroMock.mockResolvedValue({ eventos: [], yields: [], errores: [], generatedAt: Date.now() });
+    const niveles = [{ Ticker: 'ZZZ', Rol: 'SATELITE', Nivel: 'S1', Precio: 50 }];
+    const vigente = await calcularAlertaSemanal(dataConTenencia('AAPL', 1000), 7, { brief, niveles });
+    expect(vigente.brief?.resumen).toContain('Semana tranquila');
+    expect(calcularRevisionTecnicaMock).toHaveBeenCalledWith(niveles);
+
+    const viejo = await calcularAlertaSemanal(dataConTenencia('AAPL', 1000), 7, { brief: { ...brief, fecha: '2026-07-10' } });
+    expect(viejo.brief).toBeUndefined();
+  });
+
+  it('un brief con forma inválida no corta el mail', async () => {
+    fetchCalendarioFinancieroMock.mockResolvedValue({ eventos: [], yields: [], errores: [], generatedAt: Date.now() });
+    const alerta = await calcularAlertaSemanal(dataConTenencia('AAPL', 1000), 7, { brief: 'texto suelto' });
+    expect(alerta.brief).toBeUndefined();
   });
 });
 

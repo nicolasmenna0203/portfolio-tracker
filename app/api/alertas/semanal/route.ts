@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { fetchDashboardData } from '@/lib/sheets';
-import { calcularAlertaSemanal, enviarAlertaSemanal } from '@/lib/alertas';
+import { calcularAlertaSemanal, enviarAlertaSemanal, type DatosSemanales } from '@/lib/alertas';
 import { equalsSeguro } from '@/lib/timingSafe';
 import { registrarPagosBonos, type ResultadoRegistro } from '@/lib/pagosBonos';
 
@@ -20,12 +20,35 @@ export const runtime = 'nodejs';
  *
  * Envío por Resend (RESEND_API_KEY) al destinatario de ALERTA_EMAIL.
  *
+ * POST hace lo mismo que GET pero acepta en el cuerpo los datos semanales que
+ * no salen del Sheet: `{ brief, niveles }`, que el workflow lee de la rama
+ * `datos-semanales` del repo privado (docs/decisiones/0040-brief-de-noticias-y-fundamentales-escrito-por-una-sesion-programada.md).
+ * Un cuerpo vacío o inválido no corta el envío: el mail sale sin esos bloques.
+ *
  * De paso anota en la hoja PagosBonos los pagos de bonos de la cartera de esas
  * semanas (lib/pagosBonos.ts), para que no desaparezcan del calendario cuando
  * bonistas deja de publicarlos. Va acá y no en una ruta propia porque necesita
  * el mismo cron semanal y evita abrir otra ruta pública en el middleware.
  */
 export async function GET(req: NextRequest) {
+  return atender(req, {});
+}
+
+export async function POST(req: NextRequest) {
+  let datos: DatosSemanales = {};
+  try {
+    const cuerpo: unknown = await req.json();
+    if (cuerpo && typeof cuerpo === 'object') {
+      const c = cuerpo as Record<string, unknown>;
+      datos = { brief: c.brief, niveles: c.niveles };
+    }
+  } catch {
+    datos = {};
+  }
+  return atender(req, datos);
+}
+
+async function atender(req: NextRequest, datos: DatosSemanales) {
   const secret = process.env.CRON_SECRET;
   if (!secret) {
     return NextResponse.json({ error: 'CRON_SECRET no configurado' }, { status: 500 });
@@ -63,7 +86,7 @@ export async function GET(req: NextRequest) {
     const conMail = req.nextUrl.searchParams.get('mail') !== '0';
     let eventos: number | null = null;
     if (conMail) {
-      const alerta = await calcularAlertaSemanal(data, 7);
+      const alerta = await calcularAlertaSemanal(data, 7, datos);
       await enviarAlertaSemanal(destinatario, alerta);
       eventos = alerta.eventos.length;
     }
