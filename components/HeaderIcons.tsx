@@ -158,3 +158,14 @@ export function IconSeccionFinanzas({ size = 24 }: { size?: number }) {
     </Trazo>
   );
 }
+
+/** Diario plegado: el brief de noticias de la semana. */
+export function IconSeccionBrief({ size = 24 }: { size?: number }) {
+  return (
+    <Trazo size={size} grosor={1.7}>
+      <path d="M4 5.5h13v13a2 2 0 0 0 2 2H6a2 2 0 0 1-2-2z" />
+      <path d="M17 9h3v9.5a2 2 0 0 1-4 0" />
+      <path d="M7.5 9h6M7.5 12.5h6M7.5 16h4" />
+    </Trazo>
+  );
+}

@@ -11,6 +11,9 @@
 // cuerpo del POST al job (app/api/alertas/semanal/route.ts). El dashboard no
 // llama a ninguna API de modelos ni necesita credenciales nuevas.
 //
+// El job además lo guarda en la hoja Briefs, que es de donde lo lee la pestaña
+// Brief del dashboard con el historial de semanas (lib/briefsGuardados.ts).
+//
 // Se incluye solo si es de esta semana: un brief viejo es peor que ninguno,
 // porque se leería como noticia actual.
 //

@@ -18,9 +18,9 @@ import { Cargando } from './Estados';
 import {
   IconOjo, IconOjoTachado, IconSol, IconLuna, IconCargar,
   IconSeccionResumen, IconSeccionTenencias, IconSeccionBenchmarks,
-  IconSeccionCalendario, IconSeccionPerformance, IconSeccionFinanzas,
+  IconSeccionCalendario, IconSeccionPerformance, IconSeccionFinanzas, IconSeccionBrief,
 } from './HeaderIcons';
-type Tab = 'resumen' | 'tenencias' | 'benchmarks' | 'calendario' | 'performance' | 'finanzas-personales';
+type Tab = 'resumen' | 'brief' | 'tenencias' | 'benchmarks' | 'calendario' | 'performance' | 'finanzas-personales';
 
 // ── Carga diferida de las pestañas ────────────────────────────────────────────
 // Solo Resumen viaja con la página: es lo único que se ve al entrar. El resto
@@ -29,6 +29,7 @@ type Tab = 'resumen' | 'tenencias' | 'benchmarks' | 'calendario' | 'performance'
 // los pide en segundo plano apenas el dashboard queda quieto; el skeleton de
 // `loading` solo llega a verse si se toca una pestaña antes de eso.
 const cargadores = {
+  brief:      () => import('./BriefTab'),
   tenencias:  () => import('./TenenciasTab'),
   benchmarks: () => import('./BenchmarksTab'),
   calendario: () => import('./CalendarioTab'),
@@ -40,6 +41,7 @@ const esqueleto = (etiqueta: string) => {
   const Esqueleto = () => <Cargando etiqueta={etiqueta} />;
   return Esqueleto;
 };
+const BriefTab = dynamic(cargadores.brief, { loading: esqueleto('Cargando el brief') });
 const TenenciasTab = dynamic(cargadores.tenencias, { loading: esqueleto('Cargando tenencias') });
 const BenchmarksTab = dynamic(cargadores.benchmarks, { loading: esqueleto('Cargando benchmarks') });
 const CalendarioTab = dynamic(cargadores.calendario, { loading: esqueleto('Cargando calendario') });
@@ -55,6 +57,7 @@ function precargarPestanas() {
 // "Finanzas personales" no entra. El ícono solo se ve en esa tab bar.
 const TABS: { id: Tab; label: string; corto: string; Icono: (p: { size?: number }) => React.ReactNode }[] = [
   { id: 'resumen',             label: 'Resumen',             corto: 'Resumen',     Icono: IconSeccionResumen     },
+  { id: 'brief',               label: 'Brief',               corto: 'Brief',       Icono: IconSeccionBrief       },
   { id: 'tenencias',           label: 'Tenencias',           corto: 'Tenencias',   Icono: IconSeccionTenencias   },
   { id: 'benchmarks',          label: 'Benchmarks',          corto: 'Comparar',    Icono: IconSeccionBenchmarks  },
   { id: 'calendario',          label: 'Calendario',          corto: 'Calendario',  Icono: IconSeccionCalendario  },
@@ -419,6 +422,13 @@ export default function Dashboard({ data, valoresSiempreOcultos = false }: Props
       {tab === 'resumen' && (
         <TabScroll tab={tab} posiciones={scrollPorTab} alScrollear={alScrollear}>
           <ResumenTab data={data} hideValues={hideValues} moneda={moneda} />
+        </TabScroll>
+      )}
+
+      {/* ── Tab: Brief (noticias y fundamentales de cada semana) ─────────────── */}
+      {tab === 'brief' && (
+        <TabScroll tab={tab} posiciones={scrollPorTab} alScrollear={alScrollear}>
+          <BriefTab />
         </TabScroll>
       )}
 

@@ -16,11 +16,12 @@ Dashboard de seguimiento de una cartera de inversiones (CEDEARs, ETFs, bonos arg
 
 ## Funcionalidades
 
-Seis tabs, todas dentro de una sola página:
+Siete tabs, todas dentro de una sola página:
 
 | Tab | Qué muestra |
 |---|---|
 | **Resumen** | KPIs (total, aportes, rendimiento neto, TIR anual), evolución mensual |
+| **Brief** | El brief semanal de noticias y fundamentales por activo (el mismo del mail del domingo), con el historial de semanas anteriores |
 | **Tenencias** | Composición (treemap con filtro por tipo y evolución) y Rebalanceo (variación contra el mes anterior y distancia a los objetivos, editables) del mes seleccionado, con selector común de mes y dimensión |
 | **Benchmarks** | Cartera vs S&P 500, inflación, MEP, BTC y oro, en base 100 |
 | **Calendario** | Cobros esperados: dividendos, renta y amortización de bonos, balances |
@@ -132,6 +133,7 @@ La alerta semanal se dispara desde GitHub Actions (`.github/workflows/alerta-sem
 | `TickersEspeciales` | TICKER, REGLA, NOTA | `COTIZA`: tiene símbolo en Yahoo aunque su TIPO no pase el filtro (ej. un ETF cargado como ALTS). `EXCLUIR_BONO`: no se muestra en la curva de renta fija. Se edita a mano |
 | `GastosFijos` | Nombre, Monto, Moneda, Frecuencia, Categoria, Desde, Hasta | Gastos mensuales (recurrentes y estimados). Catálogo con vigencia: `Desde` / `Hasta` son el primer y último mes que cuenta (`YYYY-MM`, opcionales; `Desde` vacío = cuenta desde siempre). `Categoria` es una de: Súper y comida, Transporte, Hogar, Ocio y personal; otro valor se muestra igual y la tab sugiere a cuál moverlo. Se edita desde la tab o a mano; el dashboard reescribe toda la hoja en cada guardado. Las filas existentes sin las dos columnas nuevas siguen funcionando |
 | `NivelesTecnicos` | Ticker, Rol, Nivel, Precio, Nota | Opcional. Niveles de compra (`S1`-`S3`) y de venta (`R1`-`R3`) del plan por activo, para la revisión técnica del mail semanal (ADR 0039). Se usa solo si la rama `datos-semanales` no trae `niveles.json`, que es donde viven normalmente (ADR 0040). `Ticker` es el símbolo de Yahoo; `Rol` es `CORE`, `SATELITE`, `LEGADO`, `CONSOLIDAR` o `RADAR`; precios ajustados por dividendos, en USD |
+| `Briefs` | FECHA, BRIEF, GUARDADO | Un brief semanal de noticias y fundamentales por fila, para la tab Brief (ADR 0041). La crea y completa el job semanal: guarda el brief que recibe y reemplaza la fila si esa fecha ya estaba. `BRIEF` es el JSON tal como lo escribe la sesión programada; una fila que no valida se ignora |
 | `Passkeys` | ID, CLAVE_PUBLICA, DISPOSITIVO, CREADA | Passkeys con las que se entra o se desbloquea la app con Face ID (ADR 0035). La crea y completa el botón "Activar Face ID" del panel de carga; para revocar una, borrar la fila. No hay nada secreto: la clave privada nunca sale del dispositivo |
 
 ### Cálculo de métricas

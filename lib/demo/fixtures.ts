@@ -1,6 +1,6 @@
 // Fixtures sintéticas para el resto de los endpoints /api/demo/*: benchmarks,
 // calendario, fci, fx, ingresos, objetivos, performance,
-// performance-variable, ratios-guardados. Todas usan el mismo universo de
+// performance-variable, ratios-guardados, briefs. Todas usan el mismo universo de
 // `lib/demo/universo.ts` para ser coherentes con Tenencias/Performance.
 //
 // Fechas relativas a `Date.now()` (nunca hardcodeadas) para que no queden
@@ -28,6 +28,7 @@ import type {
 } from '@/types';
 import type { ObjetivosPorDimension } from '@/lib/objetivos';
 import type { RatioGuardado } from '@/lib/ratiosGuardados';
+import type { BriefSemanal } from '@/lib/briefSemanal';
 import { rngFromString } from './rng';
 import {
   ACTIVOS_VARIABLE,
@@ -382,3 +383,41 @@ const NOMBRES_STOCK: Record<string, string> = {
   XLF: 'Financial Select Sector SPDR Fund',
   VWO: 'Vanguard FTSE Emerging Markets ETF',
 };
+
+// ── Briefs semanales ──────────────────────────────────────────────────────
+// Dos sábados de ejemplo. El texto es inventado y genérico a propósito: no
+// cita noticias reales ni trae links. Los roles imitan los del plan (núcleo,
+// satélites, una posición con precio de salida y un activo en seguimiento que
+// no está en la cartera).
+
+function sabadoAnterior(semanasAtras: number): string {
+  const d = new Date();
+  const hastaSabado = (d.getUTCDay() + 1) % 7; // días desde el último sábado
+  d.setUTCDate(d.getUTCDate() - hastaSabado - semanasAtras * 7);
+  return d.toISOString().slice(0, 10);
+}
+
+export function buildBriefs(): BriefSemanal[] {
+  return [
+    {
+      fecha: sabadoAnterior(0),
+      resumen: 'Semana de ejemplo con el mercado amplio en baja moderada y las financieras sosteniéndose mejor que el resto. Ningún activo tocó su precio de salida y el plan no cambia.',
+      activos: [
+        { ticker: 'VTI', rol: 'CORE', noticia: 'El índice total de EE.UU. cerró la semana con una baja leve, en línea con el resto de los mercados desarrollados.', fundamentales: '', lectura: 'Dato: baja chica. Lectura: para un plan con aportes mensuales no cambia nada.', fuentes: [] },
+        { ticker: 'XLF', rol: 'SATELITE', noticia: 'Los bancos grandes presentaron resultados por encima de lo esperado y el sector subió contra el índice.', fundamentales: 'El sector cotiza cerca de su relación precio/ganancia promedio de diez años.', lectura: 'Dato: resultados mejores que lo esperado. Lectura: la tesis sigue en pie.', fuentes: [] },
+        { ticker: 'AAPL', rol: 'LEGADO', noticia: 'La acción quedó prácticamente sin cambios en una semana sin novedades de la compañía.', fundamentales: '', lectura: 'Sigue lejos de su precio de salida; no cambia nada.', fuentes: [] },
+        { ticker: 'XLU', rol: 'RADAR', noticia: 'Las eléctricas subieron por la baja de las tasas largas.', fundamentales: '', lectura: 'Solo seguimiento.', fuentes: [] },
+      ],
+      aVigilar: ['Dato de inflación de EE.UU. el miércoles.', 'Reunión del banco central europeo el jueves.'],
+    },
+    {
+      fecha: sabadoAnterior(1),
+      resumen: 'Semana tranquila: los mercados emergentes rebotaron y los bonos argentinos se movieron poco. Nada para hacer fuera del aporte mensual.',
+      activos: [
+        { ticker: 'VWO', rol: 'SATELITE', noticia: 'Los emergentes subieron por un dólar más débil.', fundamentales: '', lectura: 'Dato: rebote corto. Lectura: no cambia nada.', fuentes: [] },
+        { ticker: 'VTI', rol: 'CORE', noticia: 'Semana con poca variación y bajo volumen.', fundamentales: '', lectura: 'No cambia nada.', fuentes: [] },
+      ],
+      aVigilar: ['Balances de los bancos grandes de EE.UU.'],
+    },
+  ];
+}

@@ -2237,3 +2237,114 @@ select.campo { padding-right: 6px; cursor: pointer; }
 @media (max-width: 380px) {
   .cal-dia { min-height: 52px; }
 }
+
+/* ── Pestaña Brief ────────────────────────────────────────────────
+   Texto para leer, no para escanear: renglones de ~70 caracteres, y el
+   resumen con "a vigilar" al lado en desktop. Las fichas por activo van de a
+   dos en pantallas anchas, alineadas arriba (cada una mide lo que su texto). */
+.brief { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.brief-cabecera {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+}
+.brief-cabecera > :only-child { grid-column: 1 / -1; }
+.brief-semana { justify-content: space-between; }
+.brief-nav { display: flex; align-items: center; gap: 6px; }
+.brief-select {
+  min-height: 28px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--chip-bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.brief-texto {
+  margin: 0;
+  max-width: 72ch;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--text);
+}
+.brief-vigilar ul {
+  list-style: disc;
+  margin: 10px 0 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text-sec);
+}
+.brief-activos {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  align-items: start;
+}
+.brief-activo { display: flex; flex-direction: column; gap: 10px; }
+.brief-activo-cab { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; }
+.brief-ticker {
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: var(--text);
+}
+.brief-rol {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 22px;
+  padding: 0 9px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--chip-color, var(--muted)) 16%, transparent);
+  color: var(--text-sec);
+  font-size: 12px;
+  font-weight: 500;
+}
+.brief-filas {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr);
+  gap: 8px 12px;
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.55;
+}
+.brief-filas dt {
+  padding-top: 2px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.brief-filas dd { margin: 0; color: var(--text-sec); min-width: 0; }
+.brief-filas dd.brief-lectura { color: var(--text); }
+.brief-fuentes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin: 0;
+  font-size: 12px;
+}
+.brief-fuentes a { color: var(--primary); text-decoration: none; }
+.brief-fuentes a:hover { text-decoration: underline; }
+.brief-fuentes a:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; border-radius: 3px; }
+
+@media (max-width: 1024px) {
+  .brief-activos { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 768px) {
+  .brief-cabecera { grid-template-columns: minmax(0, 1fr); }
+  .brief-nav { width: 100%; }
+  .brief-nav .brief-select { flex: 1; }
+  .brief-filas { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+  .brief-filas dd { margin-bottom: 8px; }
+  .brief-filas dd:last-of-type { margin-bottom: 0; }
+}

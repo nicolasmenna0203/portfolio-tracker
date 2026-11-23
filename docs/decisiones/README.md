@@ -11,7 +11,7 @@ código.
 Los ADRs **no se editan** cuando cambia la decisión: se escribe uno nuevo y el
 viejo pasa a "Reemplazadas". Ver [PLANTILLA.md](PLANTILLA.md) para el flujo completo.
 
-**Próximo número: 0041**
+**Próximo número: 0042**
 
 ## Renta fija
 
@@ -57,6 +57,7 @@ viejo pasa a "Reemplazadas". Ver [PLANTILLA.md](PLANTILLA.md) para el flujo comp
 | [0029](0029-lectura-fallida-no-es-lista-vacia.md) | Tratar una lectura fallida del Sheet como error, no como lista vacía, en las hojas que se reescriben enteras | `lib/sheets.ts`, `lib/gastosFijos.ts`, `lib/objetivos.ts`, `lib/ratiosGuardados.ts`, `components/GastosSection.tsx`, `lib/useObjetivos.ts`, `components/RatiosTab.tsx` |
 | [0039](0039-revision-tecnica-semanal-en-el-mail.md) | Revisión técnica semanal en el mail, con niveles en el Sheet y tendencias recalculadas en el código | `lib/revisionTecnica.ts`, `lib/alertas.ts` |
 | [0040](0040-brief-de-noticias-y-fundamentales-escrito-por-una-sesion-programada.md) | El brief de noticias y fundamentales lo escribe una sesión programada en una rama privada y el workflow lo manda al job | `lib/briefSemanal.ts`, `lib/alertas.ts`, `lib/revisionTecnica.ts`, `app/api/alertas/semanal/route.ts`, `.github/workflows/alerta-semanal.yml`, `vercel.json` |
+| [0041](0041-historial-de-briefs-en-el-sheet.md) | El historial de briefs se guarda en el Sheet desde el job del domingo | `lib/briefsGuardados.ts`, `app/api/alertas/semanal/route.ts`, `app/api/briefs/route.ts`, `components/BriefTab.tsx` |
 
 ## Fuentes externas
 

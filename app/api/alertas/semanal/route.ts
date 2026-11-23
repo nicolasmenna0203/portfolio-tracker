@@ -3,6 +3,8 @@ import { fetchDashboardData } from '@/lib/sheets';
 import { calcularAlertaSemanal, enviarAlertaSemanal, type DatosSemanales } from '@/lib/alertas';
 import { equalsSeguro } from '@/lib/timingSafe';
 import { registrarPagosBonos, type ResultadoRegistro } from '@/lib/pagosBonos';
+import { parsearBrief } from '@/lib/briefSemanal';
+import { guardarBrief } from '@/lib/briefsGuardados';
 
 export const runtime = 'nodejs';
 
@@ -24,6 +26,12 @@ export const runtime = 'nodejs';
  * no salen del Sheet: `{ brief, niveles }`, que el workflow lee de la rama
  * `datos-semanales` del repo privado (docs/decisiones/0040-brief-de-noticias-y-fundamentales-escrito-por-una-sesion-programada.md).
  * Un cuerpo vacío o inválido no corta el envío: el mail sale sin esos bloques.
+ *
+ * El brief, además de ir en el mail, se guarda en la hoja Briefs (una fila por
+ * semana) para la pestaña Brief del dashboard (lib/briefsGuardados.ts,
+ * docs/decisiones/0041-historial-de-briefs-en-el-sheet.md). Si guardarlo falla,
+ * la respuesta lo dice pero sigue siendo 200: un 500 haría que la corrida de
+ * respaldo del domingo reenvíe el mail.
  *
  * De paso anota en la hoja PagosBonos los pagos de bonos de la cartera de esas
  * semanas (lib/pagosBonos.ts), para que no desaparezcan del calendario cuando
@@ -83,6 +91,18 @@ async function atender(req: NextRequest, datos: DatosSemanales) {
     // `?mail=0`: solo el registro. Lo usa el workflow cuando el disparo llega
     // tarde (ya es lunes): el mail no sale, pero los pagos de bonos de esa
     // semana se anotan igual. Ver docs/decisiones/0033-alerta-semanal-con-disparo-de-respaldo-el-domingo.md
+    // El brief se guarda aunque no salga el mail (`?mail=0`): la fila es por
+    // fecha, así que repetirlo no duplica nada.
+    let briefGuardado: { fila: number } | { error: string } | null = null;
+    const brief = parsearBrief(datos.brief);
+    if (brief) {
+      try {
+        briefGuardado = { fila: await guardarBrief(brief) };
+      } catch (err) {
+        briefGuardado = { error: err instanceof Error ? err.message : String(err) };
+      }
+    }
+
     const conMail = req.nextUrl.searchParams.get('mail') !== '0';
     let eventos: number | null = null;
     if (conMail) {
@@ -95,7 +115,7 @@ async function atender(req: NextRequest, datos: DatosSemanales) {
     return NextResponse.json(
       // Solo un resumen: la respuesta queda en el log de GitHub Actions, y el
       // mail completo (con montos) no tiene por qué quedar ahí.
-      { ok: registroOk, mail: conMail ? 'enviado' : 'omitido', eventos, pagosBonos: registro },
+      { ok: registroOk, mail: conMail ? 'enviado' : 'omitido', eventos, pagosBonos: registro, brief: briefGuardado },
       { status: registroOk ? 200 : 500 },
     );
   } catch (err) {
