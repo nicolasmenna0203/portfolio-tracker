@@ -296,7 +296,7 @@ export interface EstadoActivo {
 const QUE_HACER_COMPRA: Record<Rol, string> = {
   CORE: 'según el plan, conviene adelantar el aporte del mes a este activo',
   SATELITE: 'según el plan, corresponde comprar el tramo de ese nivel',
-  RADAR: 'se cumplió su condición de entrada; en el plan entra solo reemplazando otra posición',
+  RADAR: 'es un activo en seguimiento, sin compra prevista en el plan',
   LEGADO: 'el plan no compra más: es una referencia para no vender por debajo de este precio',
   CONSOLIDAR: 'el plan no compra más: es una referencia para no vender por debajo de este precio',
 };
@@ -304,7 +304,7 @@ const QUE_HACER_COMPRA: Record<Rol, string> = {
 const QUE_HACER_VENTA: Record<Rol, string> = {
   CORE: 'solo se recorta si el activo pesa más de lo previsto en la cartera',
   SATELITE: 'según el plan, se recorta hasta volver al peso objetivo',
-  RADAR: 'es solo referencia: no está en la cartera',
+  RADAR: 'es un activo en seguimiento, sin venta prevista: no está en la cartera',
   LEGADO: 'según el plan, es zona de venta de esta posición',
   CONSOLIDAR: 'según el plan, es zona para pasar esta posición al núcleo',
 };

@@ -367,7 +367,7 @@ function bloqueVariacion(v: VariacionSemanal): string {
 const ROL_LABEL: Record<Rol, string> = {
   CORE: 'Núcleo',
   SATELITE: 'Satélite',
-  LEGADO: 'A vender',
+  LEGADO: 'Satélite con salida',
   CONSOLIDAR: 'A consolidar',
   RADAR: 'Radar',
 };
